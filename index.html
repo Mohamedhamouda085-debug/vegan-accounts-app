@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1E4D35">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>فيجان فود - الحسابات</title>
+<style>
+:root{--ink:#18231D;--muted:#5E6B63;--line:#DCE3DD;--bg:#F3F5F2;--paper:#fff;--green:#1E4D35;--green2:#2F7A52;--amber:#A8650B;--red:#B3261E}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,"Noto Sans Arabic","Segoe UI",Tahoma,sans-serif}
+.hide{display:none!important}
+button,input,select{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:5;background:var(--green);color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;justify-content:space-between}
+header h1{margin:0;font-size:18px;font-weight:700}
+.pill{border:0;border-radius:99px;padding:5px 12px 5px 10px;font-size:13px;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;gap:7px}
+.pill i{width:9px;height:9px;border-radius:50%;background:#7BD79B;display:block}
+.pill.warn i{background:#F2B24C}.pill.bad i{background:#FF8A80}.pill.off i{background:#B9C4BD}
+main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+.tools{display:flex;gap:8px;padding:12px 16px;background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:var(--hh,52px);z-index:4}
+.tools select{flex:0 0 42%}
+.tools input{flex:1;min-width:0}
+input,select{width:100%;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--green2);outline-offset:1px}
+input:disabled,select:disabled{background:#EEF1EE;color:var(--ink)}
+.count{padding:10px 16px 4px;color:var(--muted);font-size:14px}
+.row{display:block;width:100%;text-align:right;background:var(--paper);border:0;border-bottom:1px solid var(--line);padding:12px 16px;cursor:pointer}
+.row .r1{display:flex;align-items:baseline;gap:10px}
+.row .no{color:var(--muted);font-size:14px;min-width:42px}
+.row .st{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .amt{font-variant-numeric:tabular-nums;font-weight:700}
+.row .r2{margin-top:2px;color:var(--ink);font-size:15px}
+.row .r2 b{font-weight:400;color:var(--muted);padding:0 6px}
+.row .r3{margin-top:2px;color:var(--muted);font-size:13px;display:flex;gap:12px;flex-wrap:wrap}
+.row .dot{width:8px;height:8px;border-radius:50%;background:var(--amber);align-self:center}
+.empty{padding:48px 24px;text-align:center;color:var(--muted)}
+.more{margin:14px 16px;width:calc(100% - 32px)}
+.btn{border:0;border-radius:10px;padding:12px 16px;min-height:46px;font-weight:700;background:var(--green);color:#fff;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--green);border:1px solid var(--green)}
+.btn.danger{background:#fff;color:var(--red);border:1px solid var(--red)}
+.btn:disabled{opacity:.55}
+.page{padding:16px}
+.page h2{margin:0 0 14px;font-size:18px}
+label{display:block;font-size:14px;color:var(--muted);margin:12px 0 4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.actions{display:flex;gap:10px;margin-top:20px}
+.actions .btn{flex:1}
+.err{color:var(--red);font-size:14px;margin-top:10px;min-height:20px}
+.note{color:var(--muted);font-size:14px;margin:6px 0 0}
+.box{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:4px 14px;margin-bottom:16px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border:0}.kv span:first-child{color:var(--muted)}
+nav{position:fixed;inset:auto 0 0 0;background:var(--paper);border-top:1px solid var(--line);display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:6}
+nav button{flex:1;border:0;background:none;padding:8px 4px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px}
+nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--green);font-weight:700}
+nav button.add{color:#fff}
+nav button.add span.c{background:var(--green);width:46px;height:46px;border-radius:50%;display:grid;place-items:center;margin-top:-18px;box-shadow:0 2px 0 rgba(0,0,0,.12)}
+nav button.add svg{stroke:#fff}
+#login{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:24px}
+#login h1{font-size:26px;margin:0 0 4px}
+#login p{margin:0 0 20px;color:var(--muted)}
+#login details{margin-top:18px;color:var(--muted);font-size:14px}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:12px 14px;border-radius:10px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s;text-align:center}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+</head>
+<body>
+
+<div id="login" class="hide">
+  <h1>فيجان فود</h1>
+  <p>الإدارة المالية</p>
+  <label for="l-email">الإيميل</label>
+  <input id="l-email" type="email" inputmode="email" autocomplete="username" dir="ltr">
+  <label for="l-pass">كلمة المرور</label>
+  <input id="l-pass" type="password" autocomplete="current-password" dir="ltr">
+  <div class="err" id="l-err"></div>
+  <button class="btn" id="l-go" style="width:100%;margin-top:6px">تسجيل الدخول</button>
+  <details>
+    <summary>رابط السيرفر</summary>
+    <input id="l-url" dir="ltr" style="margin-top:8px">
+    <p class="note">غيّره بس لو تطبيقك مش بيوصل للسيرفر.</p>
+  </details>
+</div>
+
+<div id="app" class="hide">
+  <header>
+    <h1>فيجان فود</h1>
+    <button class="pill off" id="pill" aria-live="polite"><i></i><span id="pill-t">أوفلاين</span></button>
+  </header>
+  <main>
+    <section id="v-list">
+      <div class="tools">
+        <select id="f-month" aria-label="الشهر"></select>
+        <input id="f-q" type="search" placeholder="بحث" aria-label="بحث">
+      </div>
+      <div class="count" id="count"></div>
+      <div id="rows"></div>
+      <button class="btn ghost more hide" id="more">عرض المزيد</button>
+    </section>
+
+    <section id="v-form" class="page hide">
+      <h2 id="form-title">قيد جديد</h2>
+      <div class="grid">
+        <div><label for="e-date">التاريخ</label><input id="e-date" type="date"></div>
+        <div><label for="e-no">رقم القيد</label><input id="e-no" inputmode="numeric" dir="ltr"></div>
+      </div>
+      <label for="e-stmt">البيان</label>
+      <input id="e-stmt" list="dl-stmt" autocomplete="off">
+      <datalist id="dl-stmt"></datalist>
+      <label for="e-dr">الحساب المدين</label>
+      <select id="e-dr"></select>
+      <label for="e-pa">اسم الطرف المدين</label>
+      <input id="e-pa" list="dl-pa" autocomplete="off">
+      <datalist id="dl-pa"></datalist>
+      <label for="e-cr">الحساب الدائن</label>
+      <select id="e-cr"></select>
+      <label for="e-pb">اسم الطرف الدائن</label>
+      <input id="e-pb" list="dl-pb" autocomplete="off">
+      <datalist id="dl-pb"></datalist>
+      <label for="e-prod">المنتج</label>
+      <input id="e-prod" list="dl-prod" autocomplete="off">
+      <datalist id="dl-prod"></datalist>
+      <div class="grid">
+        <div><label for="e-qty">الكمية</label><input id="e-qty" inputmode="decimal" dir="ltr"></div>
+        <div><label for="e-disc">الخصم (نسبة مثل 0.02)</label><input id="e-disc" inputmode="decimal" dir="ltr"></div>
+        <div><label for="e-price">سعر الوحدة</label><input id="e-price" inputmode="decimal" dir="ltr"></div>
+        <div><label for="e-amt">المبلغ</label><input id="e-amt" inputmode="decimal" dir="ltr"></div>
+      </div>
+      <div class="err" id="e-err"></div>
+      <div class="actions">
+        <button class="btn" id="e-save">حفظ القيد</button>
+        <button class="btn ghost" id="e-cancel">رجوع</button>
+      </div>
+      <div class="actions"><button class="btn danger hide" id="e-del">حذف القيد</button></div>
+    </section>
+
+    <section id="v-set" class="page hide">
+      <h2>الإعدادات</h2>
+      <div class="box">
+        <div class="kv"><span>الاسم</span><span id="s-name"></span></div>
+        <div class="kv"><span>الإيميل</span><span id="s-email" dir="ltr"></span></div>
+        <div class="kv"><span>الصلاحية</span><span id="s-role"></span></div>
+        <div class="kv"><span>آخر مزامنة</span><span id="s-last"></span></div>
+        <div class="kv"><span>في الانتظار</span><span id="s-pend"></span></div>
+      </div>
+      <button class="btn" id="s-sync" style="width:100%">مزامنة الآن</button>
+      <div class="err" id="s-err"></div>
+
+      <h2 style="margin-top:24px">تغيير كلمة المرور</h2>
+      <label for="p-new">كلمة المرور الجديدة</label>
+      <input id="p-new" type="password" autocomplete="new-password" dir="ltr">
+      <label for="p-new2">تأكيد كلمة المرور</label>
+      <input id="p-new2" type="password" autocomplete="new-password" dir="ltr">
+      <div class="err" id="p-err"></div>
+      <button class="btn ghost" id="p-go" style="width:100%">حفظ كلمة المرور</button>
+
+      <button class="btn danger" id="s-out" style="width:100%;margin-top:28px">تسجيل الخروج</button>
+    </section>
+  </main>
+  <nav>
+    <button id="n-list" class="on"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>القيود</button>
+    <button id="n-add" class="add"><span class="c"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>قيد جديد</button>
+    <button id="n-set"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>حسابي</button>
+  </nav>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+/* ---------- config ---------- */
+const CFG = {
+  key: 'sb_publishable_9PyozqR-Pc6MRvkDzVGJuA_HPg20c-K',
+  defUrl: 'https://ubiobmsnpgzipgvlncgb.supabase.co'
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const num = v => { const n = parseFloat(String(v).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/,/g, '')); return isNaN(n) ? 0 : n; };
+const S = { session:null, profile:null, ent:new Map(), accounts:[], statements:[], party:[], closed:new Set(),
+            month:null, q:'', limit:100, editing:null, syncing:false, lastSync:null, err:'', amtManual:false, view:'list' };
+let db;
+
+/* ---------- local storage (IndexedDB) ---------- */
+function openDB() {
+  return new Promise((ok, no) => {
+    const r = indexedDB.open('vegan-acc', 1);
+    r.onupgradeneeded = () => { const d = r.result; d.createObjectStore('entries', { keyPath:'id' }); d.createObjectStore('kv'); };
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => no(r.error);
+  });
+}
+function req(store, mode, fn) {
+  return new Promise((ok, no) => {
+    const t = db.transaction(store, mode);
+    const r = fn(t.objectStore(store));
+    t.oncomplete = () => ok(r && r.result);
+    t.onerror = () => no(t.error);
+    t.onabort = () => no(t.error);
+  });
+}
+const kvGet = k => req('kv', 'readonly', s => s.get(k));
+const kvSet = (k, v) => req('kv', 'readwrite', s => s.put(v, k));
+const kvDel = k => req('kv', 'readwrite', s => s.delete(k));
+const entAll = () => req('entries', 'readonly', s => s.getAll());
+const entPut = e => req('entries', 'readwrite', s => s.put(e));
+const entPutMany = a => req('entries', 'readwrite', s => { a.forEach(e => s.put(e)); });
+const entClear = () => req('entries', 'readwrite', s => s.clear());
+
+/* ---------- server calls ---------- */
+const url = () => localStorage.getItem('sb_url') || CFG.defUrl;
+async function http(path, { method = 'GET', body, token, headers = {} } = {}) {
+  const h = { apikey: CFG.key, ...headers };
+  if (body) h['Content-Type'] = 'application/json';
+  if (token) h.Authorization = 'Bearer ' + token;
+  let r;
+  try { r = await fetch(url() + path, { method, headers: h, body: body ? JSON.stringify(body) : undefined }); }
+  catch (e) { const x = new Error('net'); x.net = true; throw x; }
+  const txt = await r.text(); let j = null;
+  try { j = txt ? JSON.parse(txt) : null; } catch (e) {}
+  if (!r.ok) {
+    const x = new Error((j && (j.error_description || j.msg || j.message || j.error)) || ('HTTP ' + r.status));
+    x.status = r.status; x.code = j && (j.error_code || j.code); throw x;
+  }
+  return j;
+}
+function saveSession(j) {
+  S.session = { access_token:j.access_token, refresh_token:j.refresh_token,
+    expires_at: j.expires_at || Math.floor(Date.now() / 1000) + (j.expires_in || 3600),
+    user: { id:j.user.id, email:j.user.email } };
+  return kvSet('session', S.session);
+}
+async function token() {
+  const s = S.session;
+  if (s.expires_at - Math.floor(Date.now() / 1000) > 60) return s.access_token;
+  const j = await http('/auth/v1/token?grant_type=refresh_token', { method:'POST', body:{ refresh_token:s.refresh_token } });
+  await saveSession(j); return S.session.access_token;
+}
+const api = async (path, o = {}) => http(path, { ...o, token: await token() });
+
+/* ---------- helpers ---------- */
+const canWrite = () => !!S.profile && ['owner', 'accountant'].includes(S.profile.role);
+const roleAr = { owner:'مالك', accountant:'محاسب', partner:'شريك (مشاهدة)' };
+const pending = () => [...S.ent.values()].filter(e => e.dirty).length;
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
+function srvMsg(m) {
+  m = String(m || '');
+  if (/closed/i.test(m)) return 'الشهر ده مقفول، مينفعش التعديل فيه.';
+  if (/read only|not allowed|owner only/i.test(m)) return 'الحساب ده للمشاهدة بس.';
+  return m;
+}
+const fromSrv = r => ({ id:r.id, no:r.no, date:r.date, stmt:r.stmt, dr:r.dr, cr:r.cr, pa:r.pa, pb:r.pb, prod:r.prod,
+  qty:+r.qty, disc:+r.disc, price:+r.price, amtD:+r.amt_d, amtC:+r.amt_c, star:r.star, opening:r.opening,
+  deleted:r.deleted, updated:+r.upd_ms, dirty:false });
+const toSrv = e => ({ id:e.id, no:e.no, date:e.date, stmt:e.stmt, dr:e.dr, cr:e.cr, pa:e.pa, pb:e.pb, prod:e.prod,
+  qty:e.qty, disc:e.disc, price:e.price, amtD:e.amtD, amtC:e.amtC, star:e.star, opening:e.opening,
+  deleted:e.deleted, updated:e.updated });
+
+/* ---------- sync ---------- */
+async function loadProfile() {
+  const rows = await api('/rest/v1/profiles?id=eq.' + S.session.user.id + '&select=role,full_name,active');
+  S.profile = rows[0] && rows[0].active ? rows[0] : null;
+  await kvSet('profile', S.profile);
+}
+async function push() {
+  const dirty = [...S.ent.values()].filter(e => e.dirty);
+  for (let i = 0; i < dirty.length; i += 200) {
+    const chunk = dirty.slice(i, i + 200);
+    const out = await api('/rest/v1/rpc/push_entries', { method:'POST', body:{ p: chunk.map(toSrv) } });
+    const done = [];
+    for (const e of chunk) {
+      const cur = S.ent.get(e.id);
+      if (!cur || cur.updated !== e.updated) continue;     // edited again while pushing: stays pending
+      const m = (out || []).find(x => x.id === e.id);
+      if (m) cur.no = m.no;
+      cur.dirty = false; done.push(cur);
+    }
+    await entPutMany(done);
+  }
+}
+async function pull() {
+  const since = await kvGet('lastPull');
+  let off = 0, last = since;
+  for (;;) {
+    let q = '/rest/v1/entries?select=*&order=updated_at.asc,id.asc&limit=1000&offset=' + off;
+    if (since) q += '&updated_at=gte.' + encodeURIComponent(since);
+    const rows = await api(q);
+    if (!rows.length) break;
+    const put = [];
+    for (const r of rows) {
+      const l = S.ent.get(r.id);
+      if (l && l.dirty && l.updated >= +r.upd_ms) continue;
+      const e = fromSrv(r); S.ent.set(e.id, e); put.push(e);
+    }
+    await entPutMany(put);
+    last = rows[rows.length - 1].updated_at;
+    if (rows.length < 1000) break;
+    off += 1000;
+  }
+  if (last) await kvSet('lastPull', last);
+}
+async function pullLists() {
+  const [a, s, p, c] = await Promise.all([
+    api('/rest/v1/accounts?select=name'), api('/rest/v1/statements?select=name'),
+    api('/rest/v1/party_lists?select=account,name&limit=5000'), api('/rest/v1/closed_months?select=month')]);
+  const ar = (x, y) => x.localeCompare(y, 'ar');
+  S.accounts = a.map(x => x.name).sort(ar);
+  S.statements = s.map(x => x.name).sort(ar);
+  S.party = p;
+  S.closed = new Set(c.map(x => x.month.slice(0, 7)));
+  await kvSet('lists', { accounts:S.accounts, statements:S.statements, party:S.party, closed:[...S.closed] });
+}
+async function sync() {
+  if (S.syncing || !S.session) return;
+  if (!navigator.onLine) { setPill(); return; }
+  S.syncing = true; S.err = ''; setPill();
+  try {
+    await loadProfile();
+    if (!S.profile) throw new Error('حسابك لسه مش مفعّل. كلّم المالك.');
+    if (canWrite()) await push();
+    await pull(); await pullLists();
+    S.lastSync = new Date(); await kvSet('lastSync', S.lastSync.toISOString());
+  } catch (e) {
+    if (e.net) S.err = 'net';
+    else if (e.status === 401 || (e.status === 400 && /refresh|token|session/i.test(e.message))) { S.syncing = false; return softLogout('انتهت الجلسة. سجّل دخول تاني.'); }
+    else S.err = srvMsg(e.message);
+  }
+  S.syncing = false;
+  if (S.session) { render(); setPill(); }
+}
+function setPill() {
+  const p = $('#pill'), t = $('#pill-t'); const n = pending();
+  p.className = 'pill';
+  if (S.syncing) t.textContent = 'بيزامن…';
+  else if (S.err && S.err !== 'net') { p.classList.add('bad'); t.textContent = 'فشلت المزامنة'; }
+  else if (!navigator.onLine || S.err === 'net') { p.classList.add('off'); t.textContent = n ? 'أوفلاين، ' + n + ' في الانتظار' : 'أوفلاين'; }
+  else if (n) { p.classList.add('warn'); t.textContent = n + ' في الانتظار'; }
+  else t.textContent = 'متزامن';
+}
+
+/* ---------- auth ---------- */
+function showLogin(msg) {
+  $('#app').classList.add('hide'); $('#login').classList.remove('hide');
+  $('#l-url').value = url(); $('#l-err').textContent = msg || '';
+}
+async function login() {
+  const email = $('#l-email').value.trim().toLowerCase(), pw = $('#l-pass').value;
+  if (!email || !pw) { $('#l-err').textContent = 'اكتب الإيميل وكلمة المرور.'; return; }
+  const u = $('#l-url').value.trim().replace(/\/+$/, ''); if (u) localStorage.setItem('sb_url', u);
+  $('#l-go').disabled = true; $('#l-err').textContent = '';
+  try {
+    const j = await http('/auth/v1/token?grant_type=password', { method:'POST', body:{ email, password:pw } });
+    const old = await kvGet('uid');
+    if (old && old !== j.user.id) { await entClear(); S.ent.clear(); await kvDel('lastPull'); }
+    await kvSet('uid', j.user.id); await saveSession(j);
+    $('#l-pass').value = '';
+    await start();
+  } catch (e) {
+    $('#l-err').textContent = e.net ? 'مفيش اتصال بالسيرفر. تأكد من النت.' :
+      (/invalid/i.test(e.message) || e.status === 400) ? 'الإيميل أو كلمة المرور غلط.' : srvMsg(e.message);
+  }
+  $('#l-go').disabled = false;
+}
+async function softLogout(msg) { S.session = null; S.profile = null; await kvDel('session'); showLogin(msg); }
+async function logout() {
+  if (navigator.onLine) await sync();
+  const n = pending();
+  if (n && !confirm('فيه ' + n + ' قيد لسه ما اترفعش للسيرفر. لو خرجت هيتمسحوا. تكمل؟')) return;
+  await entClear(); S.ent.clear();
+  for (const k of ['session', 'uid', 'lastPull', 'lists', 'profile', 'lastSync']) await kvDel(k);
+  S.session = null; S.profile = null; showLogin('');
+}
+async function changePw() {
+  const a = $('#p-new').value, b = $('#p-new2').value, err = $('#p-err');
+  err.textContent = '';
+  if (a.length < 6) { err.textContent = 'كلمة المرور لازم تكون 6 حروف على الأقل.'; return; }
+  if (a !== b) { err.textContent = 'التأكيد مش زي كلمة المرور.'; return; }
+  if (!navigator.onLine) { err.textContent = 'محتاج نت عشان تغيّر كلمة المرور.'; return; }
+  $('#p-go').disabled = true;
+  try { await api('/auth/v1/user', { method:'PUT', body:{ password:a } }); $('#p-new').value = $('#p-new2').value = ''; toast('تم تغيير كلمة المرور'); }
+  catch (e) { err.textContent = e.net ? 'مفيش اتصال بالسيرفر.' : srvMsg(e.message); }
+  $('#p-go').disabled = false;
+}
+
+/* ---------- views ---------- */
+function go(v) {
+  S.view = v;
+  for (const x of ['list', 'form', 'set']) $('#v-' + x).classList.toggle('hide', x !== v);
+  $('#n-list').classList.toggle('on', v === 'list'); $('#n-set').classList.toggle('on', v === 'set');
+  if (v === 'set') renderSettings();
+  window.scrollTo(0, 0);
+}
+const live = () => [...S.ent.values()].filter(e => !e.deleted);
+function render() { renderList(); if (S.view === 'set') renderSettings(); $('#n-add').classList.toggle('hide', !canWrite()); setPill(); }
+function renderList() {
+  const all = live();
+  const months = [...new Set(all.map(e => e.date.slice(0, 7)))].sort().reverse();
+  if (S.month === null && months.length) S.month = months[0];
+  const sel = $('#f-month');
+  sel.innerHTML = '<option value="*">كل الشهور</option>' + months.map(m => '<option value="' + m + '">' + m + '</option>').join('');
+  sel.value = S.month && (S.month === '*' || months.includes(S.month)) ? S.month : '*';
+  const q = S.q.trim().toLowerCase();
+  let rows = all.filter(e => (sel.value === '*' || e.date.startsWith(sel.value)) &&
+    (!q || [e.no, e.stmt, e.dr, e.cr, e.pa, e.pb, e.prod, e.amtD].join(' ').toLowerCase().includes(q)));
+  rows.sort((a, b) => b.date.localeCompare(a.date) || (b.no || 0) - (a.no || 0));
+  $('#count').textContent = rows.length + ' قيد';
+  const shown = rows.slice(0, S.limit);
+  $('#rows').innerHTML = shown.length ? shown.map(e =>
+    '<button class="row" data-id="' + e.id + '"><div class="r1"><span class="no" dir="ltr">' + esc(e.no) + '</span><span class="st">' +
+    esc(e.stmt || '—') + '</span>' + (e.dirty ? '<span class="dot" title="لسه ما اترفعش"></span>' : '') +
+    '<span class="amt" dir="ltr">' + fmt(e.amtD) + '</span></div><div class="r2">' + esc(e.dr) + '<b>←</b>' + esc(e.cr) +
+    '</div><div class="r3"><span dir="ltr">' + esc(e.date) + '</span>' + (e.pa ? '<span>' + esc(e.pa) + '</span>' : '') +
+    (e.pb ? '<span>' + esc(e.pb) + '</span>' : '') + (e.prod ? '<span>' + esc(e.prod) + '</span>' : '') + '</div></button>').join('')
+    : '<div class="empty">' + (S.syncing ? 'بنحمّل القيود…' : all.length ? 'مفيش قيود بالبحث ده.' : (canWrite() ? 'لسه مفيش قيود. دوس «قيد جديد» عشان تضيف أول قيد.' : 'لسه مفيش قيود.')) + '</div>';
+  $('#more').classList.toggle('hide', rows.length <= S.limit);
+}
+function renderSettings() {
+  $('#s-name').textContent = (S.profile && S.profile.full_name) || '—';
+  $('#s-email').textContent = S.session ? S.session.user.email : '';
+  $('#s-role').textContent = S.profile ? roleAr[S.profile.role] : '—';
+  $('#s-last').textContent = S.lastSync ? S.lastSync.toLocaleString('ar-EG-u-nu-latn') : 'لسه';
+  $('#s-pend').textContent = pending();
+  $('#s-err').textContent = S.err === 'net' ? 'مفيش اتصال بالسيرفر.' : S.err;
+}
+
+/* ---------- entry form ---------- */
+function fillSelect(el, val) {
+  const list = S.accounts.includes(val) || !val ? S.accounts : [val, ...S.accounts];
+  el.innerHTML = '<option value="">اختار الحساب</option>' + list.map(a => '<option>' + esc(a) + '</option>').join('');
+  el.value = val || '';
+}
+function names(account) { return [...new Set(S.party.filter(p => p.account === account).map(p => p.name))]; }
+function setList(id, arr) { $(id).innerHTML = arr.map(n => '<option value="' + esc(n) + '">').join(''); }
+function refreshLists() {
+  const all = [...new Set(S.party.map(p => p.name))];
+  const stmt = $('#e-stmt').value.trim();
+  setList('#dl-stmt', S.statements);
+  const pa = names($('#e-dr').value), pb = names($('#e-cr').value);
+  setList('#dl-pa', pa.length ? pa : all); setList('#dl-pb', pb.length ? pb : all);
+  const pr = names(stmt); setList('#dl-prod', pr.length ? pr : all);
+}
+function calcAmt() {
+  if (S.amtManual) return;
+  const q = num($('#e-qty').value), d = num($('#e-disc').value), p = num($('#e-price').value);
+  if (q && p) $('#e-amt').value = Math.round(q * (1 - d) * p * 100) / 100;
+}
+function openForm(id) {
+  S.editing = id || null; $('#e-err').textContent = '';
+  const e = id ? S.ent.get(id) : null, ro = !canWrite();
+  $('#form-title').textContent = ro ? 'قيد رقم ' + e.no : e ? 'تعديل قيد رقم ' + e.no : 'قيد جديد';
+  const maxNo = Math.max(0, ...[...S.ent.values()].map(x => x.no || 0));
+  $('#e-date').value = e ? e.date : new Date().toISOString().slice(0, 10);
+  $('#e-no').value = e ? e.no : maxNo + 1;
+  $('#e-stmt').value = e ? e.stmt : '';
+  fillSelect($('#e-dr'), e && e.dr); fillSelect($('#e-cr'), e && e.cr);
+  $('#e-pa').value = e ? e.pa : ''; $('#e-pb').value = e ? e.pb : ''; $('#e-prod').value = e ? e.prod : '';
+  $('#e-qty').value = e && e.qty ? e.qty : ''; $('#e-disc').value = e && e.disc ? e.disc : '';
+  $('#e-price').value = e && e.price ? e.price : ''; $('#e-amt').value = e ? e.amtD : '';
+  S.amtManual = !!e;
+  for (const el of document.querySelectorAll('#v-form input,#v-form select')) el.disabled = ro;
+  $('#e-save').classList.toggle('hide', ro); $('#e-del').classList.toggle('hide', ro || !e);
+  refreshLists(); go('form'); $('#n-list').classList.add('on');
+}
+async function saveEntry() {
+  const err = $('#e-err'); err.textContent = '';
+  const v = { date:$('#e-date').value, no:Math.round(num($('#e-no').value)), stmt:$('#e-stmt').value.trim(),
+    dr:$('#e-dr').value, cr:$('#e-cr').value, pa:$('#e-pa').value.trim(), pb:$('#e-pb').value.trim(), prod:$('#e-prod').value.trim(),
+    qty:num($('#e-qty').value), disc:num($('#e-disc').value), price:num($('#e-price').value), amt:num($('#e-amt').value) };
+  if (!v.date) return void (err.textContent = 'اختار التاريخ.');
+  if (!v.stmt) return void (err.textContent = 'اكتب البيان.');
+  if (!v.dr || !v.cr) return void (err.textContent = 'اختار الحساب المدين والدائن.');
+  if (v.dr === v.cr) return void (err.textContent = 'الحساب المدين والدائن لازم يختلفوا.');
+  if (!(v.amt > 0)) return void (err.textContent = 'اكتب المبلغ.');
+  if (v.disc < 0 || v.disc >= 1) return void (err.textContent = 'الخصم نسبة بين 0 و 1 (مثلًا 0.02).');
+  if (S.profile.role === 'accountant' && S.closed.has(v.date.slice(0, 7))) return void (err.textContent = 'الشهر ده مقفول.');
+  const old = S.editing ? S.ent.get(S.editing) : null;
+  if (old && S.profile.role === 'accountant' && S.closed.has(old.date.slice(0, 7))) return void (err.textContent = 'الشهر ده مقفول.');
+  const maxNo = Math.max(0, ...[...S.ent.values()].map(x => x.no || 0));
+  let no = v.no > 0 ? v.no : maxNo + 1;
+  if (live().some(x => x.no === no && x.id !== (old && old.id))) { no = maxNo + 1; toast('الرقم كان مستخدم، اتغيّر لـ ' + no); }
+  const e = Object.assign(old ? { ...old } : { id:crypto.randomUUID(), star:false, opening:false, deleted:false },
+    { no, date:v.date, stmt:v.stmt, dr:v.dr, cr:v.cr, pa:v.pa, pb:v.pb, prod:v.prod, qty:v.qty, disc:v.disc, price:v.price,
+      amtD:v.amt, amtC:v.amt, updated:Date.now(), dirty:true });
+  S.ent.set(e.id, e); await entPut(e);
+  S.month = e.date.slice(0, 7); toast('تم حفظ القيد');
+  go('list'); render(); sync();
+}
+async function delEntry() {
+  const e = S.ent.get(S.editing); if (!e) return;
+  if (S.profile.role === 'accountant' && S.closed.has(e.date.slice(0, 7))) return void ($('#e-err').textContent = 'الشهر ده مقفول.');
+  if (!confirm('تحذف القيد رقم ' + e.no + '؟')) return;
+  Object.assign(e, { deleted:true, dirty:true, updated:Date.now() });
+  await entPut(e); toast('تم حذف القيد'); go('list'); render(); sync();
+}
+
+/* ---------- start ---------- */
+async function start() {
+  $('#login').classList.add('hide'); $('#app').classList.remove('hide');
+  S.profile = await kvGet('profile');
+  const L = await kvGet('lists'); if (L) { S.accounts = L.accounts; S.statements = L.statements; S.party = L.party; S.closed = new Set(L.closed); }
+  const ls = await kvGet('lastSync'); S.lastSync = ls ? new Date(ls) : null;
+  S.ent = new Map((await entAll()).map(e => [e.id, e]));
+  go('list'); render(); await sync();
+}
+async function init() {
+  db = await openDB();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  $('#l-go').onclick = login; $('#l-pass').onkeydown = e => { if (e.key === 'Enter') login(); };
+  $('#pill').onclick = () => sync(); $('#s-sync').onclick = () => sync();
+  $('#n-list').onclick = () => go('list'); $('#n-set').onclick = () => go('set');
+  $('#n-add').onclick = () => openForm(null);
+  $('#e-cancel').onclick = () => go('list'); $('#e-save').onclick = saveEntry; $('#e-del').onclick = delEntry;
+  $('#p-go').onclick = changePw; $('#s-out').onclick = logout;
+  $('#f-month').onchange = e => { S.month = e.target.value; S.limit = 100; renderList(); };
+  $('#f-q').oninput = e => { S.q = e.target.value; S.limit = 100; renderList(); };
+  $('#more').onclick = () => { S.limit += 100; renderList(); };
+  $('#rows').onclick = e => { const b = e.target.closest('.row'); if (b) openForm(b.dataset.id); };
+  for (const id of ['#e-dr', '#e-cr']) $(id).onchange = refreshLists;
+  $('#e-stmt').oninput = refreshLists;
+  for (const id of ['#e-qty', '#e-disc', '#e-price']) $(id).oninput = calcAmt;
+  $('#e-amt').oninput = () => { S.amtManual = true; };
+  window.addEventListener('online', () => sync()); window.addEventListener('offline', setPill);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
+  setInterval(() => { if (!document.hidden && S.session) sync(); }, 120000);
+  S.session = await kvGet('session');
+  if (S.session) await start(); else showLogin('');
+}
+init();
+</script>
+</body>
+</html>
