@@ -1,4 +1,4 @@
-const V = 'vegan-v4';
+const V = 'vegan-v5';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'logo.png', 'cover.jpg'];
 
 self.addEventListener('install', e => {

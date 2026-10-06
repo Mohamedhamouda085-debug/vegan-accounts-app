@@ -8,6 +8,7 @@
 <link rel="icon" href="icon-192.png">
 <title>فيجان فود - الحسابات</title>
 <style>
+#ph{display:none}
 :root{--ink:#17301D;--muted:#5F7566;--line:#E1EBDF;--bg:#F3F7F2;--paper:#fff;--green:#2E7D3E;--green-d:#1F5A2B;--amber:#B36B00;--red:#B3261E;--sh:0 1px 3px rgba(23,48,29,.10),0 4px 14px rgba(23,48,29,.06)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,"Noto Sans Arabic","Segoe UI",Tahoma,sans-serif}
@@ -114,17 +115,30 @@ table.tb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric
 .tb tfoot td{font-weight:800;background:#E6F3E4;border-top:2px solid var(--green)}
 .tb td.neg{color:var(--red)}
 .mrow{display:flex;gap:8px;padding:0 12px 10px}
-#ph{display:none}
+.seg{display:flex;margin:10px 12px 0;background:#E3ECE1;border-radius:11px;padding:3px}
+.seg button{flex:1;border:0;background:none;border-radius:9px;padding:8px;font-weight:700;color:var(--muted)}
+.seg button.on{background:var(--paper);color:var(--green-d);box-shadow:var(--sh)}
+.tb th{cursor:pointer}.tb th .fi{opacity:.7;font-size:11px;margin-inline-start:5px}.tb th.fa{background:#B36B00}
+.tb tbody tr[data-k]{cursor:pointer}
+.tb tr.tot td{font-weight:800;background:#E6F3E4;border-top:2px solid var(--green)}
+.mrow select{flex:1}.mrow input{flex:1}
+#fsheet{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.38);display:flex;align-items:flex-end}
+#fsheet .pn{background:var(--paper);width:100%;max-height:84vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.vl{max-height:36vh;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px}
+.vl label{display:flex;align-items:center;gap:10px;margin:0;padding:10px 12px;color:var(--ink);border-bottom:1px solid var(--line);font-size:15px}
+.vl input[type=checkbox]{width:20px;height:20px;min-height:0;padding:0;flex:none}
+input[readonly]{background:#EEF3EC}
 @media print{
  @page{size:A4 landscape;margin:10mm}
  body{background:#fff}
- header,nav,.sub,.tot,.mrow,#toast,#lock,main>section:not(#v-stm){display:none!important}
+ header,nav,.sub,.tot,.mrow,.seg,.count,.noprint,#toast,#lock,#fsheet{display:none!important}
  #ph{display:flex!important;align-items:center;gap:14px;margin:0 0 8px}
  #ph img{height:46px}#ph b{font-size:16px}#ph div{font-size:12px;color:#444}
  main{padding:0}.tbw{overflow:visible;border:0}
  table.tb{font-size:9px}.tb th{position:static;background:#1F5A2B!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
- .tb td{padding:4px 6px}.tb tr:nth-child(even) td,.tb tfoot td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
- .sc{display:none!important}
+ .tb td{padding:4px 6px}.tb tr:nth-child(even) td,.tb tr.tot td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .tb tr{break-inside:avoid}
+ .sc,.fi{display:none!important}
 }
 #toast{position:fixed;left:16px;right:16px;bottom:calc(96px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s;text-align:center}
 #toast.show{opacity:1}
@@ -167,6 +181,7 @@ table.tb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric
     <button class="pill off" id="pill" aria-live="polite"><i></i><span id="pill-t">أوفلاين</span></button>
   </header>
   <main>
+    <div id="ph"><img src="logo.png" alt=""><div><b>Vegan food</b><div>الإدارة المالية</div><div id="ph-t"></div></div></div>
     <section id="v-home">
       <div class="tiles" id="tiles"></div>
       <div class="sec"><h3>ملخص الحسابات</h3><div class="mets" id="mets"></div></div>
@@ -178,7 +193,10 @@ table.tb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric
         <select id="f-month" aria-label="الشهر"></select>
         <input id="f-q" type="search" placeholder="بحث" aria-label="بحث">
       </div>
+      <div class="seg"><button id="lv-t">جدول</button><button id="lv-c">بطاقات</button></div>
       <div class="count" id="count"></div>
+      <div class="tbw hide" id="j-w"><table class="tb" id="j-tb"></table></div>
+      <div id="j-e"></div>
       <div id="rows"></div>
       <button class="btn ghost more hide" id="more">عرض المزيد</button>
     </section>
@@ -189,22 +207,37 @@ table.tb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric
     </section>
 
     <section id="v-acc" class="hide">
-      <div class="sub"><button id="acc-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b id="acc-title"></b></div>
+      <div class="sub"><button id="acc-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b id="acc-title"></b><button id="acc-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
       <div class="tot" id="acc-tot"></div>
-      <div style="padding:0 12px 10px;display:flex;gap:8px">
-        <input id="acc-q" type="search" placeholder="بحث بالاسم" aria-label="بحث">
-        <button class="btn ghost" id="acc-all" style="white-space:nowrap">كل الحركات</button>
-      </div>
-      <div id="acc-rows"></div>
+      <div class="mrow"><select id="acc-month" aria-label="الشهر"></select><button class="btn ghost" id="acc-all" style="white-space:nowrap">كل الحركات</button></div>
+      <div class="mrow"><input id="acc-q" type="search" placeholder="بحث بالاسم" aria-label="بحث"></div>
+      <div class="count" id="acc-count"></div>
+      <div class="tbw"><table class="tb" id="acc-tb"></table></div>
+      <div class="empty" id="acc-e"></div>
     </section>
 
     <section id="v-stm" class="hide">
       <div class="sub"><button id="stm-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b id="stm-title"></b><button id="stm-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
-      <div id="ph"><img src="logo.png" alt=""><div><b>Vegan food</b><div>الإدارة المالية</div><div id="ph-t"></div></div></div>
       <div class="tot" id="stm-tot"></div>
       <div class="mrow"><select id="stm-month" aria-label="الشهر"></select></div>
       <div class="tbw"><table class="tb" id="stm-tb"></table></div>
       <div class="note" id="stm-note" style="padding:8px 14px"></div>
+    </section>
+
+    <section id="v-tb" class="hide">
+      <div class="sub"><button id="tb-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>ميزان المراجعة</b><button id="tb-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
+      <div class="mrow" style="padding-top:10px"><select id="tb-month" aria-label="الفترة"></select></div>
+      <div class="count" id="tb-note"></div>
+      <div class="tbw"><table class="tb" id="tb-tb"></table></div>
+      <div class="empty" id="tb-e"></div>
+    </section>
+
+    <section id="v-lg" class="hide">
+      <div class="sub"><button id="lg-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>دفتر الأستاذ</b><button id="lg-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
+      <div class="mrow" style="padding-top:10px"><select id="lg-acc" aria-label="الحساب"></select><select id="lg-month" aria-label="الشهر"></select></div>
+      <div class="tot" id="lg-tot"></div>
+      <div class="count" id="lg-note"></div>
+      <div class="tbw"><table class="tb" id="lg-tb"></table></div>
     </section>
 
     <section id="v-form" class="page hide">
@@ -214,25 +247,27 @@ table.tb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric
         <div><label for="e-no">رقم القيد</label><input id="e-no" inputmode="numeric" dir="ltr"></div>
       </div>
       <label for="e-stmt">البيان</label>
-      <input id="e-stmt" list="dl-stmt" autocomplete="off">
-      <datalist id="dl-stmt"></datalist>
+      <select id="e-stmt"></select>
+      <input id="e-stmt-n" class="hide" placeholder="اكتب البيان الجديد" autocomplete="off" style="margin-top:6px">
       <label for="e-dr">الحساب المدين</label>
       <select id="e-dr"></select>
       <label for="e-pa">اسم الطرف المدين</label>
-      <input id="e-pa" list="dl-pa" autocomplete="off">
-      <datalist id="dl-pa"></datalist>
+      <select id="e-pa"></select>
+      <input id="e-pa-n" class="hide" placeholder="اكتب الاسم الجديد" autocomplete="off" style="margin-top:6px">
       <label for="e-cr">الحساب الدائن</label>
       <select id="e-cr"></select>
       <label for="e-pb">اسم الطرف الدائن</label>
-      <input id="e-pb" list="dl-pb" autocomplete="off">
-      <datalist id="dl-pb"></datalist>
+      <select id="e-pb"></select>
+      <input id="e-pb-n" class="hide" placeholder="اكتب الاسم الجديد" autocomplete="off" style="margin-top:6px">
       <label for="e-prod">المنتج</label>
-      <input id="e-prod" list="dl-prod" autocomplete="off">
-      <datalist id="dl-prod"></datalist>
+      <select id="e-prod"></select>
+      <input id="e-prod-n" class="hide" placeholder="اكتب اسم المنتج الجديد" autocomplete="off" style="margin-top:6px">
       <div class="grid">
         <div><label for="e-qty">الكمية</label><input id="e-qty" inputmode="decimal" dir="ltr"></div>
-        <div><label for="e-disc">الخصم (نسبة مثل 0.02)</label><input id="e-disc" inputmode="decimal" dir="ltr"></div>
+        <div><label for="e-disc">الخصم %</label><input id="e-disc" inputmode="decimal" dir="ltr" placeholder="مثال: 2"></div>
+        <div><label for="e-qa">الكمية بعد الخصم</label><input id="e-qa" dir="ltr" readonly tabindex="-1"></div>
         <div><label for="e-price">سعر الوحدة</label><input id="e-price" inputmode="decimal" dir="ltr"></div>
+        <div><label for="e-tot">الإجمالي</label><input id="e-tot" dir="ltr" readonly tabindex="-1"></div>
         <div><label for="e-amt">المبلغ</label><input id="e-amt" inputmode="decimal" dir="ltr"></div>
       </div>
       <div class="err" id="e-err"></div>
@@ -296,6 +331,7 @@ table.tb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric
     <button id="n-set"></button>
   </nav>
 </div>
+<div id="fsheet" class="hide"><div class="pn" id="fs-pn"></div></div>
 <div id="toast" role="status"></div>
 
 <script>
@@ -322,7 +358,9 @@ const IC = {
   coin:'<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1 1-1.7 2.5-1.7s2.5.7 2.5 1.7-1 1.5-2.5 1.8-2.5.8-2.5 1.8 1 1.7 2.5 1.7 2.5-.7 2.5-1.7"/>',
   sync:'<path d="M20 11a8 8 0 00-14-4L4 9M4 4v5h5M4 13a8 8 0 0014 4l2-2M20 20v-5h-5"/>',
   home:'<path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/>', user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
-  tag:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>'
+  tag:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
+  scale:'<path d="M12 3v18M5 21h14M5 7h14M7 7l-3 7a3 3 0 006 0zM17 7l-3 7a3 3 0 006 0z"/>',
+  book:'<path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h11"/>'
 };
 const ico = n => '<svg viewBox="0 0 24 24" aria-hidden="true">' + IC[n] + '</svg>';
 const ACC = [
@@ -334,7 +372,7 @@ const ACC = [
 const accT = k => (ACC.find(a => a[0] === k) || [k, k])[1];
 const S = { session:null, profile:null, ent:new Map(), accounts:[], statements:[], party:[], closed:new Set(),
             month:null, q:'', limit:100, editing:null, syncing:false, lastSync:null, err:'', amtManual:false,
-            view:'home', stack:[], from:'home', acc:null, party_:null, accQ:'', parties:[], stmMonth:null, prog:'', skipLock:false };
+            view:'home', stack:[], from:'home', acc:null, party_:null, accQ:'', parties:[], stmMonth:null, prog:'', skipLock:false, lv:localStorage.getItem('lv') || 't', tbMonth:'*', lgMonth:'*', lgAcc:'', accMonth:'*' };
 let db;
 
 /* ---------- local storage (IndexedDB) ---------- */
@@ -554,22 +592,120 @@ const byDate = (a, b) => b.date.localeCompare(a.date) || (b.no || 0) - (a.no || 
 const balTxt = n => (n >= 0 ? 'مدين' : 'دائن');
 
 /* ---------- views ---------- */
-const VIEWS = ['home', 'list', 'an', 'acc', 'stm', 'form', 'set'];
+const VIEWS = ['home', 'list', 'an', 'acc', 'stm', 'form', 'set', 'tb', 'lg'];
 function go(v) {
   S.view = v;
   for (const x of VIEWS) $('#v-' + x).classList.toggle('hide', x !== v);
-  const tab = { home:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
+  const tab = { home:'home', tb:'home', lg:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
   for (const t of ['home', 'list', 'an', 'set']) $('#n-' + t).classList.toggle('on', t === tab);
   draw(v); window.scrollTo(0, 0);
 }
 function draw(v) {
   if (v === 'home') renderHome(); else if (v === 'list') renderList(); else if (v === 'an') renderAn();
   else if (v === 'acc') renderAcc(); else if (v === 'stm') renderStm(); else if (v === 'set') renderSettings();
+  else if (v === 'tb') renderTB(); else if (v === 'lg') renderLG();
 }
 function render() { draw(S.view); $('#n-add').classList.toggle('hide', !canWrite()); setPill(); }
 function push_(v) { S.stack.push(S.view); go(v); }
-function back() { go(S.stack.pop() || 'an'); }
+function back() { go(S.stack.pop() || 'home'); }
 
+/* ---------- Excel-style table (column filters, sort, totals row) ---------- */
+const GS = {};
+const gst = id => GS[id] || (GS[id] = { f:{}, sort:null, cols:[], rows:[], fr:[] });
+const CAP = 800, capOf = n => (S.noCap ? 1e9 : n);
+function passF(c, r, f) {
+  const v = c.k(r);
+  if (c.t === 'n') { if (f.min != null && !(v >= f.min)) return false; if (f.max != null && !(v <= f.max)) return false; return true; }
+  return !f.vals || f.vals.has(String(v == null ? '' : v));
+}
+function gridRows(id, cols, rows) {
+  const st = gst(id); st.cols = cols; st.rows = rows;
+  let out = rows;
+  for (const i in st.f) { const c = cols[i], f = st.f[i]; if (c && f) out = out.filter(r => passF(c, r, f)); }
+  if (st.sort && cols[st.sort.i]) {
+    const c = cols[st.sort.i], d = st.sort.dir;
+    out = out.slice().sort((a, b) => { const x = c.k(a), y = c.k(b);
+      return (c.t === 'n' ? (x || 0) - (y || 0) : String(x == null ? '' : x).localeCompare(String(y == null ? '' : y), 'ar', { numeric:true })) * d; });
+  }
+  st.fr = out; return out;
+}
+function disp(c, r) {
+  if (c.v) return c.v(r);
+  const v = c.k(r);
+  if (c.t === 'n') return c.raw ? (v || v === 0 ? String(v) : '') : c.z && !v ? '' : c.pct ? (v ? +(v * 100).toFixed(2) + '%' : '') : fmt(v);
+  return v == null ? '' : String(v);
+}
+function gridHTML(id, fr, cap, rid) {
+  const st = gst(id), cols = st.cols, sc = c => (c.s ? ' sc' : '');
+  if (!fr.length) return '';
+  const th = '<thead><tr>' + cols.map((c, i) => '<th data-g="' + esc(id) + '" data-i="' + i + '" class="' + ((st.f[i] ? 'fa' : '') + sc(c)).trim() + '">' + esc(c.h) +
+    '<span class="fi">' + (st.sort && st.sort.i === i ? (st.sort.dir > 0 ? '▲' : '▼') : '▾') + '</span></th>').join('') + '</tr></thead>';
+  const body = fr.slice(0, cap).map((r, j) => '<tr data-k="' + j + '"' + (rid ? ' data-id="' + esc(rid(r) || '') + '"' : '') + '>' +
+    cols.map(c => '<td class="' + ((c.t === 'n' ? 'n' + (c.neg && c.k(r) < -0.005 ? ' neg' : '') : '') + sc(c)).trim() + '">' + esc(disp(c, r)) + '</td>').join('') + '</tr>').join('');
+  const tot = cols.some(c => c.sum) ? '<tr class="tot">' + cols.map((c, i) => '<td class="' + ((c.t === 'n' ? 'n' : '') + sc(c)).trim() + '">' +
+    (i === 0 ? 'الإجمالي' : c.sum ? fmt(fr.reduce((a, r) => a + (+c.k(r) || 0), 0)) : '') + '</td>').join('') + '</tr>' : '';
+  return th + '<tbody>' + body + tot + '</tbody>';
+}
+const filterNote = id => { const st = gst(id); return Object.keys(st.f).length || st.sort ? ' · <button class="lnk clr" data-g="' + esc(id) + '">مسح الفلاتر</button>' : ''; };
+function clrG(id) { const st = gst(id); st.f = {}; st.sort = null; draw(S.view); }
+
+/* filter sheet */
+function closeFS() { $('#fsheet').classList.add('hide'); S.fs = null; }
+function fsOpen() { return !$('#fsheet').classList.contains('hide'); }
+function openFS(gid, i) {
+  const st = gst(gid), c = st.cols[i]; if (!c) return;
+  const f = st.f[i] || {};
+  S.fs = { gid, i };
+  let h = '<h2 style="margin:0 0 6px;font-size:17px">' + esc(c.h) + '</h2><div class="mrow" style="padding:6px 0 4px"><button class="btn ghost fs-s" data-d="1">ترتيب تصاعدي ▲</button><button class="btn ghost fs-s" data-d="-1">ترتيب تنازلي ▼</button></div>';
+  if (c.t === 'n') {
+    h += '<div class="grid"><div><label for="fs-min">من</label><input id="fs-min" inputmode="decimal" dir="ltr" value="' + (f.min != null ? f.min : '') + '"></div>' +
+         '<div><label for="fs-max">إلى</label><input id="fs-max" inputmode="decimal" dir="ltr" value="' + (f.max != null ? f.max : '') + '"></div></div>';
+  } else {
+    const others = st.rows.filter(r => Object.keys(st.f).every(j => +j === i || !st.f[j] || passF(st.cols[j], r, st.f[j])));
+    const vals = [...new Set(others.map(r => String(c.k(r) == null ? '' : c.k(r))))].sort((a, b) => a.localeCompare(b, 'ar', { numeric:true }));
+    S.fs.vals = vals; S.fs.sel = new Set(f.vals ? [...f.vals] : vals);
+    h += '<input id="fs-q" type="search" placeholder="بحث في القيم" style="margin-top:8px"><div class="vl" id="fs-list"></div>';
+  }
+  h += '<div class="actions"><button class="btn" id="fs-ok">تطبيق</button><button class="btn ghost" id="fs-clr">مسح الفلتر</button></div>';
+  $('#fs-pn').innerHTML = h; $('#fsheet').classList.remove('hide');
+  if (c.t !== 'n') fsList();
+}
+function fsList() {
+  const q = ($('#fs-q').value || '').trim().toLowerCase(), F = S.fs;
+  F.vis = F.vals.filter(v => !q || v.toLowerCase().includes(q));
+  $('#fs-list').innerHTML = '<label><input type="checkbox" id="fs-all"' + (F.vis.length && F.vis.every(v => F.sel.has(v)) ? ' checked' : '') + '><b>تحديد الكل</b></label>' +
+    F.vis.slice(0, 300).map((v, j) => '<label><input type="checkbox" class="fs-c" data-j="' + j + '"' + (F.sel.has(v) ? ' checked' : '') + '><span>' + esc(v || '(فارغ)') + '</span></label>').join('') +
+    (F.vis.length > 300 ? '<div class="note" style="padding:8px 12px">اكتب في البحث لتقليل القائمة (' + F.vis.length + ' قيمة)</div>' : '');
+}
+function fsApply() {
+  const F = S.fs, st = gst(F.gid), c = st.cols[F.i];
+  if (c.t === 'n') {
+    const a = $('#fs-min').value.trim(), b = $('#fs-max').value.trim();
+    if (a === '' && b === '') delete st.f[F.i]; else st.f[F.i] = { min: a === '' ? null : num(a), max: b === '' ? null : num(b) };
+  } else if (F.vals.every(v => F.sel.has(v))) delete st.f[F.i];
+  else st.f[F.i] = { vals: new Set(F.vals.filter(v => F.sel.has(v))) };
+  closeFS(); draw(S.view);
+}
+function fsClick(e) {
+  if (e.target.id === 'fsheet') return closeFS();
+  const F = S.fs; if (!F) return;
+  const st = gst(F.gid);
+  const s = e.target.closest('.fs-s'); if (s) { st.sort = { i:F.i, dir:+s.dataset.d }; closeFS(); draw(S.view); return; }
+  if (e.target.closest('#fs-ok')) return fsApply();
+  if (e.target.closest('#fs-clr')) { delete st.f[F.i]; if (st.sort && st.sort.i === F.i) st.sort = null; closeFS(); draw(S.view); return; }
+  if (e.target.id === 'fs-all') { for (const v of F.vis) { if (e.target.checked) F.sel.add(v); else F.sel.delete(v); } fsList(); return; }
+  if (e.target.classList.contains('fs-c')) { const v = F.vis[+e.target.dataset.j]; if (e.target.checked) F.sel.add(v); else F.sel.delete(v); fsList(); }
+}
+
+/* printing: whole table, totals only at the end of the last page */
+function doPrint(title) {
+  $('#ph-t').textContent = title; S.noCap = true; draw(S.view);
+  const done = () => { window.removeEventListener('afterprint', done); S.noCap = false; draw(S.view); };
+  window.addEventListener('afterprint', done);
+  setTimeout(() => window.print(), 120);
+}
+
+/* ---------- screens ---------- */
 function rowHTML(e) {
   return '<button class="row" data-id="' + e.id + '"><div class="r1"><span class="no" dir="ltr">' + esc(e.no) + '</span><span class="st">' +
     esc(e.stmt || '—') + '</span>' + (e.dirty ? '<span class="dot" title="لسه ما اترفعش"></span>' : '') +
@@ -579,9 +715,9 @@ function rowHTML(e) {
 }
 
 function renderHome() {
-  const t = [['new','قيد جديد','plus','#F28C28'], ['list','القيود','list','#1FA38A'], ['العملاء','العملاء','users','#A63CA0'],
-    ['الموردين','الموردين','truck','#1E6FE8'], ['الخزينة','الخزينة','wallet','#2E7D52'], ['المصروفات','المصروفات','receipt','#D4A00F'],
-    ['an','التحليلات','chart','#4A3FE0'], ['sync','مزامنة','sync','#2AA7C9']];
+  const t = [['new','قيد جديد','plus','#F28C28'], ['list','القيود','list','#1FA38A'], ['tb','ميزان المراجعة','scale','#4A3FE0'],
+    ['lg','دفتر الأستاذ','book','#7A4DD8'], ['الخزينة','الخزينة','wallet','#2E7D52'], ['المخزون.الخام','المخزون الخام','box','#8A5A2B'],
+    ['اصول.ثابتة','الأصول الثابتة','build','#5B6B2A'], ['sync','مزامنة','sync','#2AA7C9']];
   if (!canWrite()) t[0] = ['مبيعات توريد', 'المبيعات', 'tag', '#E8892B'];
   $('#tiles').innerHTML = t.map(x => '<button class="tile" data-k="' + x[0] + '"><span class="i" style="background:' + x[3] + '">' + ico(x[2]) + '</span>' + x[1] + '</button>').join('');
   const cash = agg('الخزينة'), cus = agg('العملاء'), sup = agg('الموردين');
@@ -598,6 +734,17 @@ function renderHome() {
       '<div class="met" style="--c:#1FA38A;grid-column:1/-1"><small>عدد قيود الشهر</small><b dir="ltr">' + cnt + '</b></div>';
   } else $('#mmets').innerHTML = '';
 }
+
+/* entries journal: Excel-like columns */
+const qAft = e => (e.qty || 0) * (1 - (e.disc || 0));
+const JC = [
+  { h:'الطرف المدين', k:e => e.pa, t:'t' }, { h:'الطرف الدائن', k:e => e.pb, t:'t' }, { h:'التاريخ', k:e => e.date, t:'t' },
+  { h:'رقم القيد', k:e => e.no, t:'n', raw:1, v:e => e.no + (e.dirty ? ' ●' : '') }, { h:'البيان', k:e => e.stmt, t:'t' },
+  { h:'الحساب المدين', k:e => e.dr, t:'t' }, { h:'الحساب الدائن', k:e => e.cr, t:'t' }, { h:'المنتج', k:e => e.prod, t:'t' },
+  { h:'الكمية', k:e => e.qty, t:'n', z:1 }, { h:'الخصم %', k:e => e.disc, t:'n', z:1, pct:1 }, { h:'الكمية بعد الخصم', k:e => e.qty ? qAft(e) : 0, t:'n', z:1 },
+  { h:'سعر الوحدة', k:e => e.price, t:'n', z:1 }, { h:'الإجمالي', k:e => e.qty && e.price ? qAft(e) * e.price : 0, t:'n', z:1 },
+  { h:'المبلغ', k:e => e.amtD || e.amtC, t:'n', sum:1 }
+];
 function renderList() {
   const all = live();
   const months = [...new Set(all.map(e => e.date.slice(0, 7)))].sort().reverse();
@@ -608,11 +755,22 @@ function renderList() {
   const q = S.q.trim().toLowerCase();
   const rows = all.filter(e => (sel.value === '*' || e.date.startsWith(sel.value)) &&
     (!q || [e.no, e.stmt, e.dr, e.cr, e.pa, e.pb, e.prod, e.amtD, e.amtC].join(' ').toLowerCase().includes(q))).sort(byDate);
-  $('#count').textContent = rows.length + ' قيد';
-  const shown = rows.slice(0, S.limit);
-  $('#rows').innerHTML = shown.length ? shown.map(rowHTML).join('')
-    : '<div class="empty">' + (S.syncing ? 'بنحمّل القيود…' : all.length ? 'مفيش قيود بالبحث ده.' : (canWrite() ? 'لسه مفيش قيود. دوس «جديد» لإضافة أول قيد.' : 'لسه مفيش قيود.')) + '</div>';
-  $('#more').classList.toggle('hide', rows.length <= S.limit);
+  const tbl = S.lv === 't';
+  $('#lv-t').classList.toggle('on', tbl); $('#lv-c').classList.toggle('on', !tbl);
+  $('#j-w').classList.toggle('hide', !tbl); $('#rows').classList.toggle('hide', tbl);
+  const empty = '<div class="empty">' + (S.syncing ? 'بنحمّل القيود…' : all.length ? 'مفيش قيود بالبحث ده.' : (canWrite() ? 'لسه مفيش قيود. دوس «جديد» لإضافة أول قيد.' : 'لسه مفيش قيود.')) + '</div>';
+  if (tbl) {
+    const fr = gridRows('j', JC, rows);
+    $('#count').innerHTML = fr.length + ' قيد' + filterNote('j');
+    $('#j-tb').innerHTML = gridHTML('j', fr, S.limit, e => e.id);
+    $('#j-e').innerHTML = fr.length ? '' : empty;
+    $('#more').classList.toggle('hide', fr.length <= S.limit);
+  } else {
+    $('#count').textContent = rows.length + ' قيد';
+    const shown = rows.slice(0, S.limit);
+    $('#rows').innerHTML = shown.length ? shown.map(rowHTML).join('') : empty;
+    $('#more').classList.toggle('hide', rows.length <= S.limit);
+  }
 }
 function renderAn() {
   $('#an-list').innerHTML = ACC.map(a => {
@@ -621,79 +779,207 @@ function renderAn() {
       '<small>مدين ' + fmt0(g.d) + '، دائن ' + fmt0(g.c) + '</small></span><span class="v" dir="ltr">' + fmt0(Math.abs(n)) + '<small>' + balTxt(n) + '</small></span></button>';
   }).join('');
 }
-function openAcc(A) { S.acc = A; S.accQ = ''; $('#acc-q').value = ''; if (S.view !== 'acc') push_('acc'); else go('acc'); }
+function openAcc(A) { S.acc = A; S.accQ = ''; S.accMonth = '*'; $('#acc-q').value = ''; if (S.view !== 'acc') push_('acc'); else go('acc'); }
+
+/* grouping key: inventory by product, assets by asset name, the rest by party name */
+const keyOf = (A, e, s) => A === 'المخزون.الخام' ? (cl(e.prod) || s.party) : A === 'اصول.ثابتة' ? (s.party || cl(e.prod)) : s.party;
+const discEgp = e => e.qty && e.disc ? (e.qty - aft(e)) * e.price : 0;
+function sumRows(A, month) {
+  const map = new Map();
+  for (const e of live()) {
+    if (month && month !== '*' && !e.date.startsWith(month)) continue;
+    const s = side(e, A); if (!s) continue;
+    const key = keyOf(A, e, s), r = map.get(key) || { name:key, d:0, c:0, disc:0, qi:0, qo:0 };
+    r.d += s.d; r.c += s.c; r.disc += discEgp(e);
+    if (e.dr === A) r.qi += e.qty * (1 - e.disc); else r.qo += e.qty;
+    map.set(key, r);
+  }
+  return [...map.values()];
+}
+function sumCols(A) {
+  const N = (h, k, o) => Object.assign({ h, k, t:'n' }, o), T = h => ({ h, k:r => r.name, t:'t' });
+  if (A === 'العملاء') return [T('اسم العميل'), N('المبيعات', r => r.d, { sum:1 }), N('الخصومات', r => r.disc, { sum:1, z:1 }), N('المدفوع', r => r.c, { sum:1 }), N('الرصيد', r => r.d - r.c, { sum:1, neg:1 })];
+  if (A === 'الموردين') return [T('اسم المورد'), N('المشتريات', r => r.c, { sum:1 }), N('الخصومات', r => r.disc, { sum:1, z:1 }), N('المدفوع', r => r.d, { sum:1 }), N('الرصيد', r => r.c - r.d, { sum:1, neg:1 })];
+  if (A === 'المخزون.الخام') return [T('اسم الصنف'), N('الوارد (كمية)', r => r.qi, { z:1 }), N('الصادر والفاقد (كمية)', r => r.qo, { z:1 }), N('الرصيد (كمية)', r => r.qi - r.qo, { neg:1 }), N('الرصيد (مبلغ)', r => r.d - r.c, { sum:1, neg:1 })];
+  if (A === 'اصول.ثابتة') return [T('اسم الأصل'), N('عدد الوحدات', r => r.qi - r.qo), N('التكلفة', r => r.d, { sum:1 }), N('المستبعد', r => r.c, { sum:1, z:1 }), N('الصافي', r => r.d - r.c, { sum:1, neg:1 })];
+  const K = { 'العهد.الماليه':['اسم مستلم العهدة', 'مبلغ العهدة', 'المصروف', 'الرصيد المتبقي', 1], 'المرتبات':['اسم الموظف', 'المسحوبات', 'المصروف', 'الرصيد المتبقي', 1],
+    'ارصده.دائنه.اخري':['الاسم', 'المبلغ', 'المسدد', 'الرصيد المتبقي', -1] }[A] || ['الاسم', 'مدين', 'دائن', 'الرصيد', 1];
+  const a = K[4] > 0 ? r => r.d : r => r.c, b = K[4] > 0 ? r => r.c : r => r.d;
+  return [T(K[0]), N(K[1], a, { sum:1 }), N(K[2], b, { sum:1 }), N(K[3], r => a(r) - b(r), { sum:1, neg:1 })];
+}
 function renderAcc() {
-  const A = S.acc, map = new Map();
-  for (const e of live()) { const s = side(e, A); if (!s) continue; const r = map.get(s.party) || { name: s.party, d: 0, c: 0 }; r.d += s.d; r.c += s.c; map.set(s.party, r); }
-  let rows = [...map.values()]; const tot = rows.reduce((a, r) => ({ d: a.d + r.d, c: a.c + r.c }), { d: 0, c: 0 });
+  const A = S.acc, id = 'a:' + A;
   $('#acc-title').textContent = accT(A);
-  const n = tot.d - tot.c;
+  const months = [...new Set(live().filter(e => side(e, A)).map(e => e.date.slice(0, 7)))].sort().reverse();
+  const sel = $('#acc-month');
+  sel.innerHTML = '<option value="*">كل الشهور</option>' + months.map(m => '<option value="' + m + '">' + m + '</option>').join('');
+  if (S.accMonth !== '*' && !months.includes(S.accMonth)) S.accMonth = '*';
+  sel.value = S.accMonth;
+  const q = S.accQ.trim().toLowerCase(), cols = sumCols(A);
+  let rows = sumRows(A, S.accMonth).filter(r => !q || String(r.name).toLowerCase().includes(q));
+  const bal = r => Math.abs(cols[cols.length - 1].k(r));
+  rows.sort((x, y) => bal(y) - bal(x));
+  const fr = gridRows(id, cols, rows);
+  const tot = fr.reduce((a, r) => ({ d: a.d + r.d, c: a.c + r.c }), { d:0, c:0 }), n = tot.d - tot.c;
   $('#acc-tot').innerHTML = '<div><small>مدين</small><b dir="ltr">' + fmt0(tot.d) + '</b></div><div><small>دائن</small><b dir="ltr">' + fmt0(tot.c) + '</b></div><div><small>الرصيد (' + balTxt(n) + ')</small><b dir="ltr">' + fmt0(Math.abs(n)) + '</b></div>';
-  const q = S.accQ.trim().toLowerCase();
-  rows = rows.filter(r => !q || r.name.toLowerCase().includes(q)).sort((a, b) => Math.abs(b.d - b.c) - Math.abs(a.d - a.c));
-  S.parties = rows;
-  $('#acc-rows').innerHTML = rows.length ? rows.map((r, i) => {
-    const x = r.d - r.c, lb = A === 'العملاء' ? ['المبيعات', 'المدفوع', r.d, r.c] : A === 'الموردين' ? ['المشتريات', 'المدفوع', r.c, r.d] : ['مدين', 'دائن', r.d, r.c];
-    return '<button class="an" data-i="' + i + '"><span class="n">' + esc(r.name || 'بدون اسم') + '<small>' + lb[0] + ' ' + fmt0(lb[2]) + '، ' + lb[1] + ' ' + fmt0(lb[3]) + '</small></span><span class="v" dir="ltr">' + fmt0(Math.abs(x)) + '<small>' + balTxt(x) + '</small></span></button>';
-  }).join('') : '<div class="empty">مفيش حركات على الحساب ده.</div>';
+  $('#acc-count').innerHTML = fr.length + ' اسم · اضغط على أي اسم لكشف حسابه' + filterNote(id);
+  $('#acc-tb').innerHTML = gridHTML(id, fr, capOf(2000));
+  $('#acc-e').textContent = fr.length ? '' : 'مفيش حركات على الحساب ده.';
+  $('#ph-t').textContent = 'تحليل ' + accT(A) + (S.accMonth === '*' ? '' : ' - شهر ' + S.accMonth);
 }
 function movements(A, party) {
   const out = [];
-  for (const e of live()) { const s = side(e, A); if (!s) continue; if (party !== null && s.party !== party) continue; out.push({ e, d: s.d, c: s.c, party: s.party, other: e.dr === A ? e.cr : e.dr }); }
+  for (const e of live()) {
+    const s = side(e, A); if (!s) continue;
+    const key = keyOf(A, e, s); if (party !== null && key !== party) continue;
+    out.push({ e, d:s.d, c:s.c, party:key, who:s.party, other:e.dr === A ? e.cr : e.dr });
+  }
   out.sort((a, b) => a.e.date.localeCompare(b.e.date) || (a.e.no || 0) - (b.e.no || 0));
-  let run = 0; for (const m of out) { run += m.d - m.c; m.run = run; }
+  let run = 0, qrun = 0;
+  for (const m of out) {
+    run += m.d - m.c; m.run = run;
+    const isIn = m.e.dr === A; m.isIn = isIn;
+    m.qin = isIn ? m.e.qty * (1 - m.e.disc) : 0; m.qout = isIn ? 0 : m.e.qty; qrun += m.qin - m.qout; m.qrun = qrun;
+  }
   return out;
 }
-const SCREEN_ONLY = new Set(['الشهر', 'الرصيد التراكمي']);   // shown on screen, left out of the PDF
 const nz = v => (v ? fmt(v) : '');
 const aft = e => e.qty * (1 - e.disc);
+/* statement columns. s:1 = on screen only (never printed to PDF) */
 function spec(A) {
-  const ID = m => m.e.no, DT = m => m.e.date, MO = m => +m.e.date.slice(5, 7);
+  const N = (h, k, o) => Object.assign({ h, k, t:'n' }, o), T = (h, k, o) => Object.assign({ h, k, t:'t' }, o);
+  const ID = N('رقم القيد', m => m.e.no, { raw:1 }), DT = T('التاريخ', m => m.e.date), MO = (o) => N('الشهر', m => +m.e.date.slice(5, 7), Object.assign({ raw:1 }, o));
   if (A === 'العملاء' || A === 'الموردين') {
     const sup = A === 'الموردين', tot = m => sup ? m.c : m.d, paid = m => sup ? m.d : m.c;
-    return { cols: [
-      ['رقم القيد', ID], ['التاريخ', DT], [sup ? 'اسم المورد' : 'اسم العميل', m => m.party], ['المنتج', m => m.e.prod || m.e.stmt],
-      ['الكمية', m => nz(m.e.qty), 'n', m => m.e.qty], ['الخصم', m => m.e.disc ? +(m.e.disc * 100).toFixed(2) + '%' : '', 'n'],
-      ['الكمية بعد الخصم', m => m.e.qty ? fmt(aft(m.e)) : '', 'n', m => m.e.qty ? aft(m.e) : 0], ['سعر الوحدة', m => nz(m.e.price), 'n'],
-      ['إجمالي مبلغ الكمية', m => nz(tot(m)), 'n', tot], ['المدفوع', m => nz(paid(m)), 'n', paid],
-      ['الرصيد المتبقي', m => fmt(tot(m) - paid(m)), 'n', m => tot(m) - paid(m)], ['الشهر', MO],
-      ['الخصم بالجنيه', m => m.e.qty && m.e.disc ? fmt((m.e.qty - aft(m.e)) * m.e.price) : '', 'n', m => m.e.qty ? (m.e.qty - aft(m.e)) * m.e.price : 0],
-      ['الرصيد التراكمي', m => fmt(sup ? -m.run : m.run), 'n']] };
+    return [ID, DT, T(sup ? 'اسم المورد' : 'اسم العميل', m => m.party), T('المنتج', m => m.e.prod || m.e.stmt),
+      N('الكمية', m => m.e.qty, { z:1, sum:1 }), N('الخصم', m => m.e.disc, { z:1, pct:1 }), N('الكمية بعد الخصم', m => m.e.qty ? aft(m.e) : 0, { z:1, sum:1 }),
+      N('سعر الوحدة', m => m.e.price, { z:1 }), N('إجمالي مبلغ الكمية', tot, { z:1, sum:1 }), N('المدفوع', paid, { z:1, sum:1 }),
+      N('الرصيد المتبقي', m => tot(m) - paid(m), { sum:1, neg:1 }),
+      MO({ s:1 }), N('الخصم بالجنيه', m => m.e.qty ? discEgp(m.e) : 0, { z:1, sum:1, s:1 }), N('الرصيد التراكمي', m => sup ? -m.run : m.run, { s:1, neg:1 })];
   }
-  const K = { 'العهد.الماليه':['اسم مستلم العهده', 'مبلغ العهده', 'المصروف', 'الرصيد المتبقي', 'd', 'c', 1],
-    'المرتبات':['اسم الموظف', 'المسحوبات', 'المصروف', 'الرصيد المتبقي', 'd', 'c', 1],
-    'جاري.الشركاء':['اسم الشريك', 'مدين', 'دائن', 'الرصيد', 'd', 'c', 1],
-    'ارصده.دائنه.اخري':['الاسم', 'المبلغ', 'المسدد', 'الرصيد المتبقي', 'c', 'd', -1] }[A];
+  if (A === 'المخزون.الخام') {
+    return [ID, DT, MO(), T('الصنف', m => m.e.prod), T('نوع الحركة', m => m.e.stmt), T('الطرف', m => m.who),
+      N('الكمية', m => m.e.qty, { z:1 }), N('نسبة الفاقد', m => m.e.disc, { z:1, pct:1 }), N('سعر الوحدة', m => m.e.price, { z:1 }),
+      N('الوارد (كمية)', m => m.qin, { z:1, sum:1 }), N('الوارد (مبلغ)', m => m.d, { z:1, sum:1 }),
+      N('الصادر (كمية)', m => m.isIn ? 0 : m.e.qty * (1 - m.e.disc), { z:1, sum:1 }), N('الصادر (مبلغ)', m => m.c, { z:1, sum:1 }),
+      N('الفاقد (كمية)', m => m.isIn ? 0 : m.e.qty * m.e.disc, { z:1, sum:1 }),
+      N('الرصيد (كمية)', m => m.qrun, { neg:1 }), N('الرصيد (مبلغ)', m => m.run, { neg:1 })];
+  }
+  const K = { 'العهد.الماليه':['اسم مستلم العهده', 'مبلغ العهده', 'المصروف', 'الرصيد المتبقي', 1],
+    'المرتبات':['اسم الموظف', 'المسحوبات', 'المصروف', 'الرصيد المتبقي', 1],
+    'جاري.الشركاء':['اسم الشريك', 'مدين', 'دائن', 'الرصيد', 1],
+    'ارصده.دائنه.اخري':['الاسم', 'المبلغ', 'المسدد', 'الرصيد المتبقي', -1] }[A];
   if (K) {
-    const a = m => m[K[4]], b = m => m[K[5]];
-    return { cols: [['رقم القيد', ID], ['التاريخ', DT], ['الشهر', MO], [K[0], m => m.party], [K[1], m => nz(a(m)), 'n', a], [K[2], m => nz(b(m)), 'n', b],
-      [K[3], m => fmt(a(m) - b(m)), 'n', m => a(m) - b(m)], ['البيان', m => m.e.stmt], ['الرصيد التراكمي', m => fmt(K[6] * m.run), 'n']] };
+    const a = K[4] > 0 ? m => m.d : m => m.c, b = K[4] > 0 ? m => m.c : m => m.d;
+    return [ID, DT, MO(), T(K[0], m => m.party), T('البيان', m => m.e.stmt), N(K[1], a, { z:1, sum:1 }), N(K[2], b, { z:1, sum:1 }),
+      N(K[3], m => a(m) - b(m), { sum:1, neg:1 }), N('الرصيد التراكمي', m => K[4] * m.run, { s:1, neg:1 })];
   }
-  return { cols: [['رقم القيد', ID], ['التاريخ', DT], ['الشهر', MO], ['البيان', m => m.e.stmt], ['الطرف', m => m.party], ['الحساب المقابل', m => m.other],
-    ['المنتج', m => m.e.prod], ['الكمية', m => nz(m.e.qty), 'n'], ['الخصم', m => m.e.disc ? +(m.e.disc * 100).toFixed(2) + '%' : '', 'n'], ['سعر الوحدة', m => nz(m.e.price), 'n'],
-    ['مدين', m => nz(m.d), 'n', m => m.d], ['دائن', m => nz(m.c), 'n', m => m.c], ['الرصيد', m => fmt(m.run), 'n']] };
+  return [ID, DT, MO(), T('البيان', m => m.e.stmt), T('الطرف', m => m.party), T('الحساب المقابل', m => m.other),
+    T('المنتج', m => m.e.prod), N('الكمية', m => m.e.qty, { z:1 }), N('الخصم', m => m.e.disc, { z:1, pct:1 }), N('سعر الوحدة', m => m.e.price, { z:1 }),
+    N('مدين', m => m.d, { z:1, sum:1 }), N('دائن', m => m.c, { z:1, sum:1 }), N('الرصيد', m => m.run, { neg:1 })];
 }
 function openStm(party) { S.party_ = party; S.stmMonth = null; push_('stm'); }
 function renderStm() {
-  const A = S.acc, sp = spec(A), mv = movements(A, S.party_);
+  const A = S.acc, cols = spec(A), mv = movements(A, S.party_), id = 'm:' + A;
   const months = [...new Set(mv.map(m => m.e.date.slice(0, 7)))].sort();
   if (S.stmMonth == null) S.stmMonth = (S.party_ === null && months.length) ? months[months.length - 1] : '*';
   if (S.stmMonth !== '*' && !months.includes(S.stmMonth)) S.stmMonth = '*';
   const sel = $('#stm-month');
   sel.innerHTML = '<option value="*">كل الشهور</option>' + months.slice().reverse().map(m => '<option value="' + m + '">' + m + '</option>').join(''); sel.value = S.stmMonth;
   const rows = S.stmMonth === '*' ? mv : mv.filter(m => m.e.date.startsWith(S.stmMonth));
-  const CAP = 800, shown = rows.slice(0, CAP);
+  const fr = gridRows(id, cols, rows);
   const ttl = accT(A) + (S.party_ === null ? ' (كل الحركات)' : ' / ' + (S.party_ || 'بدون اسم'));
   $('#stm-title').textContent = ttl; $('#ph-t').textContent = 'تحليل ' + ttl + (S.stmMonth === '*' ? '' : ' - شهر ' + S.stmMonth);
   const d = rows.reduce((a, m) => a + m.d, 0), c = rows.reduce((a, m) => a + m.c, 0), n = mv.length ? mv[mv.length - 1].run : 0;
   $('#stm-tot').innerHTML = '<div><small>مدين</small><b dir="ltr">' + fmt(d) + '</b></div><div><small>دائن</small><b dir="ltr">' + fmt(c) + '</b></div><div><small>الرصيد (' + balTxt(n) + ')</small><b dir="ltr">' + fmt(Math.abs(n)) + '</b></div>';
-  const scc = x => SCREEN_ONLY.has(x[0]) ? ' sc' : '';
-  const th = '<thead><tr>' + sp.cols.map(x => '<th class="' + scc(x).trim() + '">' + x[0] + '</th>').join('') + '</tr></thead>';
-  const tb = '<tbody>' + shown.map(m => '<tr data-id="' + m.e.id + '">' + sp.cols.map(x => '<td class="' + ((x[2] || '') + scc(x)).trim() + '">' + esc(x[1](m)) + '</td>').join('') + '</tr>').join('') + '</tbody>';
-  const foot = '<tfoot><tr>' + sp.cols.map((x, i) => '<td class="' + ((x[2] ? 'n' : '') + scc(x)).trim() + '">' + (i === 0 ? 'الإجمالي' : x[3] ? fmt(rows.reduce((a, m) => a + (x[3](m) || 0), 0)) : '') + '</td>').join('') + '</tr></tfoot>';
-  $('#stm-tb').innerHTML = shown.length ? th + tb + foot : '';
-  $('#stm-note').textContent = !shown.length ? 'مفيش حركات.' : rows.length > CAP ? 'معروض أول ' + CAP + ' حركة من ' + rows.length + '. اختار شهر لتقليل العدد.' : rows.length + ' حركة';
+  const cap = capOf(CAP);
+  $('#stm-tb').innerHTML = gridHTML(id, fr, cap, m => m.e.id);
+  $('#stm-note').innerHTML = !fr.length ? 'مفيش حركات.' : (fr.length > cap ? 'معروض أول ' + cap + ' حركة من ' + fr.length + '. اختار شهر أو استخدم الفلتر لتقليل العدد.' : fr.length + ' حركة') + filterNote(id);
 }
+
+/* trial balance */
+const acctOrder = () => { const L = accountList(), B = BASE_ACCOUNTS; return L.slice().sort((a, b) => (B.indexOf(a) < 0 ? 999 : B.indexOf(a)) - (B.indexOf(b) < 0 ? 999 : B.indexOf(b)) || arSort(a, b)); };
+function renderTB() {
+  const months = [...new Set(live().filter(e => !e.opening).map(e => e.date.slice(0, 7)))].sort();
+  const sel = $('#tb-month');
+  sel.innerHTML = '<option value="*">كل الفترة</option>' + months.map(m => '<option value="' + m + '">شهر ' + m + '</option>').join('');
+  if (S.tbMonth !== '*' && !months.includes(S.tbMonth)) S.tbMonth = '*';
+  sel.value = S.tbMonth; const M = S.tbMonth;
+  const by = new Map();
+  for (const e of live()) {
+    const open = e.opening || (M !== '*' && e.date.slice(0, 7) < M);
+    const per = !e.opening && (M === '*' || e.date.startsWith(M));
+    if (!open && !per) continue;
+    for (const [acct, dd, cc] of [[e.dr, e.amtD, 0], [e.cr, 0, e.amtC]]) {
+      if (!acct) continue;
+      const r = by.get(acct) || { name:acct, od:0, oc:0, pd:0, pc:0 };
+      if (open) { r.od += dd; r.oc += cc; } else { r.pd += dd; r.pc += cc; }
+      by.set(acct, r);
+    }
+  }
+  const rows = acctOrder().filter(a => by.has(a)).map(a => { const r = by.get(a), n = r.od + r.pd - r.oc - r.pc; r.cd = n > 0 ? n : 0; r.cc = n < 0 ? -n : 0; return r; });
+  const N = (h, k) => ({ h, k, t:'n', z:1, sum:1 });
+  const cols = [{ h:'اسم الحساب', k:r => accT(r.name), t:'t' }, N('افتتاحي مدين', r => r.od), N('افتتاحي دائن', r => r.oc), N('حركة مدين', r => r.pd), N('حركة دائن', r => r.pc), N('ختامي مدين', r => r.cd), N('ختامي دائن', r => r.cc)];
+  const fr = gridRows('tb', cols, rows);
+  const sd = rows.reduce((a, r) => a + r.cd, 0), sc = rows.reduce((a, r) => a + r.cc, 0), diff = Math.round((sd - sc) * 100) / 100;
+  $('#tb-note').innerHTML = (Math.abs(diff) < 0.5 ? '✓ الميزان متوازن' : '⚠ الميزان غير متوازن، الفرق ' + fmt(Math.abs(diff))) + ' · اضغط على الحساب لفتح دفتر الأستاذ' + filterNote('tb');
+  $('#tb-tb').innerHTML = gridHTML('tb', fr, capOf(500), r => r.name);
+  $('#tb-e').textContent = fr.length ? '' : 'مفيش قيود.';
+  $('#ph-t').textContent = 'ميزان المراجعة' + (M === '*' ? '' : ' - شهر ' + M);
+}
+
+/* general ledger */
+function renderLG() {
+  const accts = acctOrder().filter(a => live().some(e => e.dr === a || e.cr === a));
+  if (!S.lgAcc || !accts.includes(S.lgAcc)) S.lgAcc = accts.includes('الخزينة') ? 'الخزينة' : accts[0] || '';
+  const A = S.lgAcc, sa = $('#lg-acc');
+  sa.innerHTML = accts.map(a => '<option value="' + esc(a) + '">' + esc(accT(a)) + '</option>').join(''); sa.value = A;
+  const mv = A ? movements(A, null) : [];
+  const months = [...new Set(mv.map(m => m.e.date.slice(0, 7)))].sort().reverse();
+  const sm = $('#lg-month');
+  sm.innerHTML = '<option value="*">كل الشهور</option>' + months.map(m => '<option value="' + m + '">شهر ' + m + '</option>').join('');
+  if (S.lgMonth !== '*' && !months.includes(S.lgMonth)) S.lgMonth = '*';
+  sm.value = S.lgMonth;
+  let rows = mv;
+  if (S.lgMonth !== '*') {
+    const before = mv.filter(m => m.e.date.slice(0, 7) < S.lgMonth), prev = before.length ? before[before.length - 1].run : 0;
+    rows = mv.filter(m => m.e.date.startsWith(S.lgMonth));
+    rows = [{ e:{ no:'', date:S.lgMonth + '-01', stmt:'رصيد مرحل', id:'' }, d:0, c:0, who:'', other:'', run:prev }].concat(rows);
+  }
+  const N = (h, k, o) => Object.assign({ h, k, t:'n' }, o);
+  const cols = [{ h:'التاريخ', k:m => m.e.date, t:'t' }, N('رقم القيد', m => m.e.no, { raw:1 }), { h:'البيان', k:m => m.e.stmt, t:'t' }, { h:'الطرف', k:m => m.who, t:'t' },
+    { h:'الحساب المقابل', k:m => m.other, t:'t' }, N('مدين', m => m.d, { z:1, sum:1 }), N('دائن', m => m.c, { z:1, sum:1 }), N('الرصيد', m => m.run, { neg:1 })];
+  const fr = gridRows('lg', cols, rows);
+  const d = mv.reduce((a, m) => a + m.d, 0), c = mv.reduce((a, m) => a + m.c, 0), n = d - c;
+  $('#lg-tot').innerHTML = '<div><small>مدين</small><b dir="ltr">' + fmt(d) + '</b></div><div><small>دائن</small><b dir="ltr">' + fmt(c) + '</b></div><div><small>الرصيد (' + balTxt(n) + ')</small><b dir="ltr">' + fmt(Math.abs(n)) + '</b></div>';
+  const cap = capOf(CAP);
+  $('#lg-note').innerHTML = (fr.length > cap ? 'معروض أول ' + cap + ' حركة من ' + fr.length + '. اختار شهر لتقليل العدد.' : fr.length + ' حركة') + filterNote('lg');
+  $('#lg-tb').innerHTML = gridHTML('lg', fr, cap, m => m.e.id);
+  $('#ph-t').textContent = 'دفتر الأستاذ - ' + accT(A) + (S.lgMonth === '*' ? '' : ' - شهر ' + S.lgMonth);
+}
+
+/* phone back gesture: step back inside the app, never straight out */
+function appBack() {
+  if (fsOpen()) { closeFS(); return; }
+  if (!$('#lock').classList.contains('hide')) return;
+  const v = S.view;
+  if (v === 'home') {
+    if (S.exitArm) return 'exit';
+    S.exitArm = true; toast('اضغط رجوع مرة تانية للخروج'); setTimeout(() => { S.exitArm = false; }, 2200); return;
+  }
+  if (v === 'form') closeForm(); else if (S.stack.length) back(); else go('home');
+}
+const guard = () => history.pushState({ g:1 }, '');
+function armBack() {
+  if (S.guarded) return; S.guarded = true;
+  history.replaceState({ b:1 }, ''); guard();
+  window.addEventListener('popstate', () => {
+    if ($('#app').classList.contains('hide')) return;
+    if (appBack() === 'exit') { history.back(); return; }
+    guard();
+  });
+}
+
 function renderSettings() {
   $('#s-name').textContent = (S.profile && S.profile.full_name) || '—';
   $('#s-email').textContent = S.session ? S.session.user.email : '';
@@ -767,17 +1053,21 @@ function products(stmt) {
   return [...set].filter(Boolean).sort(arSort);
 }
 function setList(id, arr) { $(id).innerHTML = arr.map(n => '<option value="' + esc(n) + '">').join(''); }
-function refreshLists() {
-  const all = [...new Set([...S.party.map(p => cl(p.name)), ...[...S.ent.values()].flatMap(e => [e.pa, e.pb].map(cl))])].filter(Boolean).sort(arSort);
-  setList('#dl-stmt', stmtList());
-  const pa = names($('#e-dr').value), pb = names($('#e-cr').value);
-  setList('#dl-pa', pa.length ? pa : all); setList('#dl-pb', pb.length ? pb : all);
-  const pr = products($('#e-stmt').value.trim()); setList('#dl-prod', pr.length ? pr : all);
+function fillCombo(id, list, val, noneLbl, newLbl) {
+  const el = $(id), arr = !val || list.includes(val) ? list : [val, ...list];
+  el.innerHTML = '<option value="">' + noneLbl + '</option>' + arr.map(a => '<option>' + esc(a) + '</option>').join('') + '<option value="__new">' + newLbl + '</option>';
+  el.value = val || ''; $(id + '-n').classList.add('hide'); $(id + '-n').value = '';
 }
+const comboVal = id => { const v = $(id).value; return v === '__new' ? cl($(id + '-n').value) : v; };
+function comboChange(id) { const n = $(id + '-n'), on = $(id).value === '__new'; n.classList.toggle('hide', !on); if (on) n.focus(); }
+const fillPa = v => fillCombo('#e-pa', names($('#e-dr').value), v, '— بدون —', '＋ اسم جديد');
+const fillPb = v => fillCombo('#e-pb', names($('#e-cr').value), v, '— بدون —', '＋ اسم جديد');
+const fillProd = v => fillCombo('#e-prod', products(comboVal('#e-stmt')), v, '— بدون —', '＋ منتج جديد');
 function calcAmt() {
-  if (S.amtManual) return;
-  const q = num($('#e-qty').value), d = num($('#e-disc').value), p = num($('#e-price').value);
-  if (q && p) $('#e-amt').value = Math.round(q * (1 - d) * p * 100) / 100;
+  const q = num($('#e-qty').value), d = num($('#e-disc').value) / 100, p = num($('#e-price').value), qa = q * (1 - d);
+  $('#e-qa').value = q ? +qa.toFixed(4) : '';
+  $('#e-tot').value = q && p ? +(qa * p).toFixed(2) : '';
+  if (!S.amtManual && q && p) $('#e-amt').value = Math.round(qa * p * 100) / 100;
 }
 function openForm(id) {
   S.from = S.view === 'form' ? S.from : S.view; S.editing = id || null; $('#e-err').textContent = '';
@@ -786,28 +1076,28 @@ function openForm(id) {
   const maxNo = Math.max(0, ...[...S.ent.values()].map(x => x.no || 0));
   $('#e-date').value = e ? e.date : new Date().toISOString().slice(0, 10);
   $('#e-no').value = e ? e.no : maxNo + 1;
-  $('#e-stmt').value = e ? e.stmt : '';
+  fillCombo('#e-stmt', stmtList(), e && e.stmt, 'اختار البيان', '＋ بيان جديد');
   fillSelect($('#e-dr'), e && e.dr); fillSelect($('#e-cr'), e && e.cr);
-  $('#e-pa').value = e ? e.pa : ''; $('#e-pb').value = e ? e.pb : ''; $('#e-prod').value = e ? e.prod : '';
-  $('#e-qty').value = e && e.qty ? e.qty : ''; $('#e-disc').value = e && e.disc ? e.disc : '';
+  fillPa(e && e.pa); fillPb(e && e.pb); fillProd(e && e.prod);
+  $('#e-qty').value = e && e.qty ? e.qty : ''; $('#e-disc').value = e && e.disc ? +(e.disc * 100).toFixed(4) : '';
   $('#e-price').value = e && e.price ? e.price : ''; $('#e-amt').value = e ? (e.amtD || e.amtC) : '';
-  S.amtManual = !!e;
+  S.amtManual = !!e; calcAmt();
   for (const el of document.querySelectorAll('#v-form input,#v-form select')) el.disabled = ro;
   $('#e-save').classList.toggle('hide', ro); $('#e-del').classList.toggle('hide', ro || !e);
-  refreshLists(); go('form');
+  go('form');
 }
 const closeForm = () => go(S.from && S.from !== 'form' ? S.from : 'home');
 async function saveEntry() {
   const err = $('#e-err'); err.textContent = '';
-  const v = { date:$('#e-date').value, no:Math.round(num($('#e-no').value)), stmt:cl($('#e-stmt').value),
-    dr:$('#e-dr').value, cr:$('#e-cr').value, pa:cl($('#e-pa').value), pb:cl($('#e-pb').value), prod:cl($('#e-prod').value),
-    qty:num($('#e-qty').value), disc:num($('#e-disc').value), price:num($('#e-price').value), amt:num($('#e-amt').value) };
+  const v = { date:$('#e-date').value, no:Math.round(num($('#e-no').value)), stmt:cl(comboVal('#e-stmt')),
+    dr:$('#e-dr').value, cr:$('#e-cr').value, pa:cl(comboVal('#e-pa')), pb:cl(comboVal('#e-pb')), prod:cl(comboVal('#e-prod')),
+    qty:num($('#e-qty').value), disc:num($('#e-disc').value) / 100, price:num($('#e-price').value), amt:num($('#e-amt').value) };
   if (!v.date) return void (err.textContent = 'اختار التاريخ.');
   if (!v.stmt) return void (err.textContent = 'اكتب البيان.');
   if (!v.dr || !v.cr) return void (err.textContent = 'اختار الحساب المدين والدائن.');
   if (v.dr === v.cr) return void (err.textContent = 'الحساب المدين والدائن لازم يختلفوا.');
   if (!(v.amt > 0)) return void (err.textContent = 'اكتب المبلغ.');
-  if (v.disc < 0 || v.disc >= 1) return void (err.textContent = 'الخصم نسبة بين 0 و 1 (مثلًا 0.02).');
+  if (v.disc < 0 || v.disc >= 1) return void (err.textContent = 'الخصم نسبة مئوية بين 0 و 100 (مثلًا 2).');
   if (S.profile.role === 'accountant' && S.closed.has(v.date.slice(0, 7))) return void (err.textContent = 'الشهر ده مقفول.');
   const old = S.editing ? S.ent.get(S.editing) : null;
   if (old && S.profile.role === 'accountant' && S.closed.has(old.date.slice(0, 7))) return void (err.textContent = 'الشهر ده مقفول.');
@@ -864,7 +1154,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.2';
+const VER = '1.3';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -920,7 +1210,7 @@ async function start() {
   const L = await kvGet('lists'); if (L) { S.accounts = L.accounts; S.statements = L.statements || []; S.party = L.party; S.closed = new Set(L.closed); }
   const ls = await kvGet('lastSync'); S.lastSync = ls ? new Date(ls) : null;
   S.ent = new Map((await entAll()).map(e => [e.id, e]));
-  S.stack = []; go('home'); render();
+  S.stack = []; go('home'); render(); armBack();
   if (!S.skipLock && await bioOn()) showLock();
   await sync();
 }
@@ -947,23 +1237,41 @@ async function init() {
   $('#more').onclick = () => { S.limit += 100; renderList(); };
   const openRow = e => { const b = e.target.closest('.row'); if (b) openForm(b.dataset.id); };
   $('#rows').onclick = openRow;
-  $('#stm-tb').onclick = e => { const r = e.target.closest('tr[data-id]'); if (r) openForm(r.dataset.id); };
+  const rowEdit = e => { const r = e.target.closest('tr[data-id]'); if (r && r.dataset.id) openForm(r.dataset.id); };
+  $('#stm-tb').onclick = rowEdit; $('#j-tb').onclick = rowEdit; $('#lg-tb').onclick = rowEdit;
+  $('#acc-tb').onclick = e => { const r = e.target.closest('tr[data-k]'); if (r) openStm(gst('a:' + S.acc).fr[+r.dataset.k].name); };
+  $('#tb-tb').onclick = e => { const r = e.target.closest('tr[data-id]'); if (r && r.dataset.id) { S.lgAcc = r.dataset.id; S.lgMonth = '*'; push_('lg'); } };
+  document.addEventListener('click', e => {
+    const th = e.target.closest('th[data-g]'); if (th) { openFS(th.dataset.g, +th.dataset.i); return; }
+    const c = e.target.closest('.clr'); if (c) clrG(c.dataset.g);
+  });
+  $('#fsheet').onclick = fsClick; $('#fsheet').oninput = e => { if (e.target.id === 'fs-q') fsList(); };
+  $('#lv-t').onclick = () => { S.lv = 't'; localStorage.setItem('lv', 't'); renderList(); };
+  $('#lv-c').onclick = () => { S.lv = 'c'; localStorage.setItem('lv', 'c'); renderList(); };
+  $('#acc-month').onchange = e => { S.accMonth = e.target.value; renderAcc(); };
+  $('#acc-pdf').onclick = () => doPrint($('#ph-t').textContent);
+  $('#tb-month').onchange = e => { S.tbMonth = e.target.value; renderTB(); };
+  $('#tb-back').onclick = back; $('#lg-back').onclick = back;
+  $('#tb-pdf').onclick = () => doPrint($('#ph-t').textContent); $('#lg-pdf').onclick = () => doPrint($('#ph-t').textContent);
+  $('#lg-acc').onchange = e => { S.lgAcc = e.target.value; S.lgMonth = '*'; renderLG(); };
+  $('#lg-month').onchange = e => { S.lgMonth = e.target.value; renderLG(); };
   $('#stm-month').onchange = e => { S.stmMonth = e.target.value; renderStm(); };
-  $('#stm-pdf').onclick = () => window.print();
+  $('#stm-pdf').onclick = () => doPrint($('#ph-t').textContent);
   $('#lock-go').onclick = tryUnlock; $('#s-bio-btn').onclick = bioToggle;
   $('#lock-pw').onclick = async () => { $('#lock').classList.add('hide'); await softLogout(''); };
   $('#tiles').onclick = e => {
     const b = e.target.closest('.tile'); if (!b) return; const k = b.dataset.k;
-    if (k === 'new') openForm(null); else if (k === 'list') go('list'); else if (k === 'an') go('an');
+    if (k === 'new') openForm(null); else if (k === 'list') push_('list'); else if (k === 'tb') { S.tbMonth = '*'; push_('tb'); } else if (k === 'lg') { S.lgMonth = '*'; push_('lg'); }
     else if (k === 'sync') { toast('بنزامن…'); sync(); } else openAcc(k);
   };
   $('#an-list').onclick = e => { const b = e.target.closest('.an'); if (b) openAcc(b.dataset.k); };
-  $('#acc-rows').onclick = e => { const b = e.target.closest('.an'); if (b) openStm(S.parties[+b.dataset.i].name); };
-  $('#acc-q').oninput = e => { S.accQ = e.target.value; renderAcc(); };
+    $('#acc-q').oninput = e => { S.accQ = e.target.value; renderAcc(); };
   $('#acc-all').onclick = () => openStm(null);
   $('#acc-back').onclick = back; $('#stm-back').onclick = back;
-  for (const id of ['#e-dr', '#e-cr']) $(id).onchange = refreshLists;
-  $('#e-stmt').oninput = refreshLists;
+  $('#e-dr').onchange = () => fillPa(''); $('#e-cr').onchange = () => fillPb('');
+  $('#e-stmt').onchange = () => { comboChange('#e-stmt'); fillProd(''); };
+  for (const id of ['#e-pa', '#e-pb', '#e-prod']) $(id).onchange = () => comboChange(id);
+
   for (const id of ['#e-qty', '#e-disc', '#e-price']) $(id).oninput = calcAmt;
   $('#e-amt').oninput = () => { S.amtManual = true; };
   window.addEventListener('online', () => sync()); window.addEventListener('offline', setPill);
