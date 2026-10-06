@@ -124,6 +124,7 @@ table.tb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric
  main{padding:0}.tbw{overflow:visible;border:0}
  table.tb{font-size:9px}.tb th{position:static;background:#1F5A2B!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
  .tb td{padding:4px 6px}.tb tr:nth-child(even) td,.tb tfoot td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .sc{display:none!important}
 }
 #toast{position:fixed;left:16px;right:16px;bottom:calc(96px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s;text-align:center}
 #toast.show{opacity:1}
@@ -141,7 +142,7 @@ table.tb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric
     <input id="l-pass" type="password" autocomplete="current-password" dir="ltr" placeholder="كلمة المرور" aria-label="كلمة المرور">
     <div class="err" id="l-err"></div>
     <button class="btn" id="l-go" style="width:100%;margin-top:4px">دخول</button>
-    <div class="forgot">نسيت كلمة المرور؟ كلّم المالك</div>
+    <div class="forgot">نسيت كلمة المرور؟ كلّم المالك يعيّن لك واحدة جديدة</div>
     <img class="vg" src="logo.png" alt="Vegan">
     <details>
       <summary>رابط السيرفر</summary>
@@ -170,7 +171,6 @@ table.tb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric
       <div class="tiles" id="tiles"></div>
       <div class="sec"><h3>ملخص الحسابات</h3><div class="mets" id="mets"></div></div>
       <div class="sec"><h3 id="mh">الشهر</h3><div class="mets two" id="mmets"></div></div>
-      <div class="sec"><div class="sh"><h3>آخر القيود</h3><button class="lnk" id="seeall">عرض الكل</button></div><div class="card" id="recent"></div></div>
     </section>
 
     <section id="v-list" class="hide">
@@ -265,6 +265,17 @@ table.tb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric
         <input id="s-file" type="file" accept=".json,application/json" style="margin-top:8px">
       </div>
 
+      <h2 style="margin-top:24px">تصدير القيود للإكسيل</h2>
+      <p class="note">ملف CSV بالقيود. يفتح في الإكسيل، ويستورده ماكرو برنامج المحاسبة في شيتات الشهور.</p>
+      <select id="x-month" aria-label="الشهر" style="margin-top:6px"></select>
+      <button class="btn" id="x-go" style="width:100%;margin-top:8px">تصدير الملف</button>
+
+      <div id="s-adm" class="hide">
+        <h2 style="margin-top:24px">إدارة المستخدمين</h2>
+        <p class="note">للمالك فقط. المستخدم الجديد بيتعمل من لوحة Supabase، وبعدين تفعّله وتحدد صلاحيته من هنا.</p>
+        <div id="adm-list"></div>
+      </div>
+
       <h2 style="margin-top:24px">تغيير كلمة المرور</h2>
       <label for="p-new">كلمة المرور الجديدة</label>
       <input id="p-new" type="password" autocomplete="new-password" dir="ltr">
@@ -274,6 +285,7 @@ table.tb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric
       <button class="btn ghost" id="p-go" style="width:100%">حفظ كلمة المرور</button>
 
       <button class="btn danger" id="s-out" style="width:100%;margin-top:28px">تسجيل الخروج</button>
+      <p class="note" id="s-ver" style="text-align:center;margin-top:14px"></p>
     </section>
   </main>
   <nav>
@@ -585,8 +597,6 @@ function renderHome() {
       '<div class="met" style="--c:#D4A00F"><small>مصروفات الشهر</small><b dir="ltr">' + fmt0(ex.d - ex.c) + '</b></div>' +
       '<div class="met" style="--c:#1FA38A;grid-column:1/-1"><small>عدد قيود الشهر</small><b dir="ltr">' + cnt + '</b></div>';
   } else $('#mmets').innerHTML = '';
-  const rec = real.sort(byDate).slice(0, 5);
-  $('#recent').innerHTML = rec.length ? rec.map(rowHTML).join('') : '<div class="empty">' + (S.syncing ? 'بنحمّل القيود…' : 'لسه مفيش قيود.') + '</div>';
 }
 function renderList() {
   const all = live();
@@ -634,6 +644,7 @@ function movements(A, party) {
   let run = 0; for (const m of out) { run += m.d - m.c; m.run = run; }
   return out;
 }
+const SCREEN_ONLY = new Set(['الشهر', 'الرصيد التراكمي']);   // shown on screen, left out of the PDF
 const nz = v => (v ? fmt(v) : '');
 const aft = e => e.qty * (1 - e.disc);
 function spec(A) {
@@ -676,9 +687,10 @@ function renderStm() {
   $('#stm-title').textContent = ttl; $('#ph-t').textContent = 'تحليل ' + ttl + (S.stmMonth === '*' ? '' : ' - شهر ' + S.stmMonth);
   const d = rows.reduce((a, m) => a + m.d, 0), c = rows.reduce((a, m) => a + m.c, 0), n = mv.length ? mv[mv.length - 1].run : 0;
   $('#stm-tot').innerHTML = '<div><small>مدين</small><b dir="ltr">' + fmt(d) + '</b></div><div><small>دائن</small><b dir="ltr">' + fmt(c) + '</b></div><div><small>الرصيد (' + balTxt(n) + ')</small><b dir="ltr">' + fmt(Math.abs(n)) + '</b></div>';
-  const th = '<thead><tr>' + sp.cols.map(x => '<th>' + x[0] + '</th>').join('') + '</tr></thead>';
-  const tb = '<tbody>' + shown.map(m => '<tr data-id="' + m.e.id + '">' + sp.cols.map(x => '<td' + (x[2] ? ' class="' + x[2] + '"' : '') + '>' + esc(x[1](m)) + '</td>').join('') + '</tr>').join('') + '</tbody>';
-  const foot = '<tfoot><tr>' + sp.cols.map((x, i) => '<td' + (x[2] ? ' class="n"' : '') + '>' + (i === 0 ? 'الإجمالي' : x[3] ? fmt(rows.reduce((a, m) => a + (x[3](m) || 0), 0)) : '') + '</td>').join('') + '</tr></tfoot>';
+  const scc = x => SCREEN_ONLY.has(x[0]) ? ' sc' : '';
+  const th = '<thead><tr>' + sp.cols.map(x => '<th class="' + scc(x).trim() + '">' + x[0] + '</th>').join('') + '</tr></thead>';
+  const tb = '<tbody>' + shown.map(m => '<tr data-id="' + m.e.id + '">' + sp.cols.map(x => '<td class="' + ((x[2] || '') + scc(x)).trim() + '">' + esc(x[1](m)) + '</td>').join('') + '</tr>').join('') + '</tbody>';
+  const foot = '<tfoot><tr>' + sp.cols.map((x, i) => '<td class="' + ((x[2] ? 'n' : '') + scc(x)).trim() + '">' + (i === 0 ? 'الإجمالي' : x[3] ? fmt(rows.reduce((a, m) => a + (x[3](m) || 0), 0)) : '') + '</td>').join('') + '</tr></tfoot>';
   $('#stm-tb').innerHTML = shown.length ? th + tb + foot : '';
   $('#stm-note').textContent = !shown.length ? 'مفيش حركات.' : rows.length > CAP ? 'معروض أول ' + CAP + ' حركة من ' + rows.length + '. اختار شهر لتقليل العدد.' : rows.length + ' حركة';
 }
@@ -690,6 +702,13 @@ function renderSettings() {
   $('#s-pend').textContent = pending();
   $('#s-err').textContent = S.err === 'net' ? 'مفيش اتصال بالسيرفر.' : S.err;
   $('#s-imp').classList.toggle('hide', !(S.profile && S.profile.role === 'owner'));
+  $('#s-ver').textContent = 'الإصدار ' + VER;
+  const xm = $('#x-month'), keep = xm.value || '*';
+  const months = [...new Set(live().map(e => e.date.slice(0, 7)))].sort().reverse();
+  xm.innerHTML = '<option value="*">كل الشهور</option>' + months.map(m => '<option value="' + m + '">' + m + '</option>').join(''); xm.value = months.includes(keep) || keep === '*' ? keep : '*';
+  const owner = !!(S.profile && S.profile.role === 'owner');
+  $('#s-adm').classList.toggle('hide', !owner);
+  if (owner && navigator.onLine && Date.now() - (S.admAt || 0) > 30000) loadUsers();
   bioAvail().then(av => { $('#s-bio').classList.toggle('hide', !av); bioOn().then(on => { $('#s-bio-btn').textContent = on ? 'إيقاف الدخول بالبصمة' : 'تفعيل الدخول بالبصمة'; }); });
 }
 
@@ -716,19 +735,44 @@ async function importFile(file) {
 }
 
 /* ---------- entry form ---------- */
+const BASE_ACCOUNTS = ['الخزينة','خزينة.خاصة','البنك','مبيعات منتج تام','المشتريات','العملاء','الموردين','جاري.الشركاء','رأس.مال','المخزون.الخام','الايرادات','المصروفات','ارصدة مدينة اخري','ارصده.دائنه.اخري','اصول.ثابتة','تكلفة المبيعات','العهد.الماليه','المرتبات','مخزن منتج تام','مجمع.الاهلاك','مسموحات المبيعات','مبيعات توريد'];
+const arSort = (x, y) => x.localeCompare(y, 'ar');
+const cl = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+function accountList() {
+  const set = new Set([...S.accounts, ...BASE_ACCOUNTS]);
+  for (const e of S.ent.values()) { if (e.dr) set.add(e.dr); if (e.cr) set.add(e.cr); }
+  return [...set].sort(arSort);
+}
+function stmtList() {
+  const set = new Set(S.statements);
+  for (const e of S.ent.values()) if (e.stmt) set.add(e.stmt);
+  return [...set].sort(arSort);
+}
 function fillSelect(el, val) {
-  const list = S.accounts.includes(val) || !val ? S.accounts : [val, ...S.accounts];
+  const base = accountList(), list = !val || base.includes(val) ? base : [val, ...base];
   el.innerHTML = '<option value="">اختار الحساب</option>' + list.map(a => '<option>' + esc(a) + '</option>').join('');
   el.value = val || '';
 }
-function names(account) { return [...new Set(S.party.filter(p => p.account === account).map(p => p.name))]; }
+function names(account) {
+  const set = new Set(S.party.filter(p => p.account === account).map(p => cl(p.name)));
+  if (account) for (const e of S.ent.values()) {
+    if (e.dr === account && e.pa) set.add(cl(e.pa));
+    if (e.cr === account && e.pb) set.add(cl(e.pb));
+  }
+  return [...set].filter(Boolean).sort(arSort);
+}
+function products(stmt) {
+  const set = new Set(S.party.filter(p => p.account === stmt).map(p => cl(p.name)));
+  if (stmt) for (const e of S.ent.values()) if (e.stmt === stmt && e.prod) set.add(cl(e.prod));
+  return [...set].filter(Boolean).sort(arSort);
+}
 function setList(id, arr) { $(id).innerHTML = arr.map(n => '<option value="' + esc(n) + '">').join(''); }
 function refreshLists() {
-  const all = [...new Set(S.party.map(p => p.name))];
-  setList('#dl-stmt', S.statements);
+  const all = [...new Set([...S.party.map(p => cl(p.name)), ...[...S.ent.values()].flatMap(e => [e.pa, e.pb].map(cl))])].filter(Boolean).sort(arSort);
+  setList('#dl-stmt', stmtList());
   const pa = names($('#e-dr').value), pb = names($('#e-cr').value);
   setList('#dl-pa', pa.length ? pa : all); setList('#dl-pb', pb.length ? pb : all);
-  const pr = names($('#e-stmt').value.trim()); setList('#dl-prod', pr.length ? pr : all);
+  const pr = products($('#e-stmt').value.trim()); setList('#dl-prod', pr.length ? pr : all);
 }
 function calcAmt() {
   if (S.amtManual) return;
@@ -755,8 +799,8 @@ function openForm(id) {
 const closeForm = () => go(S.from && S.from !== 'form' ? S.from : 'home');
 async function saveEntry() {
   const err = $('#e-err'); err.textContent = '';
-  const v = { date:$('#e-date').value, no:Math.round(num($('#e-no').value)), stmt:$('#e-stmt').value.trim(),
-    dr:$('#e-dr').value, cr:$('#e-cr').value, pa:$('#e-pa').value.trim(), pb:$('#e-pb').value.trim(), prod:$('#e-prod').value.trim(),
+  const v = { date:$('#e-date').value, no:Math.round(num($('#e-no').value)), stmt:cl($('#e-stmt').value),
+    dr:$('#e-dr').value, cr:$('#e-cr').value, pa:cl($('#e-pa').value), pb:cl($('#e-pb').value), prod:cl($('#e-prod').value),
     qty:num($('#e-qty').value), disc:num($('#e-disc').value), price:num($('#e-price').value), amt:num($('#e-amt').value) };
   if (!v.date) return void (err.textContent = 'اختار التاريخ.');
   if (!v.stmt) return void (err.textContent = 'اكتب البيان.');
@@ -819,11 +863,61 @@ async function bioToggle() {
   renderSettings();
 }
 
+/* ---------- export to Excel (CSV) ---------- */
+const VER = '1.2';
+const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+function csvOf(list) {
+  const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
+  const rows = list.map(e => [e.no, e.date, e.stmt, e.dr, e.cr, e.pa, e.pb, e.prod, e.qty || '', e.disc || '', e.price || '', e.amtD || e.amtC, e.opening ? 1 : 0, e.id].map(csvQ).join(','));
+  return '\ufeff' + [head.join(',')].concat(rows).join('\r\n');
+}
+async function shareFile(name, text, mime) {
+  const file = new File([text], name, { type: mime });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function exportXl() {
+  const m = $('#x-month').value;
+  const list = live().filter(e => m === '*' || e.date.startsWith(m)).sort((a, b) => a.date.localeCompare(b.date) || (a.no || 0) - (b.no || 0));
+  if (!list.length) { toast('مفيش قيود للتصدير'); return; }
+  shareFile('vegan-entries-' + (m === '*' ? 'all' : m) + '.csv', csvOf(list), 'text/csv');
+  toast('تم تجهيز ' + list.length + ' قيد');
+}
+
+/* ---------- users (owner) ---------- */
+async function loadUsers() {
+  const box = $('#adm-list'); S.admAt = Date.now();
+  try {
+    const us = await api('/rest/v1/profiles?select=id,email,full_name,role,active&order=created_at.asc');
+    S.users = us;
+    box.innerHTML = us.map((u, i) => '<div class="box" style="margin-top:8px"><div class="kv"><span>' + esc(u.full_name || u.email) + '</span><span dir="ltr">' + esc(u.email) + '</span></div>' +
+      '<div class="kv"><span>الصلاحية</span><span><select class="adm-role" data-u="' + i + '"' + (u.id === S.session.user.id ? ' disabled' : '') + '>' +
+      ['owner', 'accountant', 'partner'].map(r => '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + roleAr[r] + '</option>').join('') + '</select>' +
+      (u.active ? '' : ' <small>(غير مفعّل)</small>') + '</span></div>' +
+      '<button class="btn ghost adm-pw" data-u="' + i + '" style="width:100%;margin-top:6px">كلمة مرور جديدة</button></div>').join('');
+  } catch (e) { box.innerHTML = '<div class="note">' + (e.net ? 'مفيش اتصال بالسيرفر.' : esc(srvMsg(e.message))) + '</div>'; }
+}
+async function admSetPw(u) {
+  const pw = prompt('اكتب كلمة مرور مؤقتة لـ ' + (u.full_name || u.email) + ' (6 حروف أو أكتر). بعد ما يدخل، يغيّرها من «حسابي».');
+  if (pw === null) return;
+  if (pw.length < 6) { toast('كلمة المرور قصيرة'); return; }
+  try { await api('/rest/v1/rpc/admin_set_password', { method: 'POST', body: { p_email: u.email, p_password: pw } }); toast('تم تغيير كلمة المرور'); }
+  catch (e) { toast(e.net ? 'مفيش اتصال بالسيرفر.' : srvMsg(e.message)); }
+}
+async function admSetRole(u, role) {
+  try { await api('/rest/v1/rpc/set_role', { method: 'POST', body: { p_email: u.email, p_role: role } }); toast('تم تغيير الصلاحية'); }
+  catch (e) { toast(e.net ? 'مفيش اتصال بالسيرفر.' : srvMsg(e.message)); }
+  S.admAt = 0; loadUsers();
+}
+
 /* ---------- start ---------- */
 async function start() {
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
   S.profile = await kvGet('profile');
-  const L = await kvGet('lists'); if (L) { S.accounts = L.accounts; S.statements = L.statements; S.party = L.party; S.closed = new Set(L.closed); }
+  const L = await kvGet('lists'); if (L) { S.accounts = L.accounts; S.statements = L.statements || []; S.party = L.party; S.closed = new Set(L.closed); }
   const ls = await kvGet('lastSync'); S.lastSync = ls ? new Date(ls) : null;
   S.ent = new Map((await entAll()).map(e => [e.id, e]));
   S.stack = []; go('home'); render();
@@ -844,14 +938,15 @@ async function init() {
   $('#n-an').onclick = () => { S.stack = []; go('an'); }; $('#n-set').onclick = () => { S.stack = []; go('set'); };
   $('#n-add').onclick = () => openForm(null);
   $('#e-cancel').onclick = closeForm; $('#e-save').onclick = saveEntry; $('#e-del').onclick = delEntry;
-  $('#p-go').onclick = changePw; $('#s-out').onclick = logout;
+  $('#p-go').onclick = changePw; $('#s-out').onclick = logout; $('#x-go').onclick = exportXl;
+  $('#adm-list').onclick = e => { const b = e.target.closest('.adm-pw'); if (b) admSetPw(S.users[+b.dataset.u]); };
+  $('#adm-list').onchange = e => { const x = e.target.closest('.adm-role'); if (x) admSetRole(S.users[+x.dataset.u], x.value); };
   $('#s-file').onchange = e => importFile(e.target.files[0]);
   $('#f-month').onchange = e => { S.month = e.target.value; S.limit = 100; renderList(); };
   $('#f-q').oninput = e => { S.q = e.target.value; S.limit = 100; renderList(); };
   $('#more').onclick = () => { S.limit += 100; renderList(); };
-  $('#seeall').onclick = () => go('list');
   const openRow = e => { const b = e.target.closest('.row'); if (b) openForm(b.dataset.id); };
-  $('#rows').onclick = openRow; $('#recent').onclick = openRow;
+  $('#rows').onclick = openRow;
   $('#stm-tb').onclick = e => { const r = e.target.closest('tr[data-id]'); if (r) openForm(r.dataset.id); };
   $('#stm-month').onchange = e => { S.stmMonth = e.target.value; renderStm(); };
   $('#stm-pdf').onclick = () => window.print();
