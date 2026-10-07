@@ -114,6 +114,13 @@ table.tb{border-collapse:separate;border-spacing:0;width:auto;font-size:13px;fon
 .tb td.n{direction:ltr;text-align:left}
 .tb td.neg{color:var(--red)}
 .mrow{display:flex;gap:8px;padding:0 12px 10px}
+.pkb{display:block;width:100%;text-align:right;min-height:46px;padding:10px 12px;border:1px solid #CFDDCC;border-radius:10px;background:#fff;font-size:16px;color:var(--ink)}
+.pkb.ph{color:var(--muted)}.pkb:disabled{background:#EEF3EC}
+#psheet{position:fixed;inset:0;z-index:45;background:rgba(0,0,0,.38);display:flex;align-items:flex-start}
+#psheet .pn{background:var(--paper);width:100%;border-radius:0 0 20px 20px;padding:calc(env(safe-area-inset-top) + 12px) 14px 14px}
+#pk-list{max-height:52vh}
+.pki{display:block;width:100%;text-align:right;border:0;border-bottom:1px solid var(--line);background:none;padding:14px 12px;font-size:16px;color:var(--ink)}
+.pki.new{color:var(--green-d);font-weight:700}
 .seg{display:flex;margin:10px 12px 0;background:#E3ECE1;border-radius:11px;padding:3px}
 .seg button{flex:1;border:0;background:none;border-radius:9px;padding:8px;font-weight:700;color:var(--muted)}
 .seg button.on{background:var(--paper);color:var(--green-d);box-shadow:var(--sh)}
@@ -263,22 +270,18 @@ input[readonly]{background:#EEF3EC}
         <div><label for="e-date">التاريخ</label><input id="e-date" type="date"></div>
         <div><label for="e-no">رقم القيد</label><input id="e-no" inputmode="numeric" dir="ltr"></div>
       </div>
-      <label for="e-stmt">البيان</label>
-      <select id="e-stmt"></select>
-      <input id="e-stmt-n" class="hide" placeholder="اكتب البيان الجديد" autocomplete="off" style="margin-top:6px">
-      <label for="e-dr">الحساب المدين</label>
-      <select id="e-dr"></select>
-      <label for="e-pa">اسم الطرف المدين</label>
-      <select id="e-pa"></select>
-      <input id="e-pa-n" class="hide" placeholder="اكتب الاسم الجديد" autocomplete="off" style="margin-top:6px">
-      <label for="e-cr">الحساب الدائن</label>
-      <select id="e-cr"></select>
-      <label for="e-pb">اسم الطرف الدائن</label>
-      <select id="e-pb"></select>
-      <input id="e-pb-n" class="hide" placeholder="اكتب الاسم الجديد" autocomplete="off" style="margin-top:6px">
-      <label for="e-prod">المنتج</label>
-      <select id="e-prod"></select>
-      <input id="e-prod-n" class="hide" placeholder="اكتب اسم المنتج الجديد" autocomplete="off" style="margin-top:6px">
+      <label>البيان</label>
+      <select id="e-stmt" class="hide" data-ph="اضغط واكتب للبحث" data-new="1"></select><button type="button" class="pkb" id="e-stmt-b" data-for="#e-stmt"></button>
+      <label>الحساب المدين</label>
+      <select id="e-dr" class="hide" data-ph="اختار الحساب"></select><button type="button" class="pkb" id="e-dr-b" data-for="#e-dr"></button>
+      <div id="e-pa-w"><label>اسم الطرف المدين</label>
+      <select id="e-pa" class="hide" data-ph="— بدون —" data-new="1" data-none="1"></select><button type="button" class="pkb" id="e-pa-b" data-for="#e-pa"></button></div>
+      <label>الحساب الدائن</label>
+      <select id="e-cr" class="hide" data-ph="اختار الحساب"></select><button type="button" class="pkb" id="e-cr-b" data-for="#e-cr"></button>
+      <div id="e-pb-w"><label>اسم الطرف الدائن</label>
+      <select id="e-pb" class="hide" data-ph="— بدون —" data-new="1" data-none="1"></select><button type="button" class="pkb" id="e-pb-b" data-for="#e-pb"></button></div>
+      <label>المنتج</label>
+      <select id="e-prod" class="hide" data-ph="— بدون —" data-new="1" data-none="1"></select><button type="button" class="pkb" id="e-prod-b" data-for="#e-prod"></button>
       <div class="grid">
         <div><label for="e-qty">الكمية</label><input id="e-qty" inputmode="decimal" dir="ltr"></div>
         <div><label for="e-disc">الخصم %</label><input id="e-disc" inputmode="decimal" dir="ltr" placeholder="مثال: 2"></div>
@@ -351,6 +354,7 @@ input[readonly]{background:#EEF3EC}
     <button id="n-set"></button>
   </nav>
 </div>
+<div id="psheet" class="hide"><div class="pn"><input id="pk-q" type="search" placeholder="اكتب حرف أو حرفين للبحث" autocomplete="off"><div class="vl" id="pk-list"></div></div></div>
 <div id="fsheet" class="hide"><div class="pn" id="fs-pn"></div></div>
 <div id="toast" role="status"></div>
 
@@ -1030,6 +1034,7 @@ function renderLG() {
 
 /* phone back gesture: step back inside the app, never straight out */
 function appBack() {
+  if (pkOpen()) { closePk(); return; }
   if (fsOpen()) { closeFS(); return; }
   if (!$('#lock').classList.contains('hide')) return;
   const v = S.view;
@@ -1107,7 +1112,7 @@ function stmtList() {
 function fillSelect(el, val) {
   const base = accountList(), list = !val || base.includes(val) ? base : [val, ...base];
   el.innerHTML = '<option value="">اختار الحساب</option>' + list.map(a => '<option>' + esc(a) + '</option>').join('');
-  el.value = val || '';
+  el.value = val || ''; syncPk('#' + el.id);
 }
 function names(account) {
   const set = new Set(S.party.filter(p => p.account === account).map(p => cl(p.name)));
@@ -1123,16 +1128,46 @@ function products(stmt) {
   return [...set].filter(Boolean).sort(arSort);
 }
 function setList(id, arr) { $(id).innerHTML = arr.map(n => '<option value="' + esc(n) + '">').join(''); }
-function fillCombo(id, list, val, noneLbl, newLbl) {
+function syncPk(id) { const b = $(id + '-b'); if (!b) return; const v = $(id).value; b.textContent = v || $(id).dataset.ph || '— بدون —'; b.classList.toggle('ph', !v); }
+function fillCombo(id, list, val, noneLbl) {
   const el = $(id), arr = !val || list.includes(val) ? list : [val, ...list];
-  el.innerHTML = '<option value="">' + noneLbl + '</option>' + arr.map(a => '<option>' + esc(a) + '</option>').join('') + '<option value="__new">' + newLbl + '</option>';
-  el.value = val || ''; $(id + '-n').classList.add('hide'); $(id + '-n').value = '';
+  el.innerHTML = '<option value="">' + noneLbl + '</option>' + arr.map(a => '<option>' + esc(a) + '</option>').join('');
+  el.value = val || ''; syncPk(id);
 }
-const comboVal = id => { const v = $(id).value; return v === '__new' ? cl($(id + '-n').value) : v; };
-function comboChange(id) { const n = $(id + '-n'), on = $(id).value === '__new'; n.classList.toggle('hide', !on); if (on) n.focus(); }
-const fillPa = v => fillCombo('#e-pa', names($('#e-dr').value), v, '— بدون —', '＋ اسم جديد');
-const fillPb = v => fillCombo('#e-pb', names($('#e-cr').value), v, '— بدون —', '＋ اسم جديد');
-const fillProd = v => fillCombo('#e-prod', products(comboVal('#e-stmt')), v, '— بدون —', '＋ منتج جديد');
+const comboVal = id => cl($(id).value);
+const hasList = a => !!a && (!S.party.length || S.party.some(p => p.account === a));
+const fillPa = v => { fillCombo('#e-pa', names($('#e-dr').value), v, '— بدون —'); $('#e-pa-w').classList.toggle('hide', !(hasList($('#e-dr').value) || v)); };
+const fillPb = v => { fillCombo('#e-pb', names($('#e-cr').value), v, '— بدون —'); $('#e-pb-w').classList.toggle('hide', !(hasList($('#e-cr').value) || v)); };
+const fillProd = v => fillCombo('#e-prod', products(comboVal('#e-stmt')), v, '— بدون —');
+
+/* searchable picker: type a letter or two, tap the match */
+const nrm = x => String(x).toLowerCase().replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه');
+const pkOpen = () => !$('#psheet').classList.contains('hide');
+function closePk() { $('#psheet').classList.add('hide'); S.pk = null; }
+function openPk(id) {
+  const el = $(id);
+  S.pk = { id, items:[...el.options].map(o => o.value).filter(Boolean), nw:el.dataset.new === '1', none:el.dataset.none === '1' };
+  $('#pk-q').value = ''; $('#psheet').classList.remove('hide'); pkList(); $('#pk-q').focus();
+}
+function pkList() {
+  const P = S.pk; if (!P) return;
+  const qr = cl($('#pk-q').value), q = nrm(qr);
+  let it = P.items;
+  if (q) it = it.map(v => { const n = nrm(v), i = n.indexOf(q), ws = n.split(/[\s.]+/).flatMap(w => w.startsWith('ال') ? [w, w.slice(2)] : [w]); return { v, s: i === 0 ? 0 : ws.some(w => w.startsWith(q)) ? 1 : i > 0 ? 2 : 9 }; })
+    .filter(x => x.s < 9).sort((a, b) => a.s - b.s || arSort(a.v, b.v)).map(x => x.v);
+  let h = '';
+  if (!q && P.none) h += '<button type="button" class="pki" data-v="">— بدون —</button>';
+  h += it.slice(0, 200).map(v => '<button type="button" class="pki" data-v="' + esc(v) + '">' + esc(v) + '</button>').join('');
+  if (q && P.nw && !P.items.some(v => nrm(v) === q)) h += '<button type="button" class="pki new" data-v="' + esc(qr) + '">＋ إضافة «' + esc(qr) + '» كاسم جديد</button>';
+  if (!it.length && !(q && P.nw)) h += '<div class="note" style="padding:12px">مفيش نتائج</div>';
+  $('#pk-list').innerHTML = h;
+}
+function pickPk(v) {
+  const P = S.pk; if (!P) return;
+  const el = $(P.id); closePk();
+  if (v && ![...el.options].some(o => o.value === v)) el.insertAdjacentHTML('beforeend', '<option>' + esc(v) + '</option>');
+  el.value = v; syncPk(P.id); if (el.onchange) el.onchange();
+}
 function calcAmt() {
   const q = num($('#e-qty').value), d = num($('#e-disc').value) / 100, p = num($('#e-price').value), qa = q * (1 - d);
   $('#e-qa').value = q ? +qa.toFixed(4) : '';
@@ -1146,13 +1181,13 @@ function openForm(id) {
   const maxNo = Math.max(0, ...live().map(x => x.no || 0));
   $('#e-date').value = e ? e.date : new Date().toISOString().slice(0, 10);
   $('#e-no').value = e ? e.no : maxNo + 1;
-  fillCombo('#e-stmt', stmtList(), e && e.stmt, 'اختار البيان', '＋ بيان جديد');
+  fillCombo('#e-stmt', stmtList(), e && e.stmt, 'اختار البيان');
   fillSelect($('#e-dr'), e && e.dr); fillSelect($('#e-cr'), e && e.cr);
   fillPa(e && e.pa); fillPb(e && e.pb); fillProd(e && e.prod);
   $('#e-qty').value = e && e.qty ? e.qty : ''; $('#e-disc').value = e && e.disc ? +(e.disc * 100).toFixed(4) : '';
   $('#e-price').value = e && e.price ? e.price : ''; $('#e-amt').value = e ? (e.amtD || e.amtC) : '';
   S.amtManual = !!e; calcAmt();
-  for (const el of document.querySelectorAll('#v-form input,#v-form select')) el.disabled = ro;
+  for (const el of document.querySelectorAll('#v-form input,#v-form select,#v-form .pkb')) el.disabled = ro;
   $('#e-save').classList.toggle('hide', ro); $('#e-del').classList.toggle('hide', ro || !e);
   go('form');
 }
@@ -1224,7 +1259,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.4';
+const VER = '1.5';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -1345,8 +1380,11 @@ async function init() {
   $('#acc-all').onclick = () => openStm(null);
   $('#acc-back').onclick = accBack; $('#stm-back').onclick = back;
   $('#e-dr').onchange = () => fillPa(''); $('#e-cr').onchange = () => fillPb('');
-  $('#e-stmt').onchange = () => { comboChange('#e-stmt'); fillProd(''); };
-  for (const id of ['#e-pa', '#e-pb', '#e-prod']) $(id).onchange = () => comboChange(id);
+  $('#e-stmt').onchange = () => fillProd('');
+  document.addEventListener('click', e => { const b = e.target.closest('.pkb'); if (b) openPk(b.dataset.for); });
+  $('#psheet').onclick = e => { if (e.target.id === 'psheet') closePk(); const b = e.target.closest('.pki'); if (b) pickPk(b.dataset.v); };
+  $('#pk-q').oninput = pkList;
+  $('#pk-q').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const b = $('#pk-list .pki'); if (b) pickPk(b.dataset.v); } };
 
   for (const id of ['#e-qty', '#e-disc', '#e-price']) $(id).oninput = calcAmt;
   $('#e-amt').oninput = () => { S.amtManual = true; };
