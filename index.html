@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#FFFFFF">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -116,10 +116,12 @@ table.tb{border-collapse:separate;border-spacing:0;width:auto;font-size:13px;fon
 .mrow{display:flex;gap:8px;padding:0 12px 10px}
 .pkb{display:block;width:100%;text-align:right;min-height:46px;padding:10px 12px;border:1px solid #CFDDCC;border-radius:10px;background:#fff;font-size:16px;color:var(--ink)}
 .pkb.ph{color:var(--muted)}.pkb:disabled{background:#EEF3EC}
-#psheet{position:fixed;inset:0;z-index:45;background:rgba(0,0,0,.38);display:flex;align-items:flex-start}
-#psheet .pn{background:var(--paper);width:100%;border-radius:0 0 20px 20px;padding:calc(env(safe-area-inset-top) + 12px) 14px 14px}
-#pk-list{max-height:52vh}
-.pki{display:block;width:100%;text-align:right;border:0;border-bottom:1px solid var(--line);background:none;padding:14px 12px;font-size:16px;color:var(--ink)}
+#psheet{position:fixed;inset:0;z-index:45;background:var(--paper)}
+#psheet .pn{height:100dvh;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 10px) 12px 10px}
+.pkh{display:flex;gap:8px;align-items:center}
+#pk-q{flex:1;font-size:19px;min-height:54px}
+#pk-list{flex:1;overflow:auto;margin-top:10px;border:1px solid var(--line);border-radius:12px}
+.pki{display:block;width:100%;text-align:right;border:0;border-bottom:1px solid var(--line);background:none;padding:17px 14px;font-size:19px;color:var(--ink)}
 .pki.new{color:var(--green-d);font-weight:700}
 .seg{display:flex;margin:10px 12px 0;background:#E3ECE1;border-radius:11px;padding:3px}
 .seg button{flex:1;border:0;background:none;border-radius:9px;padding:8px;font-weight:700;color:var(--muted)}
@@ -354,7 +356,7 @@ input[readonly]{background:#EEF3EC}
     <button id="n-set"></button>
   </nav>
 </div>
-<div id="psheet" class="hide"><div class="pn"><input id="pk-q" type="search" placeholder="اكتب حرف أو حرفين للبحث" autocomplete="off"><div class="vl" id="pk-list"></div></div></div>
+<div id="psheet" class="hide"><div class="pn"><div class="pkh"><input id="pk-q" type="search" placeholder="اضغط هنا واكتب للبحث" autocomplete="off"><button type="button" class="btn ghost" id="pk-x">إغلاق</button></div><div id="pk-list"></div></div></div>
 <div id="fsheet" class="hide"><div class="pn" id="fs-pn"></div></div>
 <div id="toast" role="status"></div>
 
@@ -1135,9 +1137,8 @@ function fillCombo(id, list, val, noneLbl) {
   el.value = val || ''; syncPk(id);
 }
 const comboVal = id => cl($(id).value);
-const hasList = a => !!a && (!S.party.length || S.party.some(p => p.account === a));
-const fillPa = v => { fillCombo('#e-pa', names($('#e-dr').value), v, '— بدون —'); $('#e-pa-w').classList.toggle('hide', !(hasList($('#e-dr').value) || v)); };
-const fillPb = v => { fillCombo('#e-pb', names($('#e-cr').value), v, '— بدون —'); $('#e-pb-w').classList.toggle('hide', !(hasList($('#e-cr').value) || v)); };
+const fillPa = v => fillCombo('#e-pa', names($('#e-dr').value), v, '— بدون —');
+const fillPb = v => fillCombo('#e-pb', names($('#e-cr').value), v, '— بدون —');
 const fillProd = v => fillCombo('#e-prod', products(comboVal('#e-stmt')), v, '— بدون —');
 
 /* searchable picker: type a letter or two, tap the match */
@@ -1147,7 +1148,7 @@ function closePk() { $('#psheet').classList.add('hide'); S.pk = null; }
 function openPk(id) {
   const el = $(id);
   S.pk = { id, items:[...el.options].map(o => o.value).filter(Boolean), nw:el.dataset.new === '1', none:el.dataset.none === '1' };
-  $('#pk-q').value = ''; $('#psheet').classList.remove('hide'); pkList(); $('#pk-q').focus();
+  $('#pk-q').value = ''; $('#pk-q').placeholder = 'اضغط هنا واكتب للبحث'; $('#psheet').classList.remove('hide'); pkList();
 }
 function pkList() {
   const P = S.pk; if (!P) return;
@@ -1159,7 +1160,9 @@ function pkList() {
   if (!q && P.none) h += '<button type="button" class="pki" data-v="">— بدون —</button>';
   h += it.slice(0, 200).map(v => '<button type="button" class="pki" data-v="' + esc(v) + '">' + esc(v) + '</button>').join('');
   if (q && P.nw && !P.items.some(v => nrm(v) === q)) h += '<button type="button" class="pki new" data-v="' + esc(qr) + '">＋ إضافة «' + esc(qr) + '» كاسم جديد</button>';
-  if (!it.length && !(q && P.nw)) h += '<div class="note" style="padding:12px">مفيش نتائج</div>';
+  else if (!q && P.nw) h += '<button type="button" class="pki new" data-act="new">＋ إضافة اسم جديد</button>';
+  if (!it.length && !P.nw) h += '<div class="note" style="padding:14px">مفيش نتائج</div>';
+  else if (!P.items.length && !q) h = '<div class="note" style="padding:14px 14px 4px">مفيش أسماء مسجلة هنا.</div>' + h;
   $('#pk-list').innerHTML = h;
 }
 function pickPk(v) {
@@ -1259,7 +1262,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.5';
+const VER = '1.6';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -1382,9 +1385,9 @@ async function init() {
   $('#e-dr').onchange = () => fillPa(''); $('#e-cr').onchange = () => fillPb('');
   $('#e-stmt').onchange = () => fillProd('');
   document.addEventListener('click', e => { const b = e.target.closest('.pkb'); if (b) openPk(b.dataset.for); });
-  $('#psheet').onclick = e => { if (e.target.id === 'psheet') closePk(); const b = e.target.closest('.pki'); if (b) pickPk(b.dataset.v); };
+  $('#psheet').onclick = e => { if (e.target.closest('#pk-x')) return closePk(); const b = e.target.closest('.pki'); if (!b) return; if (b.dataset.act === 'new') { $('#pk-q').placeholder = 'اكتب الاسم الجديد'; $('#pk-q').focus(); } else pickPk(b.dataset.v); };
   $('#pk-q').oninput = pkList;
-  $('#pk-q').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const b = $('#pk-list .pki'); if (b) pickPk(b.dataset.v); } };
+  $('#pk-q').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const b = $('#pk-list .pki[data-v]'); if (b) pickPk(b.dataset.v); } };
 
   for (const id of ['#e-qty', '#e-disc', '#e-price']) $(id).oninput = calcAmt;
   $('#e-amt').oninput = () => { S.amtManual = true; };
