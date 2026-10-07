@@ -123,7 +123,10 @@ table.tb{border-collapse:separate;border-spacing:0;width:auto;font-size:13px;fon
 #pk-list{flex:1;overflow:auto;margin-top:10px;border:1px solid var(--line);border-radius:12px}
 .pki{display:block;width:100%;text-align:right;border:0;border-bottom:1px solid var(--line);background:none;padding:17px 14px;font-size:19px;color:var(--ink)}
 .pki.new{color:var(--green-d);font-weight:700}
-.st td{white-space:normal}.st td:first-child{min-width:200px}
+table.st{width:100%;table-layout:fixed;font-size:15.5px}
+.st th{font-size:14px;padding:10px 6px}.st td{padding:11px 6px;white-space:normal;word-break:break-word;line-height:1.45}
+.st td.n{white-space:nowrap;padding-inline:4px}
+.st th:first-child,.st td:first-child{position:static;box-shadow:none;min-width:0;background:transparent}
 .st tr.h td{font-weight:800;background:#EAF3E7!important;color:var(--green-d)}
 .st tr.t td{font-weight:800;border-top:2px solid var(--green);background:#F1F7EF!important}
 .st tr.m td{color:var(--muted);font-size:12.5px}
@@ -422,7 +425,7 @@ const IC = {
 };
 const ico = n => '<svg viewBox="0 0 24 24" aria-hidden="true">' + IC[n] + '</svg>';
 const ACC = [
-  ['العملاء','العملاء','users','#A63CA0'], ['الموردين','الموردين','truck','#1E6FE8'], ['الخزينة','الخزينة','wallet','#2E7D52'],
+  ['العملاء','العملاء','users','#A63CA0'], ['الموردين','الموردين','truck','#1E6FE8'], ['المشتريات','المشتريات','box','#3F7CAC'], ['الخزينة','الخزينة','wallet','#2E7D52'],
   ['مبيعات توريد','المبيعات','chart','#E8892B'], ['المصروفات','المصروفات','receipt','#D4A00F'], ['الايرادات','الإيرادات','coin','#1FA38A'],
   ['المرتبات','المرتبات','brief','#4A3FE0'], ['العهد.الماليه','العهد المالية','tag','#2AA7C9'], ['جاري.الشركاء','الشركاء','users','#7A4DD8'],
   ['ارصده.دائنه.اخري','الديون والأرصدة الدائنة','coin','#C0453A'], ['اصول.ثابتة','الأصول الثابتة','build','#5B6B2A'], ['المخزون.الخام','المخزون الخام','box','#8A5A2B']
@@ -847,7 +850,7 @@ function renderAn() {
 function openAcc(A) { S.acc = A; S.expGroup = null; S.accQ = ''; S.accMonth = '*'; $('#acc-q').value = ''; if (S.view !== 'acc') push_('acc'); else go('acc'); }
 
 /* grouping key: inventory by product, assets by asset name, the rest by party name */
-const keyOf = (A, e, s) => A === 'المخزون.الخام' ? (cl(e.prod) || s.party) : A === 'اصول.ثابتة' ? (s.party || cl(e.prod)) : s.party;
+const keyOf = (A, e, s) => A === 'المصروفات' ? expItem(e) : A === 'المشتريات' ? (cl(e.prod) || s.party || cl(e.stmt) || 'بدون اسم') : A === 'المخزون.الخام' ? (cl(e.prod) || s.party) : A === 'اصول.ثابتة' ? (s.party || cl(e.prod)) : s.party;
 const discEgp = e => e.qty && e.disc ? (e.qty - aft(e)) * e.price : 0;
 function sumRows(A, month) {
   const map = new Map();
@@ -866,6 +869,7 @@ function sumCols(A) {
   if (A === 'العملاء') return [T('اسم العميل'), N('المبيعات', r => r.d, { sum:1 }), N('الخصومات', r => r.disc, { sum:1, z:1 }), N('المدفوع', r => r.c, { sum:1 }), N('الرصيد', r => r.d - r.c, { sum:1, neg:1 })];
   if (A === 'الموردين') return [T('اسم المورد'), N('المشتريات', r => r.c, { sum:1 }), N('الخصومات', r => r.disc, { sum:1, z:1 }), N('المدفوع', r => r.d, { sum:1 }), N('الرصيد', r => r.c - r.d, { sum:1, neg:1 })];
   if (A === 'المخزون.الخام') return [T('اسم الصنف'), N('الوارد (كمية)', r => r.qi, { z:1 }), N('الصادر والفاقد (كمية)', r => r.qo, { z:1 }), N('الرصيد (كمية)', r => r.qi - r.qo, { neg:1 }), N('الرصيد (مبلغ)', r => r.d - r.c, { sum:1, neg:1 })];
+  if (A === 'المشتريات') return [T('اسم الصنف'), N('المشتريات', r => r.d, { sum:1 }), N('المردودات', r => r.c, { sum:1, z:1 }), N('صافي المشتريات', r => r.d - r.c, { sum:1, neg:1 })];
   if (A === 'اصول.ثابتة') return [T('اسم الأصل'), N('عدد الوحدات', r => r.qi - r.qo), N('التكلفة', r => r.d, { sum:1 }), N('المستبعد', r => r.c, { sum:1, z:1 }), N('الصافي', r => r.d - r.c, { sum:1, neg:1 })];
   const K = { 'العهد.الماليه':['اسم مستلم العهدة', 'مبلغ العهدة', 'المصروف', 'الرصيد المتبقي', 1], 'المرتبات':['اسم الموظف', 'المسحوبات', 'المصروف', 'الرصيد المتبقي', 1],
     'ارصده.دائنه.اخري':['الاسم', 'المبلغ', 'المسدد', 'الرصيد المتبقي', -1] }[A] || ['الاسم', 'مدين', 'دائن', 'الرصيد', 1];
@@ -874,7 +878,21 @@ function sumCols(A) {
 }
 const EXP_G = [["مصروفات تشغيلية", ["نقل منتج خام", "كلوريد كالسيوم", "تشغيل منتج", "مشروبات المصنع", "مواصلات للعاملين", "ماكولات المصنع", "بكر استريتش للبراميل", "خل تركيز 99.9%", "ملح", "صنايعي تقطيع", "زيت طعام", "اكراميات", "ميتا باى سلفات", "سكاكين مشط تقطيع", "جهز رفراكتوميتر للملح", "ملئ انابيب غاز", "مصافي بلاستيك", "نولون نقل زيتون", "كارته ميزان منتج", "شكائر للجزر", "تحميل فلفل", "عمالة للفلفل", "حساب مفرش تقطيع", "حساب ملح كفر الدوار", "حساب كلاك نقل"]], ["مصروفات الادارية", ["ايجار المصنع", "دفاتر", "غفره المصنع", "ماكولات اداريين", "مشروبات اداريين", "مواصلات اداريين", "شحن باقة", "بنزين سيارة اداره", "ختم الكترونى", "مصروفات اخري", "كارته مرور", "صيانه لاب توب", "مصروفات سيارة", "ختم الشركة", "كهرباء المصنع", "كاوتش سيارة الادارة", "غيار زيت لسيارة محمد الفقي", "مصروفات كفر الدوار"]], ["مصروفات مالية", ["اتعاب محامى", "ضريبة 1% للشيك", "توكيلات", "مصروفات مالية اخري", "رسوم تحويل انستا", "المحاسب القانوني", "عيدية", "مكافئة عمل"]], ["مصروفات البيع والتوزيع", ["مصروفات تسويقة", "نقل منتج تام", "سولار سيارة", "تصفية سيارة طنطا", "عمولة مبيعات"]], ["مصروفات عامة اخري", ["برطمانات للعينات", "تصفية مصروفات", "مراتب للعاملين", "عينات", "عجلة كاوتش للازق", "جوانتى سيلكون للعاملين", "منظفات", "مستلزمات كهرباء", "علب حديد للنت", "صيانه طلمبة مياه", "رولمان بلي", "سير ماكينة الصنفرة", "لحاف غطاء"]], ["مصروفات ماكينة التشريح", ["نولون نقل الماكينة", "سن سكاكين الماكينة", "خراطة اكسات السيور", "سلك كهرباء لخط التشريح", "نولون نقل سير الماكينة", "مسامير", "كراسي بلي", "مستلزمات سباكة لخط التشريح", "خامات استلس", "رولمان بلى", "اويل سيل", "سير v للماكينة", "صنايعي لحام", "موتور لدرج الحلة", "سير لدرج الحلة", "طنابير للماكينة", "عمالة لماكينة التشريح", "لحام هزاز", "سن سكاكين الماكينة خالد", "سوست الهزاز", "تصنيع سكاكين سن اول مره", "سيور نقل حركة للماكينة", "خسائر مالية"]], ["توزيع الارباح الاستثمارية", ["توزيع ارباح", "حسن الشيخ", "خالد رسلان"]]];
 let EXP_MAP = null;
-const expGroupOf = n => { if (!EXP_MAP) { EXP_MAP = new Map(); for (const [g, it] of EXP_G) for (const x of it) { const k = cl(x); if (!EXP_MAP.has(k)) EXP_MAP.set(k, g); } } return EXP_MAP.get(cl(n)) || 'غير مصنف'; };
+const EXP_PA = { 'نولون':'نقل منتج خام', 'نولون وادى فود':'نقل منتج خام', 'اكراميه تنزيل':'اكراميات', 'اكرامية تنزيل':'اكراميات', 'خصم ضريبة 1%':'ضريبة 1% للشيك' };
+const expGroupRaw = n => { if (!EXP_MAP) { EXP_MAP = new Map(); for (const [g, it] of EXP_G) for (const x of it) { const k = cl(x); if (!EXP_MAP.has(k)) EXP_MAP.set(k, g); } EXP_MAP.set('مصروفات عامة اخري', 'مصروفات عامة اخري'); } return EXP_MAP.get(cl(n)) || null; };
+const expGroupOf = n => expGroupRaw(n) || 'مصروفات عامة اخري';
+const EXP_GEN = new Set(['مصروفات عامة اخري', 'مصروفات اخري', 'مصروفات اخرى']);
+function expItem(e) {
+  const p = cl(e.dr === 'المصروفات' ? e.pa : e.pb), st = cl(e.stmt), pr = cl(e.prod);
+  if (p && !EXP_GEN.has(p) && expGroupRaw(p)) return p;
+  if (st && !EXP_GEN.has(st) && expGroupRaw(st)) return st;
+  const al = EXP_PA[pr] || EXP_PA[nrm(pr)]; if (al) return al;
+  if (/^شحن باقة/.test(st)) return 'شحن باقة';
+  if (st === 'تكاليف') return 'تشغيل منتج';
+  if (/اكرام/.test(nrm(st))) return 'اكراميات';
+  if (p && EXP_GEN.has(p) && st && !EXP_GEN.has(st)) return st;
+  return p || st || 'بدون اسم';
+}
 function renderAcc() {
   const A = S.acc, isExp = A === 'المصروفات', groups = isExp && S.expGroup == null;
   S.accMode = groups ? 'g' : 'i';
@@ -957,7 +975,7 @@ function spec(A) {
     return [ID, DT, MO(), T(K[0], m => m.party), T('البيان', m => m.e.stmt), N(K[1], a, { z:1, sum:1 }), N(K[2], b, { z:1, sum:1 }),
       N(K[3], m => a(m) - b(m), { sum:1, neg:1 }), N('الرصيد التراكمي', m => K[4] * m.run, { s:1, neg:1 })];
   }
-  return [ID, DT, MO(), T('البيان', m => m.e.stmt), T('الطرف', m => m.party), T('الحساب المقابل', m => m.other),
+  return [ID, DT, MO(), T('البيان', m => m.e.stmt), T(A === 'المشتريات' ? 'المورد' : 'الطرف', m => A === 'المشتريات' ? m.who : m.party), T('الحساب المقابل', m => m.other),
     T('المنتج', m => m.e.prod), N('الكمية', m => m.e.qty, { z:1 }), N('الخصم', m => m.e.disc, { z:1, pct:1 }), N('سعر الوحدة', m => m.e.price, { z:1 }),
     N('مدين', m => m.d, { z:1, sum:1 }), N('دائن', m => m.c, { z:1, sum:1 }), N('الرصيد', m => m.run, { neg:1 })];
 }
@@ -1042,8 +1060,8 @@ function plCalc(pred, rng) {
   for (const e of live()) {
     if (!pred(e)) continue;
     if (e.dr) add(D, e.dr, e.amtD); if (e.cr) add(C, e.cr, e.amtC);
-    if (e.dr === 'المصروفات') add(ex, cl(e.pa), e.amtD);
-    if (e.cr === 'المصروفات') add(ex, cl(e.pb), -e.amtC);
+    if (e.dr === 'المصروفات') add(ex, expItem(e), e.amtD);
+    if (e.cr === 'المصروفات') add(ex, expItem(e), -e.amtC);
   }
   const d = a => D.get(a) || 0, c = a => C.get(a) || 0, n = a => d(a) - c(a), g = {};
   for (const [k, v] of ex) { const x = expGroupOf(k); g[x] = (g[x] || 0) + v; }
@@ -1054,18 +1072,20 @@ function plCalc(pred, rng) {
   P.cos = n('تكلفة المبيعات'); P.purD = d('المشتريات'); P.purC = c('المشتريات'); P.pur = P.purD - P.purC; P.cogs = P.cos + P.pur;
   P.gross = P.net - P.cogs;
   P.oper = gg('مصروفات تشغيلية'); P.sal = n('المرتبات'); P.admin = gg('مصروفات الادارية'); P.sell = gg('مصروفات البيع والتوزيع');
-  P.fine = gg('مصروفات مالية') + gg('مصروفات عامة اخري'); P.unc = gg('غير مصنف');
+  P.fine = gg('مصروفات مالية') + gg('مصروفات عامة اخري');
   P.dep = rng ? depBetween(rng[0], rng[1]) : 0;
-  P.opex = P.oper + P.sal + P.admin + P.sell + P.fine + P.dep + P.unc;
+  P.opex = P.oper + P.sal + P.admin + P.sell + P.fine;
   P.op = P.gross - P.opex; P.other = -n('الايرادات'); P.machine = gg('مصروفات ماكينة التشريح');
   P.pre = P.op + P.other - P.machine; P.dist = gg('توزيع الارباح الاستثمارية'); P.np = P.pre - P.dist;
   return P;
 }
 function stmtTable(id, cols, rows) {
-  const f = v => v == null ? '' : (Math.abs(v) < 0.005 ? '0' : fmt(v));
-  const cell = (v, neg) => '<td class="n' + (neg && v < -0.005 ? ' neg' : '') + '">' + esc(f(v)) + '</td>';
-  $(id).innerHTML = '<thead><tr>' + cols.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + rows.map(r =>
-    '<tr class="' + (r.c || '') + '"><td>' + esc(r.l) + '</td>' + (cols.length === 4 ? cell(r.a) + cell(r.b, 1) + '<td class="n">' + (r.p == null ? '' : esc(r.p)) + '</td>' : cell(r.b, 1)) + '</tr>').join('') + '</tbody>';
+  const f = v => v == null ? '' : fmt0(v);
+  const cell = (v, neg) => '<td class="n' + (neg && v < -0.5 ? ' neg' : '') + '">' + esc(f(v)) + '</td>';
+  const W = cols.length === 4 ? [37, 21, 23, 19] : [60, 40];
+  $(id).innerHTML = '<colgroup>' + W.map(w => '<col style="width:' + w + '%">').join('') + '</colgroup><thead><tr>' + cols.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + rows.map(r =>
+    '<tr class="' + (r.c || '') + '"' + (r.k ? ' data-acc="' + esc(r.k) + '" style="cursor:pointer"' : '') + '><td>' + esc(r.l) + (r.k ? ' ›' : '') + '</td>' +
+    (cols.length === 4 ? cell(r.a) + cell(r.b, 1) + '<td class="n">' + (r.p == null ? '' : esc(r.p)) + '</td>' : cell(r.b, 1)) + '</tr>').join('') + '</tbody>';
 }
 const monthsOf = () => [...new Set(live().filter(e => !e.opening).map(e => e.date.slice(0, 7)))].sort();
 function renderIS() {
@@ -1076,24 +1096,24 @@ function renderIS() {
   const P = plCalc(M === '*' ? () => true : e => !e.opening && e.date.startsWith(M), M === '*' ? ytdRange(asOfDef()) : monthRange(M));
   const pc = v => P.net ? (v / P.net * 100).toFixed(1) + '%' : '';
   const R = [
-    { l:'مبيعات خام', b:P.sales }, { l:'مبيعات منتج تام', b:P.fin }, { l:'يطرح: مردودات ومسموحات المبيعات', b:P.allow },
+    { l:'مبيعات خام', b:P.sales, k:'مبيعات توريد' }, { l:'مبيعات منتج تام', b:P.fin }, { l:'يطرح: مردودات ومسموحات المبيعات', b:P.allow },
     { l:'صافي المبيعات', b:P.net, c:'t' },
     { l:'تكلفة المبيعات', b:P.cos },
-    { l:'يضاف: المشتريات', a:P.purD }, { l:'يطرح: مردودات المشتريات', a:P.purC }, { l:'صافي المشتريات', a:P.pur, c:'t' },
+    { l:'يضاف: المشتريات', a:P.purD, k:'المشتريات' }, { l:'يطرح: مردودات المشتريات', a:P.purC, k:'المشتريات' }, { l:'صافي المشتريات', a:P.pur, c:'t', k:'المشتريات' },
     { l:'تكلفة البضاعة', b:P.cogs, c:'t' },
     { l:'مجمل الربح', b:P.gross, p:pc(P.gross), c:'t' },
-    { l:'المصروفات التشغيلية', a:P.oper }, { l:'المرتبات والأجور', a:P.sal }, { l:'المصروفات الإدارية', a:P.admin },
-    { l:'مصروفات البيع والتوزيع', a:P.sell }, { l:'مصروفات مالية ومصروفات أخرى', a:P.fine },
-    { l:'إهلاك الأصول الثابتة (محسوب تلقائي)', a:P.dep }];
-  if (Math.abs(P.unc) > 0.005) R.push({ l:'مصروفات غير مصنفة (بدون اسم بند أو البند مش في المجموعات)', a:P.unc, c:'w' });
+    { l:'المصروفات التشغيلية', a:P.oper, k:'المصروفات' }, { l:'المرتبات والأجور', a:P.sal, k:'المرتبات' }, { l:'المصروفات الإدارية', a:P.admin, k:'المصروفات' },
+    { l:'مصروفات البيع والتوزيع', a:P.sell, k:'المصروفات' }, { l:'مصروفات مالية ومصروفات أخرى', a:P.fine, k:'المصروفات' }];
   R.push({ l:'مجموع المصروفات', b:P.opex, c:'t' },
     { l:'صافي الربح التشغيلي', b:P.op, p:pc(P.op), c:'t' },
-    { l:'الإيرادات والمكاسب الأخرى', a:P.other }, { l:'المصروفات والخسائر الأخرى (ماكينة التشريح)', a:P.machine },
+    { l:'الإيرادات والمكاسب الأخرى', a:P.other, k:'الايرادات' }, { l:'المصروفات والخسائر الأخرى (ماكينة التشريح)', a:P.machine, k:'المصروفات' },
     { l:'صافي الإيرادات والمصروفات الأخرى', b:P.other - P.machine, c:'t' },
     { l:'صافي الربح قبل التوزيع', b:P.pre, p:pc(P.pre), c:'t' },
     { l:'يطرح: توزيعات الأرباح للمستثمرين', b:P.dist },
-    { l:'صافي الربح بعد التوزيع', b:P.np, p:pc(P.np), c:'t' });
-  stmtTable('#is-tb', ['البيان', 'جزئي', 'كلي', '% من المبيعات'], R);
+    { l:'صافي الربح بعد التوزيع', b:P.np, p:pc(P.np), c:'t' },
+    { l:'للمعلومية: إهلاك السنة (غير مخصوم من الربح)', b:P.dep, c:'m' },
+    { l:'للمعلومية: صافي الربح لو اتخصم الإهلاك', b:P.np - P.dep, c:'m' });
+  stmtTable('#is-tb', ['البيان', 'جزئي', 'كلي', 'النسبة'], R);
   $('#ph-t').textContent = 'قائمة الدخل' + (M === '*' ? ' - كل الفترة' : ' - شهر ' + M);
 }
 function renderBS() {
@@ -1109,18 +1129,18 @@ function renderBS() {
   const rec = n('العملاء') + n('ارصدة مدينة اخري') + n('العهد.الماليه');
   const cur = cash + inv + rec, fx = n('اصول.ثابتة') + accDep, assets = cur + fx;
   const sup = -n('الموردين'), oc = -n('ارصده.دائنه.اخري'), liab = sup + oc;
-  const cap = -n('رأس.مال'), part = -n('جاري.الشركاء'), eq = cap + part + P.np, tot = liab + eq, diff = assets - tot;
+  const cap = -n('رأس.مال'), part = -n('جاري.الشركاء'), eq = cap + part + P.np - P.dep, tot = liab + eq, diff = assets - tot;
   const R = [{ l:'الأصول', c:'h' }, { l:'أولاً: الأصول المتداولة', c:'h' },
-    { l:'الخزينة', b:n('الخزينة') }, { l:'الخزينة الخاصة', b:n('خزينة.خاصة') }, { l:'البنك', b:n('البنك') }, { l:'إجمالي النقدية', b:cash, c:'t' },
-    { l:'المخزون الخام', b:n('المخزون.الخام') }, { l:'مخزن المنتج تام', b:n('مخزن منتج تام') }];
+    { l:'الخزينة', b:n('الخزينة'), k:'الخزينة' }, { l:'الخزينة الخاصة', b:n('خزينة.خاصة') }, { l:'البنك', b:n('البنك') }, { l:'إجمالي النقدية', b:cash, c:'t' },
+    { l:'المخزون الخام', b:n('المخزون.الخام'), k:'المخزون.الخام' }, { l:'مخزن المنتج تام', b:n('مخزن منتج تام') }];
   if (Math.abs(n('مخزن فلفل')) > 0.005) R.push({ l:'مخزن فلفل', b:n('مخزن فلفل') });
-  R.push({ l:'إجمالي المخزون', b:inv, c:'t' }, { l:'العملاء', b:n('العملاء') }, { l:'أرصدة مدينة أخرى', b:n('ارصدة مدينة اخري') }, { l:'العهد المالية', b:n('العهد.الماليه') },
+  R.push({ l:'إجمالي المخزون', b:inv, c:'t' }, { l:'العملاء', b:n('العملاء'), k:'العملاء' }, { l:'أرصدة مدينة أخرى', b:n('ارصدة مدينة اخري') }, { l:'العهد المالية', b:n('العهد.الماليه'), k:'العهد.الماليه' },
     { l:'إجمالي المدينون', b:rec, c:'t' }, { l:'إجمالي الأصول المتداولة', b:cur, c:'t' },
-    { l:'ثانياً: الأصول غير المتداولة (الثابتة)', c:'h' }, { l:'الأصول الثابتة', b:n('اصول.ثابتة') }, { l:'(-) مجمع الإهلاك (المسجل + إهلاك السنة)', b:accDep },
+    { l:'ثانياً: الأصول غير المتداولة (الثابتة)', c:'h' }, { l:'الأصول الثابتة', b:n('اصول.ثابتة'), k:'اصول.ثابتة' }, { l:'(-) مجمع الإهلاك (المسجل + إهلاك السنة)', b:accDep },
     { l:'صافي الأصول الثابتة', b:fx, c:'t' }, { l:'إجمالي الأصول', b:assets, c:'t' },
-    { l:'الخصوم وحقوق الملكية', c:'h' }, { l:'أولاً: الخصوم المتداولة', c:'h' }, { l:'الموردين', b:sup }, { l:'أرصدة دائنة أخرى', b:oc },
-    { l:'إجمالي الخصوم المتداولة', b:liab, c:'t' }, { l:'ثانياً: حقوق الملكية', c:'h' }, { l:'رأس المال', b:cap }, { l:'جاري الشركاء', b:part },
-    { l:'أرباح محتجزة (صافي الربح بعد التوزيع)', b:P.np }, { l:'إجمالي حقوق الملكية', b:eq, c:'t' }, { l:'إجمالي الخصوم وحقوق الملكية', b:tot, c:'t' });
+    { l:'الخصوم وحقوق الملكية', c:'h' }, { l:'أولاً: الخصوم المتداولة', c:'h' }, { l:'الموردين', b:sup, k:'الموردين' }, { l:'أرصدة دائنة أخرى', b:oc, k:'ارصده.دائنه.اخري' },
+    { l:'إجمالي الخصوم المتداولة', b:liab, c:'t' }, { l:'ثانياً: حقوق الملكية', c:'h' }, { l:'رأس المال', b:cap }, { l:'جاري الشركاء', b:part, k:'جاري.الشركاء' },
+    { l:'أرباح محتجزة (صافي الربح بعد التوزيع)', b:P.np }, { l:'(-) إهلاك الأصول الثابتة للسنة (من شيت الإهلاك)', b:-P.dep }, { l:'إجمالي حقوق الملكية', b:eq, c:'t' }, { l:'إجمالي الخصوم وحقوق الملكية', b:tot, c:'t' });
   R.push(Math.abs(diff) > 0.5 ? { l:'الفرق بين الأصول والخصوم وحقوق الملكية', b:diff, c:'w' } : { l:'✓ الميزانية متوازنة', c:'m' });
   stmtTable('#bs-tb', ['البيان', 'المبلغ'], R);
   $('#ph-t').textContent = 'قائمة المركز المالي' + (M === '*' ? '' : ' - حتى شهر ' + M);
@@ -1138,12 +1158,13 @@ function renderMP() {
     return { M, lbl:MN[+M.slice(5, 7) - 1] + ' ' + M.slice(2, 4), P, wd };
   });
   const N = (h, k, o) => Object.assign({ h, k, t:'n', z:1, sum:1 }, o);
-  const cols = [{ h:'الشهر', k:r => r.lbl, t:'t' }, N('المبيعات', r => r.P.sales + r.P.fin), N('مسموحات', r => r.P.allow), N('صافي المبيعات', r => r.P.net), N('ت.المبيعات', r => r.P.cogs - r.P.pur),
-    N('المشتريات', r => r.P.pur), N('مجمل الربح', r => r.P.gross, { neg:1 }), N('المصروفات', r => r.P.oper + r.P.admin + r.P.sell + r.P.fine + r.P.unc), N('المرتبات', r => r.P.sal),
-    N('الإهلاك', r => r.P.dep), N('الإيرادات الأخرى', r => r.P.other), N('مصروفات أخرى (ماكينة)', r => r.P.machine), N('صافي الربح', r => r.P.pre, { neg:1 }),
-    N('توزيعات الأرباح', r => r.P.dist), N('مسحوبات جاري الشركاء', r => r.wd), N('الصافي بعد التوزيع والسحب', r => r.P.pre - r.P.dist - r.wd, { neg:1 })];
+  const allExp = r => r.P.oper + r.P.admin + r.P.sell + r.P.fine + r.P.machine + r.P.dist;
+  const profit = r => r.P.gross + r.P.other - allExp(r) - r.P.sal;
+  const cols = [{ h:'الشهر', k:r => r.lbl, t:'t' }, N('المبيعات', r => r.P.sales + r.P.fin), N('مسموحات', r => r.P.allow), N('صافي المبيعات', r => r.P.net), N('ت.المبيعات', r => r.P.cos),
+    N('المشتريات', r => r.P.pur), N('مجمل الربح', r => r.P.gross, { neg:1 }), N('الإيرادات', r => r.P.other), N('المصروفات', allExp), N('المرتبات', r => r.P.sal),
+    N('صافي الربح', profit, { neg:1 }), N('مسحوبات جاري الشركاء', r => r.wd), N('الصافي بعد السحب', r => profit(r) - r.wd, { neg:1 })];
   const fr = gridRows('mp', cols, rows);
-  $('#mp-note').innerHTML = 'الصافي بعد التوزيع والسحب = صافي الربح − توزيعات الأرباح − مسحوبات جاري الشركاء (اللي خرج من الخزنة فعلًا)' + filterNote('mp');
+  $('#mp-note').innerHTML = 'المصروفات هنا هي كل المصروفات (بما فيها ماكينة التشريح وتوزيع الأرباح). الصافي بعد السحب = صافي الربح − مسحوبات جاري الشركاء' + filterNote('mp');
   $('#mp-tb').innerHTML = gridHTML('mp', fr, capOf(60));
   $('#ph-t').textContent = 'صافي الربح الشهري';
 }
@@ -1175,7 +1196,7 @@ function renderDP() {
   const ytd = lines.reduce((x, l) => x + l.ytd, 0), calc0 = lines.reduce((x, l) => x + l.acc0, 0);
   $('#dp-tot').innerHTML = '<div><small>مجمع مسجل أول السنة</small><b dir="ltr">' + fmt0(booked) + '</b></div><div><small>إهلاك السنة (محسوب)</small><b dir="ltr">' + fmt0(ytd) + '</b></div><div><small>المجمع في الميزانية</small><b dir="ltr">' + fmt0(booked + ytd) + '</b></div>';
   const gap = calc0 - booked;
-  $('#dp-note').innerHTML = 'طريقة القسط الثابت، العمر ' + LIFE_YRS + ' سنين، بالأيام ÷ 365 (زي الإكسيل). الميزانية وقائمة الدخل بياخدوا إهلاك السنة من هنا تلقائي، فمتسجلش قيود إهلاك يدوي.' +
+  $('#dp-note').innerHTML = 'طريقة القسط الثابت، العمر ' + LIFE_YRS + ' سنين، بالأيام ÷ 365 (زي الإكسيل). الميزانية بتاخد إهلاك السنة من هنا تلقائي وبيتخصم من حقوق الملكية (مش داخل في قائمة الدخل)، فمتسجلش قيود إهلاك يدوي.' +
     (Math.abs(gap) > 1 ? ' · المجمع المحسوب من تواريخ الشراء أول السنة (' + fmt0(calc0) + ') بيختلف عن المسجل في الأرصدة الافتتاحية بـ ' + fmt0(Math.abs(gap)) + '، والميزانية معتمدة على المسجل.' : '') + filterNote('dp:' + S.dpMode);
   $('#dp-tb').innerHTML = gridHTML('dp:' + S.dpMode, fr, capOf(1500));
   $('#ph-t').textContent = 'إهلاك الأصول الثابتة حتى ' + T;
@@ -1464,7 +1485,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.8';
+const VER = '1.9.1';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -1556,6 +1577,8 @@ async function init() {
   $('#mp-pdf').onclick = () => doPrint($('#ph-t').textContent); $('#dp-pdf').onclick = () => doPrint($('#ph-t').textContent);
   $('#dp-month').onchange = e => { S.dpMonth = e.target.value; renderDP(); };
   $('#dp-d').onclick = () => { S.dpMode = 'd'; renderDP(); }; $('#dp-a').onclick = () => { S.dpMode = 'a'; renderDP(); };
+  const stmtGo = e => { const r = e.target.closest('tr[data-acc]'); if (r) openAcc(r.dataset.acc); };
+  $('#is-tb').onclick = stmtGo; $('#bs-tb').onclick = stmtGo;
   $('#is-back').onclick = back; $('#bs-back').onclick = back;
   $('#is-pdf').onclick = () => doPrint($('#ph-t').textContent); $('#bs-pdf').onclick = () => doPrint($('#ph-t').textContent);
   $('#is-month').onchange = e => { S.isMonth = e.target.value; renderIS(); }; $('#bs-month').onchange = e => { S.bsMonth = e.target.value; renderBS(); };
