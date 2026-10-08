@@ -123,17 +123,17 @@ table.tb{border-collapse:separate;border-spacing:0;width:auto;font-size:13px;fon
 #pk-list{flex:1;overflow:auto;margin-top:10px;border:1px solid var(--line);border-radius:12px}
 .pki{display:block;width:100%;text-align:right;border:0;border-bottom:1px solid var(--line);background:none;padding:17px 14px;font-size:19px;color:var(--ink)}
 .pki.new{color:var(--green-d);font-weight:700}
-table.stb{width:100%;table-layout:fixed;border-collapse:collapse;font-size:17px;background:var(--paper)}
+table.stb{width:100%;table-layout:fixed;border-collapse:collapse;font-size:15.5px;background:var(--paper)}
 .stb th{position:sticky;top:0;z-index:2;background:var(--green-d);color:#fff;padding:12px 8px;font-size:15px;text-align:center}
 .stb th:first-child{text-align:right}
-.stb td{padding:13px 8px;border-bottom:1px solid var(--line);vertical-align:middle;line-height:1.5}
-.stb td.l{text-align:right;word-break:break-word}
-.stb td.v{direction:ltr;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
+.stb td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle;line-height:1.6}
+.stb td.l{text-align:right;word-break:normal;overflow-wrap:break-word;hyphens:none}
+.stb td.v{direction:ltr;text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600;padding-left:14px}.stb td.v small{display:block;color:var(--muted);font-weight:500;font-size:12.5px;line-height:1.3}
 .stb td.p{direction:ltr;text-align:center;white-space:nowrap;color:var(--muted);font-size:15px}
 .stb td.neg{color:var(--red)}
-.stb tr.sub td.l{padding-right:26px;color:#3E5545}.stb tr.sub td.v{font-weight:500}
+.stb tr.sub td.l{padding-right:22px;color:#3E5545;font-size:15px}.stb tr.sub td.v{font-weight:500}
 .stb tr[data-acc]{cursor:pointer}
-.stb tr.h td{font-weight:800;background:#EAF3E7;color:var(--green-d);font-size:16px}
+.stb tr.h td{font-weight:800;background:#EAF3E7;color:var(--green-d);font-size:15.5px;padding:10px 10px;border-top:10px solid var(--bg)}
 .stb tr.t td{font-weight:800;border-top:2px solid var(--green);background:#F1F7EF}
 .stb tr.m td{color:var(--muted);font-size:14.5px;font-weight:500}
 .stb tr.w td{color:var(--red);font-weight:700}
@@ -291,7 +291,7 @@ input[readonly]{background:#EEF3EC}
       <div id="hr-p1"><div class="mrow" style="padding-top:6px"><select id="hr-month" aria-label="الشهر"></select></div><div class="count" id="hr-count"></div>
         <div class="tbw"><table class="tb" id="hr-tb"></table></div><div class="empty" id="hr-e1"></div></div>
       <div id="hr-p2" class="hide"><div class="mrow" style="padding-top:6px"><input type="date" id="hr-date" aria-label="اليوم"><button class="btn ghost" id="hr-all" style="white-space:nowrap">الكل حاضر</button></div><div id="hr-att"></div></div>
-      <div id="hr-p3" class="hide"><div class="mrow" style="padding-top:6px"><button class="btn" id="hr-add" style="width:100%">＋ موظف جديد</button></div><div id="hr-emps"></div></div>
+      <div id="hr-p3" class="hide"><div class="mrow" style="padding-top:6px"><button class="btn" id="hr-add" style="width:100%">＋ موظف جديد</button></div><div class="mrow"><button class="btn ghost" id="hr-imp" style="width:100%">استيراد الرواتب من أول السنة (شيت الإكسل)</button></div><div id="hr-emps"></div></div>
     </section>
 
     <section id="v-db" class="hide">
@@ -831,8 +831,7 @@ function rowHTML(e) {
 function renderHome() {
   const t = [['new','قيد جديد','plus','#F28C28'], ['list','القيود','list','#1FA38A'], ['db','لوحة المؤشرات','chart','#2E7D52'], ['tb','ميزان المراجعة','scale','#4A3FE0'],
     ['gl','دفتر الأستاذ العام','book','#7A4DD8'], ['is','قائمة الدخل','chart','#E8892B'], ['bs','المركز المالي','scale','#1E6FE8'], ['mp','صافي الربح الشهري','chart','#1FA38A'], ['dp','إهلاك الأصول','build','#8A5A2B'], ['hr','المرتبات','brief','#4A3FE0'], ['an','التحليلات','coin','#A63CA0'], ['sync','مزامنة','sync','#2AA7C9']];
-  if (!canWrite()) { const i = t.findIndex(x => x[0] === 'hr'); if (i >= 0) t.splice(i, 1); }
-  if (!canWrite()) t[0] = ['مبيعات توريد', 'المبيعات', 'tag', '#E8892B'];
+  if (!canWrite()) t.shift(); /* الشريك: مشاهدة بس، من غير قيد جديد */
   $('#tiles').innerHTML = t.map(x => '<button class="tile" data-k="' + x[0] + '"><span class="i" style="background:' + x[3] + '">' + ico(x[2]) + '</span>' + x[1] + '</button>').join('');
   const cash = agg('الخزينة'), cus = agg('العملاء'), sup = agg('الموردين');
   const met = (l, v, c) => '<div class="met row" style="--c:' + c + '"><small>' + l + '</small><b dir="ltr">' + fmt0(v) + '</b></div>';
@@ -1126,12 +1125,11 @@ function plCalc(pred, rng) {
   return P;
 }
 function stmtTable(id, cols, rows) {
-  const two = cols.length === 4, W = two ? [50, 33, 17] : [62, 38];
-  const v0 = r => (r.b != null ? r.b : r.a);
-  $(id).innerHTML = '<colgroup>' + W.map(w => '<col style="width:' + w + '%">').join('') + '</colgroup><thead><tr><th>البيان</th><th>المبلغ</th>' + (two ? '<th>النسبة</th>' : '') + '</tr></thead><tbody>' +
+  const W = [64, 36], v0 = r => (r.b != null ? r.b : r.a), hasP = cols.length === 4;
+  $(id).innerHTML = '<colgroup>' + W.map(w => '<col style="width:' + w + '%">').join('') + '</colgroup><thead><tr><th>البيان</th><th>' + (hasP ? 'المبلغ / النسبة' : 'المبلغ') + '</th></tr></thead><tbody>' +
     rows.map(r => { const v = v0(r), sub = r.a != null && r.b == null && !r.c;
       return '<tr class="' + ((r.c || '') + (sub ? ' sub' : '')).trim() + '"' + (r.k ? ' data-acc="' + esc(r.k) + '"' : '') + '><td class="l">' + esc(r.l) + (r.k ? ' ›' : '') + '</td>' +
-        '<td class="v' + (v != null && v < -0.5 ? ' neg' : '') + '">' + (v == null ? '' : esc(fmt0(v))) + '</td>' + (two ? '<td class="p">' + (r.p == null ? '' : esc(r.p)) + '</td>' : '') + '</tr>'; }).join('') + '</tbody>';
+        '<td class="v' + (v != null && v < -0.5 ? ' neg' : '') + '">' + (v == null ? '' : esc(fmt0(v))) + (hasP && r.p ? '<small>' + esc(r.p) + '</small>' : '') + '</td></tr>'; }).join('') + '</tbody>';
 }
 const monthsOf = () => [...new Set(live().filter(e => !e.opening).map(e => e.date.slice(0, 7)))].sort();
 function renderIS() {
@@ -1142,22 +1140,22 @@ function renderIS() {
   const P = plCalc(M === '*' ? () => true : e => !e.opening && e.date.startsWith(M), M === '*' ? ytdRange(asOfDef()) : monthRange(M));
   const pc = v => P.net ? (v / P.net * 100).toFixed(1) + '%' : '';
   const R = [
-    { l:'مبيعات خام', b:P.sales, k:'مبيعات توريد' }, { l:'مبيعات منتج تام', b:P.fin }, { l:'يطرح: مردودات ومسموحات المبيعات', b:P.allow },
+    { l:'المبيعات', c:'h' }, { l:'مبيعات خام', b:P.sales, k:'مبيعات توريد' }, { l:'مبيعات منتج تام', b:P.fin }, { l:'يطرح: مردودات ومسموحات المبيعات', b:P.allow },
     { l:'صافي المبيعات', b:P.net, c:'t' },
-    { l:'تكلفة المبيعات', b:P.cos },
+    { l:'تكلفة البضاعة المباعة', c:'h' }, { l:'تكلفة المبيعات', b:P.cos },
     { l:'يضاف: المشتريات', a:P.purD, k:'المشتريات' }, { l:'يطرح: مردودات المشتريات', a:P.purC, k:'المشتريات' }, { l:'صافي المشتريات', a:P.pur, c:'t', k:'المشتريات' },
     { l:'تكلفة البضاعة', b:P.cogs, c:'t' },
     { l:'مجمل الربح', b:P.gross, p:pc(P.gross), c:'t' },
-    { l:'المصروفات التشغيلية', a:P.oper, k:'المصروفات' }, { l:'المرتبات والأجور', a:P.sal, k:'المرتبات' }, { l:'المصروفات الإدارية', a:P.admin, k:'المصروفات' },
+    { l:'المصروفات', c:'h' }, { l:'المصروفات التشغيلية', a:P.oper, k:'المصروفات' }, { l:'المرتبات والأجور', a:P.sal, k:'المرتبات' }, { l:'المصروفات الإدارية', a:P.admin, k:'المصروفات' },
     { l:'مصروفات البيع والتوزيع', a:P.sell, k:'المصروفات' }, { l:'مصروفات مالية ومصروفات أخرى', a:P.fine, k:'المصروفات' }];
   R.push({ l:'مجموع المصروفات', b:P.opex, c:'t' },
     { l:'صافي الربح التشغيلي', b:P.op, p:pc(P.op), c:'t' },
-    { l:'الإيرادات والمكاسب الأخرى', a:P.other, k:'الايرادات' }, { l:'المصروفات والخسائر الأخرى (ماكينة التشريح)', a:P.machine, k:'المصروفات' },
+    { l:'إيرادات ومصروفات أخرى', c:'h' }, { l:'الإيرادات والمكاسب الأخرى', a:P.other, k:'الايرادات' }, { l:'مصروفات أخرى (ماكينة التشريح)', a:P.machine, k:'المصروفات' },
     { l:'صافي الإيرادات والمصروفات الأخرى', b:P.other - P.machine, c:'t' },
     { l:'صافي الربح قبل التوزيع', b:P.pre, p:pc(P.pre), c:'t' },
-    { l:'يطرح: توزيعات الأرباح للمستثمرين', b:P.dist },
+    { l:'التوزيع', c:'h' }, { l:'يطرح: توزيعات الأرباح للمستثمرين', b:P.dist },
     { l:'صافي الربح بعد التوزيع', b:P.np, p:pc(P.np), c:'t' },
-    { l:'للمعلومية: إهلاك السنة (غير مخصوم من الربح)', b:P.dep, c:'m' },
+    { l:'للمعلومية: إهلاك السنة (غير مخصوم)', b:P.dep, c:'m' },
     { l:'للمعلومية: صافي الربح لو اتخصم الإهلاك', b:P.np - P.dep, c:'m' });
   stmtTable('#is-tb', ['البيان', 'جزئي', 'كلي', 'النسبة'], R);
   $('#ph-t').textContent = 'قائمة الدخل' + (M === '*' ? ' - كل الفترة' : ' - شهر ' + M);
@@ -1233,20 +1231,28 @@ function docSave(kind, id, data, del) {
 /* ---------- payroll (المرتبات) ---------- */
 const hrEmps = () => docsOf('emp').map(d => ({ id:d.id, ...d.data })).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
 function monthsBetween(a, b) { const out = []; let m = a; while (m <= b && out.length < 120) { out.push(m); const y = +m.slice(0, 4), mo = +m.slice(5, 7); m = mo === 12 ? (y + 1) + '-01' : y + '-' + String(mo + 1).padStart(2, '0'); } return out; }
+/* الراتب بيتحسب بالأيام اللي اشتغلها (يوم حاضر = أجر يوم). الاعتيادي (p=2) يوم مدفوع. الحد الأقصى أيام الشهر للحساب (30) حتى لو اشتغل 31. */
+function hrHist(emp, M, h) {
+  const adv = +h.adv || 0, ded = +h.ded || 0, otVal = +h.otVal || 0, sal = +h.sal || +emp.salary || 0, earned = sal - (+h.absVal || 0), paid = +h.paid || 0, net = earned + otVal - adv - ded;
+  return { emp, M, name:emp.name, hist:true, sal, present:+h.present || 0, leave:0, absent:+h.absD || 0, paidDays:+h.present || 0, ot:+h.otH || 0, otVal, earned, due:earned + otVal, adv, ded, totalDed:adv + ded, net, paid, rem:net - paid, other:0, advL:[], paidL:[], note:'من شيت الإكسل' };
+}
 function hrMonth(emp, M) {
+  const hd = S.docs.get('hm:' + emp.id + ':' + M); if (hd && !hd.deleted) return hrHist(emp, M, hd.data);
   const D = +emp.days || 30, H = +emp.hours || 8, sal = +emp.salary || 0, daily = sal / D, hourly = daily / H;
-  const att = docsOf('att').filter(d => d.data.emp === emp.id && d.data.date.slice(0, 7) === M && d.data.p === 1);
-  const ot = att.reduce((a, d) => a + (+d.data.ot || 0), 0);
+  const att = docsOf('att').filter(d => d.data.emp === emp.id && d.data.date.slice(0, 7) === M);
+  const pres = att.filter(d => d.data.p === 1), lv = att.filter(d => d.data.p === 2);
+  const ot = pres.reduce((a, d) => a + (+d.data.ot || 0), 0);
+  const paidDays = Math.min(D, pres.length + lv.length);
   const t = todayStr(), tm = t.slice(0, 7), elapsed = M < tm ? D : M === tm ? Math.min(D, +t.slice(8, 10)) : 0;
-  const absent = Math.max(0, elapsed - att.length), otVal = +emp.otMul > 0 ? hourly * ot * (+emp.otMul) : 0;
+  const absent = Math.max(0, elapsed - paidDays), otVal = +emp.otMul > 0 ? hourly * ot * (+emp.otMul) : 0;
   let adv = 0, paid = 0, other = 0; const advL = [], paidL = [];
   for (const e of live()) {
     if (e.opening || e.dr !== 'المرتبات' || cl(e.pa) !== cl(emp.name) || !e.date.startsWith(M)) continue;
     if (/^سلف/.test(cl(e.stmt))) { adv += e.amtD; advL.push(e); } else if (/^دفع راتب/.test(cl(e.stmt))) { paid += e.amtD; paidL.push(e); } else other += e.amtD;
   }
   const dd = S.docs.get('ded:' + emp.id + ':' + M), ded = dd && !dd.deleted ? +dd.data.amt || 0 : 0;
-  const due = sal + otVal, absVal = absent * daily, totalDed = adv + absVal + ded, net = due - totalDed;
-  return { emp, M, name:emp.name, sal, present:att.length, absent, ot, otVal, due, adv, absVal, ded, totalDed, net, paid, rem:net - paid, other, advL, paidL, note:dd && !dd.deleted ? dd.data.note || '' : '', partial:M >= tm };
+  const earned = daily * paidDays, due = earned + otVal, totalDed = adv + ded, net = due - totalDed;
+  return { emp, M, name:emp.name, sal, present:pres.length, leave:lv.length, absent, paidDays, ot, otVal, earned, due, adv, ded, totalDed, net, paid, rem:net - paid, other, advL, paidL, note:dd && !dd.deleted ? dd.data.note || '' : '', partial:M >= tm };
 }
 function hrRows(M) {
   return hrEmps().filter(e => e.active !== false && (e.start || M) <= M).map(emp => {
@@ -1271,11 +1277,11 @@ function hrPayroll() {
   const sel = $('#hr-month'); sel.innerHTML = ms.map(m => '<option value="' + m + '">شهر ' + m + '</option>').join(''); sel.value = S.hrMonth;
   const M = S.hrMonth, rows = hrRows(M);
   const N = (h, k, o) => Object.assign({ h, k, t:'n', z:1, sum:1 }, o);
-  const cols = [{ h:'الاسم', k:r => r.name, t:'t' }, N('الراتب الأساسي', r => r.sal), N('أيام الحضور', r => r.present, { raw:1, sum:0 }), N('أيام الغياب', r => r.absent, { raw:1, sum:0 }), N('ساعات الإضافي', r => r.ot, { sum:0 }),
-    N('قيمة الإضافي', r => r.otVal), N('إجمالي المستحق', r => r.due), N('السلف', r => r.adv), N('قيمة الغياب', r => r.absVal), N('خصم', r => r.ded), N('إجمالي المستقطع', r => r.totalDed),
+  const cols = [{ h:'الاسم', k:r => r.name, t:'t' }, N('الراتب الأساسي', r => r.sal), N('أيام الحضور', r => r.present, { raw:1, sum:0 }), N('اعتيادي', r => r.leave, { raw:1, sum:0 }), N('غياب', r => r.absent, { raw:1, sum:0 }), N('ساعات الإضافي', r => r.ot, { sum:0 }),
+    N('مستحق الأيام', r => r.earned), N('قيمة الإضافي', r => r.otVal), N('إجمالي المستحق', r => r.due), N('السلف', r => r.adv), N('خصم', r => r.ded), N('إجمالي المستقطع', r => r.totalDed),
     N('صافي المستحق', r => r.net, { neg:1 }), N('المستلم', r => r.paid), N('الباقي (له/عليه)', r => r.rem, { neg:1 }), N('الرصيد التراكمي', r => r.cum, { neg:1 })];
   const fr = gridRows('hr', cols, rows);
-  $('#hr-count').innerHTML = (M === tm ? 'الشهر لسه شغال: الغياب محسوب لحد النهارده. ' : '') + 'السلف والمستلم بيتسحبوا من قيود المرتبات (سلفة / دفع راتب). اضغط على الموظف للتفاصيل والخصم.' + filterNote('hr');
+  $('#hr-count').innerHTML = (M === tm ? 'المستحق بيزيد مع كل يوم حضور بتسجله. ' : '') + 'السلف والمستلم بيتسحبوا من قيود المرتبات (سلفة / دفع راتب). اضغط على الموظف للتفاصيل والخصم.' + filterNote('hr');
   $('#hr-tb').innerHTML = rows.length ? gridHTML('hr', fr, capOf(200), r => r.emp.id) : '';
   $('#hr-e1').textContent = rows.length ? '' : 'ضيف الموظفين الأول من تبويب «الموظفين».';
   $('#ph-t').textContent = 'كشف المرتبات - شهر ' + M;
@@ -1286,11 +1292,12 @@ function otHours(tin, tout, H) {
   return Math.max(0, +(((b - a + 1440) % 1440) / 60 - H).toFixed(2));
 }
 function hrAttendance() {
+  $('#hr-all').classList.toggle('hide', !canWrite());
   if (!S.hrDate) S.hrDate = todayStr(); $('#hr-date').value = S.hrDate;
   const D = S.hrDate, emps = hrEmps().filter(e => e.active !== false && (e.start || D.slice(0, 7)) <= D.slice(0, 7));
   $('#hr-att').innerHTML = emps.length ? emps.map(e => {
     const d = S.docs.get('att:' + e.id + ':' + D), x = d && !d.deleted ? d.data : null, p = x ? x.p : null;
-    return '<div class="hrow" data-e="' + e.id + '"><div class="n">' + esc(e.name) + '</div><div class="chips"><button class="chip p' + (p === 1 ? ' on' : '') + '" data-v="1">حاضر</button><button class="chip a' + (p === 0 ? ' on' : '') + '" data-v="0">غائب</button></div>' +
+    return '<div class="hrow" data-e="' + e.id + '"><div class="n">' + esc(e.name) + '</div><div class="chips"><button class="chip p' + (p === 1 ? ' on' : '') + '" data-v="1">حاضر</button><button class="chip p' + (p === 2 ? ' on' : '') + '" data-v="2">اعتيادي</button><button class="chip a' + (p === 0 ? ' on' : '') + '" data-v="0">غائب</button></div>' +
       (p === 1 ? '<div class="tm"><div><label>من</label><input type="time" class="tin" value="' + esc((x && x.in) || '') + '"></div><div><label>إلى</label><input type="time" class="tout" value="' + esc((x && x.out) || '') + '"></div>' +
         '<div><label>إضافي (ساعات)</label><input class="tot" inputmode="decimal" dir="ltr" value="' + (x && x.ot ? x.ot : '') + '"></div></div>' : '') + '</div>';
   }).join('') : '<div class="empty">ضيف الموظفين الأول من تبويب «الموظفين».</div>';
@@ -1300,9 +1307,29 @@ function hrSetAtt(eid, patch) {
   docSave('att', id, { ...cur, ...patch });
 }
 function hrSetAtt0(eid, D) { const id = 'att:' + eid + ':' + D; docSave('att', id, { emp:eid, date:D, p:1, in:'', out:'', ot:0 }); }
+const HR_HIST = {"متوكل":{"2026-01":{"sal":7500,"present":30,"otH":19.5,"otVal":914.0625,"adv":3255,"absD":0,"absVal":0,"ded":0,"net":5159.0625,"paid":4000,"rem":1159.0625},"2026-02":{"sal":7500,"present":30,"otH":88,"otVal":4125,"adv":5050,"absD":0,"absVal":0,"ded":0,"net":6575,"paid":5000,"rem":1575},"2026-03":{"sal":7500,"present":30,"otH":28,"otVal":1312.5,"adv":2800,"absD":0,"absVal":0,"ded":0,"net":6012.5,"paid":8000,"rem":-1987.5},"2026-04":{"sal":7500,"present":30,"otH":6,"otVal":281.25,"adv":1000,"absD":0,"absVal":0,"ded":0,"net":6781.25,"paid":4940,"rem":1841.25},"2026-05":{"sal":7500,"present":30,"otH":12,"otVal":562.5,"adv":2200,"absD":0,"absVal":0,"ded":0,"net":5862.5,"paid":7100,"rem":-1237.5},"2026-06":{"sal":7500,"present":29,"otH":35,"otVal":1640.625,"adv":3520,"absD":1,"absVal":250,"ded":0,"net":5370.625,"paid":5000,"rem":370.625},"2026-07":{"sal":7500,"present":30,"otH":0,"otVal":0,"adv":3000,"absD":0,"absVal":0,"ded":0,"net":4500,"paid":4000,"rem":500},"2026-08":{"sal":7500,"present":30,"otH":139,"otVal":6515.625,"adv":4300,"absD":0,"absVal":0,"ded":0,"net":9715.625,"paid":0,"rem":9715.625},"2026-09":{"sal":7500,"present":29,"otH":7,"otVal":328.125,"adv":5164,"absD":1,"absVal":250,"ded":0,"net":2414.125,"paid":3000,"rem":-585.875}},"عبد السلام":{"2026-06":{"sal":6000,"present":24,"otH":22,"otVal":825,"adv":4660,"absD":6,"absVal":1200,"ded":0,"net":965,"paid":0,"rem":965},"2026-07":{"sal":6000,"present":28,"otH":0,"otVal":0,"adv":3000,"absD":2,"absVal":400,"ded":0,"net":2600,"paid":3000,"rem":-400},"2026-08":{"sal":6000,"present":16,"otH":0,"otVal":0,"adv":5000,"absD":14,"absVal":2800,"ded":0,"net":-1800,"paid":0,"rem":-1800},"2026-09":{"sal":6000,"present":30,"otH":0,"otVal":0,"adv":1700,"absD":0,"absVal":0,"ded":0,"net":4300,"paid":1000,"rem":3300}}};
+function hrImport() {
+  if (!canWrite()) return;
+  if (!confirm('هيتم استيراد رواتب الشهور من يناير لسبتمبر 2026 من شيت الإكسل (متوكل وعبد السلام) كرصيد تراكمي، وضبط بداية حسابهم من أول شهر في الشيت. تكمل؟')) return;
+  let n = 0;
+  for (const [name, months] of Object.entries(HR_HIST)) {
+    const ms = Object.keys(months).sort(), first = months[ms[0]];
+    let emp = hrEmps().find(e => cl(e.name) === cl(name)), id = emp ? emp.id : 'emp:' + uid8();
+    const base = emp ? { ...S.docs.get(id).data } : { name, salary:first.sal, days:30, hours:8, otMul:1.5, active:true };
+    docSave('emp', id, { ...base, start:ms[0], opening:0 });
+    for (const m of ms) { docSave('hm', 'hm:' + id + ':' + m, { emp:id, month:m, ...months[m] }); n++; }
+  }
+  renderHR(); toast('تم استيراد ' + n + ' شهر');
+}
 function hrEmployees() {
-  const emps = hrEmps();
+  const emps = hrEmps(), w = canWrite();
+  $('#hr-add').classList.toggle('hide', !w); $('#hr-imp').classList.toggle('hide', !(w && S.profile.role === 'owner'));
   $('#hr-emps').innerHTML = emps.length ? emps.map(e => '<button class="hrow" data-id="' + e.id + '" style="width:100%;text-align:right;border:0"><div class="n">' + esc(e.name) + (e.active === false ? ' (موقوف)' : '') + '</div><div class="note" style="margin:2px 0 0">الراتب ' + esc(fmt0(+e.salary || 0)) + ' · ' + (+e.otMul > 0 ? 'إضافي ×' + e.otMul : 'بدون إضافي') + ' · من شهر ' + esc(e.start || '—') + '</div></button>').join('') : '<div class="empty">لسه مفيش موظفين. دوس «＋ موظف جديد».</div>';
+}
+function hrRO() { /* مشاهدة بس: قفل كل الحقول وإخفاء الحفظ */
+  if (canWrite()) return;
+  for (const x of $('#hs-pn').querySelectorAll('input,select')) x.disabled = true;
+  for (const b of $('#hs-pn').querySelectorAll('.btn')) if (b.id !== 'he-x') b.classList.add('hide');
 }
 function openEmp(id) {
   const e = id ? { ...S.docs.get(id).data } : { name:'', salary:'', days:30, hours:8, otMul:0, start:todayStr().slice(0, 7), opening:0, active:true };
@@ -1316,24 +1343,25 @@ function openEmp(id) {
     '<label for="he-open">رصيد مرحّل قبل الشهر ده (له موجب، عليه سالب)</label><input id="he-open" inputmode="decimal" dir="ltr" value="' + esc(e.opening || 0) + '">' +
     '<label style="display:flex;gap:10px;align-items:center;margin-top:12px"><input type="checkbox" id="he-act" style="width:22px;height:22px;min-height:0"' + (e.active === false ? '' : ' checked') + '> موظف شغال</label>' +
     '<div class="err" id="he-err"></div><div class="actions"><button class="btn" id="he-save">حفظ</button>' + (id ? '<button class="btn danger" id="he-del">حذف</button>' : '') + '<button class="btn ghost" id="he-x">إلغاء</button></div>';
-  $('#hsheet').classList.remove('hide');
+  hrRO(); $('#hsheet').classList.remove('hide');
 }
 function openSlip(eid) {
   const M = S.hrMonth, r = hrRows(M).find(x => x.emp.id === eid); if (!r) return;
   const L = (a, t) => a.length ? '<div class="note" style="margin:8px 0 2px"><b>' + t + '</b></div>' + a.map(e => '<div class="kv"><span>' + esc(e.date) + ' · ' + esc(e.stmt) + '</span><span dir="ltr">' + esc(fmt(e.amtD)) + '</span></div>').join('') : '';
   S.hs = { type:'slip', eid, M };
   $('#hs-pn').innerHTML = '<h2 style="margin:0 0 4px;font-size:18px">' + esc(r.name) + ' - شهر ' + M + '</h2>' +
-    '<div class="kv"><span>الراتب الأساسي</span><span dir="ltr">' + esc(fmt(r.sal)) + '</span></div><div class="kv"><span>قيمة الإضافي (' + esc(fmt(r.ot)) + ' ساعة)</span><span dir="ltr">' + esc(fmt(r.otVal)) + '</span></div>' +
-    '<div class="kv"><span>قيمة الغياب (' + r.absent + ' يوم)</span><span dir="ltr">-' + esc(fmt(r.absVal)) + '</span></div><div class="kv"><span>السلف</span><span dir="ltr">-' + esc(fmt(r.adv)) + '</span></div>' +
+    '<div class="kv"><span>الراتب الأساسي</span><span dir="ltr">' + esc(fmt(r.sal)) + '</span></div><div class="kv"><span>الأيام: حضور ' + r.present + ' · اعتيادي ' + r.leave + ' · غياب ' + r.absent + '</span><span dir="ltr">' + esc(fmt(r.earned)) + '</span></div><div class="kv"><span>قيمة الإضافي (' + esc(fmt(r.ot)) + ' ساعة)</span><span dir="ltr">' + esc(fmt(r.otVal)) + '</span></div>' +
+    '<div class="kv"><span>السلف</span><span dir="ltr">-' + esc(fmt(r.adv)) + '</span></div>' +
     '<div class="kv"><b>صافي المستحق</b><b dir="ltr">' + esc(fmt(r.net)) + '</b></div><div class="kv"><span>المستلم</span><span dir="ltr">' + esc(fmt(r.paid)) + '</span></div><div class="kv"><b>الباقي (له/عليه)</b><b dir="ltr">' + esc(fmt(r.rem)) + '</b></div>' +
     '<div class="kv"><b>الرصيد التراكمي</b><b dir="ltr">' + esc(fmt(r.cum)) + '</b></div>' + L(r.advL, 'السلف من القيود') + L(r.paidL, 'المرتب المدفوع من القيود') +
     (r.other ? '<div class="note">قيود تانية على المرتبات (مش محسوبة هنا): ' + esc(fmt(r.other)) + '</div>' : '') +
     '<label for="hd-amt">خصم إضافي (جزاء وخلافه)</label><input id="hd-amt" inputmode="decimal" dir="ltr" value="' + (r.ded || '') + '"><label for="hd-note">ملاحظة</label><input id="hd-note" value="' + esc(r.note) + '">' +
     '<div class="actions"><button class="btn" id="hd-save">حفظ الخصم</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
-  $('#hsheet').classList.remove('hide');
+  hrRO(); $('#hsheet').classList.remove('hide');
 }
 function hsClick(e) {
   if (e.target.id === 'hsheet' || e.target.closest('#he-x')) return closeHS();
+  if (!canWrite()) return;
   if (e.target.closest('#he-save')) {
     const g = id => $(id).value, name = cl(g('#he-name')), sal = num(g('#he-sal'));
     if (!name || !(sal > 0)) { $('#he-err').textContent = 'اكتب الاسم والراتب.'; return; }
@@ -1842,13 +1870,13 @@ async function init() {
   $('#hr-t1').onclick = () => { S.hrTab = 'p'; renderHR(); }; $('#hr-t2').onclick = () => { S.hrTab = 'a'; renderHR(); }; $('#hr-t3').onclick = () => { S.hrTab = 'e'; renderHR(); };
   $('#hr-month').onchange = e => { S.hrMonth = e.target.value; hrPayroll(); };
   $('#hr-tb').onclick = e => { const r = e.target.closest('tr[data-id]'); if (r && r.dataset.id) openSlip(r.dataset.id); };
-  $('#hr-add').onclick = () => openEmp(null);
+  $('#hr-add').onclick = () => openEmp(null); $('#hr-imp').onclick = hrImport;
   $('#hr-emps').onclick = e => { const b = e.target.closest('[data-id]'); if (b) openEmp(b.dataset.id); };
   $('#hr-date').onchange = e => { S.hrDate = e.target.value || todayStr(); hrAttendance(); };
-  $('#hr-all').onclick = () => { const D = S.hrDate; for (const e of hrEmps()) { const o = S.docs.get('att:' + e.id + ':' + D); if (e.active !== false && (!o || o.deleted)) hrSetAtt0(e.id, D); } hrAttendance(); };
-  $('#hr-att').onclick = e => { const c = e.target.closest('.chip'); if (!c) return; const eid = c.closest('.hrow').dataset.e, v = +c.dataset.v, old = S.docs.get('att:' + eid + ':' + S.hrDate);
-    if (old && !old.deleted && old.data.p === v) docSave('att', old.id, old.data, true); else hrSetAtt(eid, { p:v, ...(v === 0 ? { in:'', out:'', ot:0 } : {}) }); hrAttendance(); };
-  $('#hr-att').onchange = e => { const row = e.target.closest('.hrow'); if (!row) return; const eid = row.dataset.e, emp = S.docs.get(eid).data;
+  $('#hr-all').onclick = () => { if (!canWrite()) return; const D = S.hrDate; for (const e of hrEmps()) { const o = S.docs.get('att:' + e.id + ':' + D); if (e.active !== false && (!o || o.deleted)) hrSetAtt0(e.id, D); } hrAttendance(); };
+  $('#hr-att').onclick = e => { if (!canWrite()) return; const c = e.target.closest('.chip'); if (!c) return; const eid = c.closest('.hrow').dataset.e, v = +c.dataset.v, old = S.docs.get('att:' + eid + ':' + S.hrDate);
+    if (old && !old.deleted && old.data.p === v) docSave('att', old.id, old.data, true); else hrSetAtt(eid, { p:v, ...(v !== 1 ? { in:'', out:'', ot:0 } : {}) }); hrAttendance(); };
+  $('#hr-att').onchange = e => { if (!canWrite()) return; const row = e.target.closest('.hrow'); if (!row) return; const eid = row.dataset.e, emp = S.docs.get(eid).data;
     if (e.target.classList.contains('tot')) hrSetAtt(eid, { ot:num(e.target.value) });
     else if (e.target.classList.contains('tin') || e.target.classList.contains('tout')) { const a = row.querySelector('.tin').value, b = row.querySelector('.tout').value; hrSetAtt(eid, { in:a, out:b, ot:otHours(a, b, +emp.hours || 8) }); hrAttendance(); } };
   $('#hsheet').onclick = hsClick;
