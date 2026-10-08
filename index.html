@@ -123,17 +123,17 @@ table.tb{border-collapse:separate;border-spacing:0;width:auto;font-size:13px;fon
 #pk-list{flex:1;overflow:auto;margin-top:10px;border:1px solid var(--line);border-radius:12px}
 .pki{display:block;width:100%;text-align:right;border:0;border-bottom:1px solid var(--line);background:none;padding:17px 14px;font-size:19px;color:var(--ink)}
 .pki.new{color:var(--green-d);font-weight:700}
-table.stb{width:100%;table-layout:fixed;border-collapse:collapse;font-size:15.5px;background:var(--paper)}
+table.stb{width:100%;table-layout:fixed;border-collapse:collapse;font-size:17px;background:var(--paper)}
 .stb th{position:sticky;top:0;z-index:2;background:var(--green-d);color:#fff;padding:12px 8px;font-size:15px;text-align:center}
 .stb th:first-child{text-align:right}
-.stb td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle;line-height:1.6}
-.stb td.l{text-align:right;word-break:normal;overflow-wrap:break-word;hyphens:none}
-.stb td.v{direction:ltr;text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600;padding-left:14px}.stb td.v small{display:block;color:var(--muted);font-weight:500;font-size:12.5px;line-height:1.3}
+.stb td{padding:13px 8px;border-bottom:1px solid var(--line);vertical-align:middle;line-height:1.5}
+.stb td.l{text-align:right;word-break:normal;overflow-wrap:break-word}
+.stb td.v{direction:ltr;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
 .stb td.p{direction:ltr;text-align:center;white-space:nowrap;color:var(--muted);font-size:15px}
 .stb td.neg{color:var(--red)}
-.stb tr.sub td.l{padding-right:22px;color:#3E5545;font-size:15px}.stb tr.sub td.v{font-weight:500}
+.stb tr.sub td.l{padding-right:26px;color:#3E5545}.stb tr.sub td.v{font-weight:500}
 .stb tr[data-acc]{cursor:pointer}
-.stb tr.h td{font-weight:800;background:#EAF3E7;color:var(--green-d);font-size:15.5px;padding:10px 10px;border-top:10px solid var(--bg)}
+.stb tr.h td{font-weight:800;background:#EAF3E7;color:var(--green-d);font-size:16px}
 .stb tr.t td{font-weight:800;border-top:2px solid var(--green);background:#F1F7EF}
 .stb tr.m td{color:var(--muted);font-size:14.5px;font-weight:500}
 .stb tr.w td{color:var(--red);font-weight:700}
@@ -1125,11 +1125,12 @@ function plCalc(pred, rng) {
   return P;
 }
 function stmtTable(id, cols, rows) {
-  const W = [64, 36], v0 = r => (r.b != null ? r.b : r.a), hasP = cols.length === 4;
-  $(id).innerHTML = '<colgroup>' + W.map(w => '<col style="width:' + w + '%">').join('') + '</colgroup><thead><tr><th>البيان</th><th>' + (hasP ? 'المبلغ / النسبة' : 'المبلغ') + '</th></tr></thead><tbody>' +
+  const two = cols.length === 4, W = two ? [50, 33, 17] : [62, 38];
+  const v0 = r => (r.b != null ? r.b : r.a);
+  $(id).innerHTML = '<colgroup>' + W.map(w => '<col style="width:' + w + '%">').join('') + '</colgroup><thead><tr><th>البيان</th><th>المبلغ</th>' + (two ? '<th>النسبة</th>' : '') + '</tr></thead><tbody>' +
     rows.map(r => { const v = v0(r), sub = r.a != null && r.b == null && !r.c;
       return '<tr class="' + ((r.c || '') + (sub ? ' sub' : '')).trim() + '"' + (r.k ? ' data-acc="' + esc(r.k) + '"' : '') + '><td class="l">' + esc(r.l) + (r.k ? ' ›' : '') + '</td>' +
-        '<td class="v' + (v != null && v < -0.5 ? ' neg' : '') + '">' + (v == null ? '' : esc(fmt0(v))) + (hasP && r.p ? '<small>' + esc(r.p) + '</small>' : '') + '</td></tr>'; }).join('') + '</tbody>';
+        '<td class="v' + (v != null && v < -0.5 ? ' neg' : '') + '">' + (v == null ? '' : esc(fmt0(v))) + '</td>' + (two ? '<td class="p">' + (r.p == null ? '' : esc(r.p)) + '</td>' : '') + '</tr>'; }).join('') + '</tbody>';
 }
 const monthsOf = () => [...new Set(live().filter(e => !e.opening).map(e => e.date.slice(0, 7)))].sort();
 function renderIS() {
@@ -1140,22 +1141,22 @@ function renderIS() {
   const P = plCalc(M === '*' ? () => true : e => !e.opening && e.date.startsWith(M), M === '*' ? ytdRange(asOfDef()) : monthRange(M));
   const pc = v => P.net ? (v / P.net * 100).toFixed(1) + '%' : '';
   const R = [
-    { l:'المبيعات', c:'h' }, { l:'مبيعات خام', b:P.sales, k:'مبيعات توريد' }, { l:'مبيعات منتج تام', b:P.fin }, { l:'يطرح: مردودات ومسموحات المبيعات', b:P.allow },
+    { l:'مبيعات خام', b:P.sales, k:'مبيعات توريد' }, { l:'مبيعات منتج تام', b:P.fin }, { l:'يطرح: مردودات ومسموحات المبيعات', b:P.allow },
     { l:'صافي المبيعات', b:P.net, c:'t' },
-    { l:'تكلفة البضاعة المباعة', c:'h' }, { l:'تكلفة المبيعات', b:P.cos },
+    { l:'تكلفة المبيعات', b:P.cos },
     { l:'يضاف: المشتريات', a:P.purD, k:'المشتريات' }, { l:'يطرح: مردودات المشتريات', a:P.purC, k:'المشتريات' }, { l:'صافي المشتريات', a:P.pur, c:'t', k:'المشتريات' },
     { l:'تكلفة البضاعة', b:P.cogs, c:'t' },
     { l:'مجمل الربح', b:P.gross, p:pc(P.gross), c:'t' },
-    { l:'المصروفات', c:'h' }, { l:'المصروفات التشغيلية', a:P.oper, k:'المصروفات' }, { l:'المرتبات والأجور', a:P.sal, k:'المرتبات' }, { l:'المصروفات الإدارية', a:P.admin, k:'المصروفات' },
+    { l:'المصروفات التشغيلية', a:P.oper, k:'المصروفات' }, { l:'المرتبات والأجور', a:P.sal, k:'المرتبات' }, { l:'المصروفات الإدارية', a:P.admin, k:'المصروفات' },
     { l:'مصروفات البيع والتوزيع', a:P.sell, k:'المصروفات' }, { l:'مصروفات مالية ومصروفات أخرى', a:P.fine, k:'المصروفات' }];
   R.push({ l:'مجموع المصروفات', b:P.opex, c:'t' },
     { l:'صافي الربح التشغيلي', b:P.op, p:pc(P.op), c:'t' },
-    { l:'إيرادات ومصروفات أخرى', c:'h' }, { l:'الإيرادات والمكاسب الأخرى', a:P.other, k:'الايرادات' }, { l:'مصروفات أخرى (ماكينة التشريح)', a:P.machine, k:'المصروفات' },
+    { l:'الإيرادات والمكاسب الأخرى', a:P.other, k:'الايرادات' }, { l:'المصروفات والخسائر الأخرى (ماكينة التشريح)', a:P.machine, k:'المصروفات' },
     { l:'صافي الإيرادات والمصروفات الأخرى', b:P.other - P.machine, c:'t' },
     { l:'صافي الربح قبل التوزيع', b:P.pre, p:pc(P.pre), c:'t' },
-    { l:'التوزيع', c:'h' }, { l:'يطرح: توزيعات الأرباح للمستثمرين', b:P.dist },
+    { l:'يطرح: توزيعات الأرباح للمستثمرين', b:P.dist },
     { l:'صافي الربح بعد التوزيع', b:P.np, p:pc(P.np), c:'t' },
-    { l:'للمعلومية: إهلاك السنة (غير مخصوم)', b:P.dep, c:'m' },
+    { l:'للمعلومية: إهلاك السنة (غير مخصوم من الربح)', b:P.dep, c:'m' },
     { l:'للمعلومية: صافي الربح لو اتخصم الإهلاك', b:P.np - P.dep, c:'m' });
   stmtTable('#is-tb', ['البيان', 'جزئي', 'كلي', 'النسبة'], R);
   $('#ph-t').textContent = 'قائمة الدخل' + (M === '*' ? ' - كل الفترة' : ' - شهر ' + M);
