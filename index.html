@@ -364,6 +364,7 @@ input[readonly]{background:#EEF3EC}
       <select id="e-pb" class="hide" data-ph="— بدون —" data-new="1" data-none="1"></select><button type="button" class="pkb" id="e-pb-b" data-for="#e-pb"></button></div>
       <label>المنتج</label>
       <select id="e-prod" class="hide" data-ph="— بدون —" data-new="1" data-none="1"></select><button type="button" class="pkb" id="e-prod-b" data-for="#e-prod"></button>
+      <div id="e-src-w" class="hide"><label for="e-src">مصدر البضاعة (للتكاليف)</label><select id="e-src"></select></div>
       <div class="grid">
         <div><label for="e-qty">الكمية</label><input id="e-qty" inputmode="decimal" dir="ltr"></div>
         <div><label for="e-disc">الخصم %</label><input id="e-disc" inputmode="decimal" dir="ltr" placeholder="مثال: 2"></div>
@@ -1366,26 +1367,56 @@ function csFifo(x, q) { /* تكلفة q كجم خام من الدفعات الأ
 async function csGen(sale, force) {
   csSeed();
   const old = csLink(sale.id);
-  if (old) for (const id of [old.e1, old.e2]) { const x = id && S.ent.get(id); if (x && !x.deleted) { Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }); await entPut(x); } }
+  if (old) for (const id of [old.e1, old.e2, ...(old.ex || [])]) { const x = id && S.ent.get(id); if (x && !x.deleted) { Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }); await entPut(x); } }
   const drop = () => { if (old) docSave('cl', 'cl:' + sale.id, old, true); return null; };
   if (sale.deleted || sale.cr !== 'مبيعات توريد') return drop();
+  if (old && old.out) return null;
   const t = csTpl(sale.prod), st = csStart();
   if (!t || !st || sale.date < st) return drop();
-  const man = !!(old && old.man), raw = man ? old.raw : t.raw, rd = csRawDef(raw), loss = man ? +old.loss || 0 : (t.loss != null && t.loss !== '') ? +t.loss || 0 : rd ? +rd.loss || 0 : 0, disc = +sale.disc || 0;
-  const outQ = (+sale.qty || 0) * (1 - disc), tot = loss + disc;
-  if (!(outQ > 0) || tot >= 1 || !raw) return drop();
-  const rawQ = outQ / (1 - tot), x = csStock(sale.date).get(csKey(raw)), fc = x && x.last > 0 ? csFifo(x, rawQ) : 0, avg = fc / rawQ;
-  if (!force && !man && (!x || x.q < rawQ - 0.5)) { toast('اتسجلت كبيعة من بره: مفيش خام «' + raw + '» كفاية في المخزون'); return drop(); }
-  if (!(avg > 0)) { toast('مفيش سعر مخزون للخام «' + raw + '»، التكلفة ما اتحسبتش'); return drop(); }
-  const maxNo = Math.max(0, ...live().map(z => z.no || 0)), cost = fc, op = rawQ * (+t.op || 0), now = Date.now();
-  const mk = (n, o) => Object.assign({ id:crypto.randomUUID(), no:maxNo + n, date:sale.date, stmt:'تكاليف', pa:'', pb:'', star:false, opening:false, deleted:false, updated:now, dirty:true }, o);
-  const e1 = mk(1, { dr:CS_COGS, cr:CS_RAW, prod:raw, qty:rawQ, disc:tot, price:cost / outQ, amtD:cost, amtC:cost });
-  S.ent.set(e1.id, e1); await entPut(e1);
-  let e2 = null;
-  if (op > 0) { e2 = mk(2, { dr:CS_COGS, cr:'المصروفات', pb:'تشغيل منتج', prod:raw, qty:rawQ, disc:0, price:+t.op, amtD:op, amtC:op }); S.ent.set(e2.id, e2); await entPut(e2); }
-  const lk = { sale:sale.id, e1:e1.id, e2:e2 ? e2.id : '', raw, loss, man, rawQ, avg, cost, op, outQ };
+  const man = !!(old && old.man), disc = +sale.disc || 0, outQ = (+sale.qty || 0) * (1 - disc);
+  if (!(outQ > 0)) return drop();
+  const cands = [man ? old.raw : t.raw].filter(Boolean), stock = csStock(sale.date);
+  const lossOf = r => man ? +old.loss || 0 : (t.loss != null && t.loss !== '') ? +t.loss || 0 : csRawDef(r) ? +csRawDef(r).loss || 0 : 0;
+  const mkPick = r => { const loss = lossOf(r), tot = loss + disc; if (tot >= 1) return null; const x = stock.get(csKey(r)); return { raw:r, loss, tot, rawQ:outQ / (1 - tot), x }; };
+  let pk = null;
+  for (const r of cands) { const p = mkPick(r); if (p && p.x && p.x.last > 0 && p.x.q >= p.rawQ - 0.5) { pk = p; break; } } /* أول خام (بالأولوية) رصيده يكفي */
+  if (!pk && !force && !man) { toast('اتسجلت كبيعة من بره: مفيش خام كفاية في المخزون'); return drop(); }
+  if (!pk) for (const r of cands) { const p = mkPick(r); if (p && p.x && p.x.last > 0) { pk = p; break; } }
+  if (!pk) { toast('مفيش سعر مخزون للخام، التكلفة ما اتحسبتش'); return drop(); }
+  const { raw, loss, tot, rawQ } = pk, fc = csFifo(pk.x, rawQ), avg = fc / rawQ;
+  const maxNo = Math.max(0, ...live().map(z => z.no || 0)), now = Date.now(); let n = 0;
+  const mk = o => Object.assign({ id:crypto.randomUUID(), no:maxNo + (++n), date:sale.date, stmt:'تكاليف', pa:'', pb:'', star:false, opening:false, deleted:false, updated:now, dirty:true }, o);
+  const put = async e => { S.ent.set(e.id, e); await entPut(e); return e; };
+  const e1 = await put(mk({ dr:CS_COGS, cr:CS_RAW, prod:raw, qty:rawQ, disc:tot, price:fc / outQ, amtD:fc, amtC:fc }));
+  const op = rawQ * (+t.op || 0); let e2 = null;
+  if (op > 0) e2 = await put(mk({ dr:CS_COGS, cr:'المصروفات', pb:'تشغيل منتج', prod:raw, qty:rawQ, disc:0, price:+t.op, amtD:op, amtC:op }));
+  const lk = { sale:sale.id, e1:e1.id, e2:e2 ? e2.id : '', raw, loss, man, rawQ, avg, cost:fc, op, outQ };
   docSave('cl', 'cl:' + sale.id, lk);
   return lk;
+}
+/* مصدر البضاعة في قيد البيع: من المخزون (بخام معين) أو من بره */
+function csSrcUpdate() {
+  const w = $('#e-src-w'); if (!w) return;
+  const prod = comboVal('#e-prod'), show = canWrite() && $('#e-cr').value === 'مبيعات توريد' && prod && csTpl(prod);
+  w.classList.toggle('hide', !show); if (!show) return;
+  const t = csTpl(prod), st = csStock(), e = S.editing ? S.ent.get(S.editing) : null, lk = e ? csLink(e.id) : null, cur = $('#e-src').value;
+  const defs = csRaws().map(r => cl(r.raw)), names = defs.length ? defs : [...st.values()].filter(x => x.q > 0.01).map(x => x.name); if (t.raw && !names.some(n => csKey(n) === csKey(t.raw))) names.push(cl(t.raw));
+  const seen = new Set(); names.splice(0, names.length, ...names.filter(n => { const k = csKey(n); if (seen.has(k)) return false; seen.add(k); return true; }));
+  names.sort((a, b) => csColl.compare(a, b));
+  const pref = cur || (lk ? (lk.out ? 'out' : lk.raw) : localStorage.getItem('cs_src:' + csKey(prod)) || '');
+  $('#e-src').innerHTML = '<option value="">اختار مصدر البضاعة</option><option value="out">من بره (بدون مخزون وبدون تكاليف)</option>' + names.map(n => '<option value="' + esc(n) + '">من المخزون: ' + esc(n) + '</option>').join('');
+  $('#e-src').value = [...$('#e-src').options].some(o => o.value === pref) ? pref : '';
+}
+async function csApplySrc(e, src) {
+  if (src == null) return csGen(e);
+  const t = csTpl(e.prod), old = csLink(e.id);
+  if (!t) return csGen(e);
+  localStorage.setItem('cs_src:' + csKey(e.prod), src);
+  if (old && !old.out) await csGen({ ...e, deleted:true });
+  if (src === 'out') { docSave('cl', 'cl:' + e.id, { sale:e.id, out:true }); return null; }
+  const rd = csRawDef(src), loss = (t.loss != null && t.loss !== '') ? +t.loss || 0 : rd ? +rd.loss || 0 : 0;
+  docSave('cl', 'cl:' + e.id, { sale:e.id, raw:src, loss, man:true });
+  return csGen(e, true);
 }
 const csUnlinked = () => { const st = csStart(); if (!st) return []; return live().filter(e => e.cr === 'مبيعات توريد' && e.date >= st && csTpl(e.prod) && !csLink(e.id)).sort((a, b) => a.date < b.date ? 1 : -1); };
 function renderCS() {
@@ -1405,7 +1436,7 @@ function csSalesHTML(w) {
   h += ls.length ? ls.map(l => { const e = S.ent.get(l.sale), tc = l.cost + l.op, pr = e.amtC - tc;
     return '<div class="hrow"><div class="n">' + esc(e.prod) + '</div><div class="note">' + esc(e.date) + (e.pa ? ' · ' + esc(e.pa) : '') + ' · صافي ' + esc(fmt(l.outQ)) + ' كجم</div>' +
       '<div class="kv"><span>المبيعات</span><span dir="ltr">' + esc(fmt0(e.amtC)) + '</span></div><div class="kv"><span>تكلفة الخام (' + esc(fmt(l.rawQ)) + ' كجم بسعر ' + esc(fmt(l.avg)) + ')</span><span dir="ltr">' + esc(fmt0(l.cost)) + '</span></div>' +
-      '<div class="kv"><span>تشغيل</span><span dir="ltr">' + esc(fmt0(l.op)) + '</span></div><div class="kv"><b>الربح</b><b dir="ltr" class="' + (pr < 0 ? 'neg' : '') + '">' + esc(fmt0(pr)) + ' (' + (e.amtC ? (pr / e.amtC * 100).toFixed(1) + '%' : '—') + ')</b></div>' +
+      '<div class="kv"><span>تشغيل</span><span dir="ltr">' + esc(fmt0(l.op)) + '</span></div>' + '<div class="kv"><b>الربح</b><b dir="ltr" class="' + (pr < 0 ? 'neg' : '') + '">' + esc(fmt0(pr)) + ' (' + (e.amtC ? (pr / e.amtC * 100).toFixed(1) + '%' : '—') + ')</b></div>' +
       '<div class="note">الخام: ' + esc(l.raw) + ' · فاقد ' + esc(fmt(l.loss * 100)) + '%' + (l.man ? ' (معدّل)' : '') + '</div>' + (w ? '<div class="actions"><button class="btn ghost" data-chg="' + e.id + '">تغيير الخام / الفاقد</button></div>' : '') + '</div>'; }).join('') : '<div class="empty">لسه مفيش بيعات اتحسبت تكلفتها.</div>';
   return h;
 }
@@ -1420,18 +1451,18 @@ function csStockHTML() {
 function csProdsHTML(w) {
   const ts = csTpls().sort((a, b) => csColl.compare(a.prod, b.prod));
   return (w ? '<div class="mrow" style="padding-top:6px"><button class="btn" id="cp-new" style="width:100%">＋ صنف جديد</button></div>' + '' : '') +
-    ts.map(t => '<div class="hrow"' + (w ? ' data-cp="' + t.id + '"' : '') + '><div class="n">' + esc(t.prod) + (t.on === false ? ' (موقوف)' : '') + '</div><div class="kv"><span>الخام الافتراضي</span><span>' + esc(t.raw) + '</span></div><div class="kv"><span>نسبة الفاقد</span><span dir="ltr">' + (t.loss == null || t.loss === '' ? 'حسب نوع الخام' : esc(fmt(t.loss * 100)) + '%') + '</span></div><div class="kv"><span>تشغيل للكيلو الخام</span><span dir="ltr">' + esc(fmt(t.op)) + '</span></div></div>').join('') +
+    ts.map(t => '<div class="hrow"' + (w ? ' data-cp="' + t.id + '"' : '') + '><div class="n">' + esc(t.prod) + (t.on === false ? ' (موقوف)' : '') + '</div><div class="kv"><span>الخام</span><span>' + esc(t.raw) + '</span></div><div class="kv"><span>نسبة الفاقد</span><span dir="ltr">' + (t.loss == null || t.loss === '' ? 'حسب نوع الخام' : esc(fmt(t.loss * 100)) + '%') + '</span></div><div class="kv"><span>تشغيل للكيلو الخام</span><span dir="ltr">' + esc(fmt(t.op)) + '</span></div>' + '</div>').join('') +
     '<div class="hrow"><div class="n">نسبة الفاقد لكل نوع خام</div><div class="note" style="margin:4px 0">لفت فريش ليه فاقد، ولفت مخلل سليم ليه فاقد تاني. الخام اللي له نسبة هنا بتتطبق عليه، وغير كده بتتطبق نسبة الصنف.</div>' +
     csRaws().sort((a, b) => csColl.compare(a.raw, b.raw)).map(r => '<div class="kv"' + (w ? ' data-cr="' + r.id + '" style="cursor:pointer"' : '') + '><span>' + esc(r.raw) + '</span><span dir="ltr">' + esc(fmt(r.loss * 100)) + '%</span></div>').join('') + (w ? '<div class="actions"><button class="btn ghost" id="cr-new">＋ نوع خام</button></div>' : '') + '</div>' +
     '<div class="note" style="padding:8px 14px">خصم البيعة نفسه (3% مثلاً) بيتضاف على نسبة الفاقد تلقائي، زي ما كنت بتعمل في قيد التكاليف.</div>';
 }
 function openCP(id) {
-  const t = id ? { ...S.docs.get(id).data } : { prod:'', raw:'', loss:0.3, op:1, on:true };
-  S.hs = { type:'cp', id };
+  const t = id ? { ...S.docs.get(id).data } : { prod:'', raw:'', loss:null, op:1, on:true };
+    S.hs = { type:'cp', id };
   $('#hs-pn').innerHTML = csDL() + '<h2 style="margin:0 0 6px;font-size:18px">' + (id ? 'تعديل صنف' : 'صنف جديد') + '</h2>' +
     '<label for="cp-prod">صنف البيع (زي ما بيتكتب في قيد البيع)</label><input id="cp-prod" value="' + esc(t.prod) + '">' +
-    '<label for="cp-raw">الخام الافتراضي (من المخزون.الخام)</label><input id="cp-raw" list="cs-dl" value="' + esc(t.raw) + '">' +
-    '<div class="grid"><div><label for="cp-loss">نسبة الفاقد % (سيبها فاضية = حسب نوع الخام)</label><input id="cp-loss" inputmode="decimal" dir="ltr" value="' + (t.loss == null || t.loss === '' ? '' : esc(+(t.loss * 100).toFixed(4))) + '"></div><div><label for="cp-op">تشغيل للكيلو الخام</label><input id="cp-op" inputmode="decimal" dir="ltr" value="' + esc(t.op) + '"></div></div>' +
+    '<label for="cp-raw">الخام الافتراضي من المخزون.الخام</label><input id="cp-raw" list="cs-dl" value="' + esc(t.raw) + '">' +
+    '<div class="grid"><div><label for="cp-loss">نسبة الفاقد % (فاضية = حسب نوع الخام)</label><input id="cp-loss" inputmode="decimal" dir="ltr" value="' + (t.loss == null || t.loss === '' ? '' : esc(+(t.loss * 100).toFixed(4))) + '"></div><div><label for="cp-op">تشغيل للكيلو الخام (تقطيع ومحلول وعمالة)</label><input id="cp-op" inputmode="decimal" dir="ltr" value="' + esc(t.op) + '"></div></div>' +
     '<label style="display:flex;gap:10px;align-items:center;margin-top:12px"><input type="checkbox" id="cp-on" style="width:22px;height:22px;min-height:0"' + (t.on === false ? '' : ' checked') + '> شغال</label>' +
     '<div class="err" id="cp-err"></div><div class="actions"><button class="btn" id="cp-save">حفظ</button>' + (id ? '<button class="btn danger" id="cp-del">حذف</button>' : '') + '<button class="btn ghost" id="he-x">إغلاق</button></div>';
   $('#hsheet').classList.remove('hide');
@@ -1854,7 +1885,7 @@ function pickPk(v) {
   const P = S.pk; if (!P) return;
   const el = $(P.id); closePk();
   if (v && ![...el.options].some(o => o.value === v)) el.insertAdjacentHTML('beforeend', '<option>' + esc(v) + '</option>');
-  el.value = v; syncPk(P.id); if (el.onchange) el.onchange();
+  el.value = v; syncPk(P.id); if (el.onchange) el.onchange(); csSrcUpdate();
 }
 function calcAmt() {
   const q = num($('#e-qty').value), d = num($('#e-disc').value) / 100, p = num($('#e-price').value), qa = q * (1 - d);
@@ -1874,7 +1905,7 @@ function openForm(id) {
   fillPa(e && e.pa); fillPb(e && e.pb); fillProd(e && e.prod);
   $('#e-qty').value = e && e.qty ? e.qty : ''; $('#e-disc').value = e && e.disc ? +(e.disc * 100).toFixed(4) : '';
   $('#e-price').value = e && e.price ? e.price : ''; $('#e-amt').value = e ? (e.amtD || e.amtC) : '';
-  S.amtManual = !!e; calcAmt();
+  S.amtManual = !!e; calcAmt(); $('#e-src').innerHTML = ''; csSrcUpdate();
   for (const el of document.querySelectorAll('#v-form input,#v-form select,#v-form .pkb')) el.disabled = ro;
   $('#e-save').classList.toggle('hide', ro); $('#e-del').classList.toggle('hide', ro || !e);
   go('form');
@@ -1892,6 +1923,8 @@ async function saveEntry() {
   if (!(v.amt > 0)) return void (err.textContent = 'اكتب المبلغ.');
   if (v.disc < 0 || v.disc >= 1) return void (err.textContent = 'الخصم نسبة مئوية بين 0 و 100 (مثلًا 2).');
   if (S.profile.role === 'accountant' && S.closed.has(v.date.slice(0, 7))) return void (err.textContent = 'الشهر ده مقفول.');
+  const srcOn = !$('#e-src-w').classList.contains('hide'), srcV = srcOn ? $('#e-src').value : null;
+  if (srcOn && !srcV) return void (err.textContent = 'اختار مصدر البضاعة: من المخزون أو من بره.');
   const old = S.editing ? S.ent.get(S.editing) : null;
   if (old && S.profile.role === 'accountant' && S.closed.has(old.date.slice(0, 7))) return void (err.textContent = 'الشهر ده مقفول.');
   const maxNo = Math.max(0, ...live().map(x => x.no || 0));
@@ -1901,7 +1934,7 @@ async function saveEntry() {
     { no, date:v.date, stmt:v.stmt, dr:v.dr, cr:v.cr, pa:v.pa, pb:v.pb, prod:v.prod, qty:v.qty, disc:v.disc, price:v.price,
       amtD:v.amt, amtC:v.amt, updated:Date.now(), dirty:true });
   S.ent.set(e.id, e); await entPut(e);
-  let cg = null; try { cg = await csGen(e); } catch (x) { console.error(x); }
+  let cg = null; try { cg = await csApplySrc(e, srcV); } catch (x) { console.error(x); }
   S.month = e.date.slice(0, 7); toast('تم حفظ القيد' + (cg ? ' + تكلفة ' + fmt0(cg.cost + cg.op) : ''));
   go(S.from && S.from !== 'form' ? S.from : 'home'); render(); sync();
 }
@@ -2037,7 +2070,7 @@ async function init() {
   $('#acc-tb').onclick = e => { const r = e.target.closest('tr[data-k]'); if (!r) return; const row = gst(S.accGid).fr[+r.dataset.k]; if (!row) return;
     if (S.accMode === 'g') { S.expGroup = row.name; renderAcc(); } else openStm(row.name); };
   $('#acc-allx').onclick = () => { S.expGroup = '*'; renderAcc(); };
-  $('#hr-back').onclick = back; $('#cs-back').onclick = back;
+  $('#hr-back').onclick = back; $('#cs-back').onclick = back; $('#e-cr').addEventListener('change', csSrcUpdate);
   $('#cs-t1').onclick = () => { S.csTab = 's'; renderCS(); }; $('#cs-t2').onclick = () => { S.csTab = 'k'; renderCS(); }; $('#cs-t3').onclick = () => { S.csTab = 'p'; renderCS(); }; $('#cs-body').onclick = csBodyClick; $('#hr-pdf').onclick = () => { if (S.hrTab === 'p') doPrint($('#ph-t').textContent); else toast('الطباعة من تبويب كشف الرواتب'); };
   $('#hr-t1').onclick = () => { S.hrTab = 'p'; renderHR(); }; $('#hr-t2').onclick = () => { S.hrTab = 'a'; renderHR(); }; $('#hr-t3').onclick = () => { S.hrTab = 'e'; renderHR(); };
   $('#hr-month').onchange = e => { S.hrMonth = e.target.value; hrPayroll(); };
