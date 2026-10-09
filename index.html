@@ -1403,7 +1403,7 @@ function csSalesHTML(w) {
   h += ls.length ? ls.map(l => { const e = S.ent.get(l.sale), tc = l.cost + l.op, pr = e.amtC - tc;
     return '<div class="hrow"><div class="n">' + esc(e.prod) + '</div><div class="note">' + esc(e.date) + (e.pa ? ' · ' + esc(e.pa) : '') + ' · صافي ' + esc(fmt(l.outQ)) + ' كجم</div>' +
       '<div class="kv"><span>المبيعات</span><span dir="ltr">' + esc(fmt0(e.amtC)) + '</span></div><div class="kv"><span>تكلفة الخام (' + esc(fmt(l.rawQ)) + ' كجم بسعر ' + esc(fmt(l.avg)) + ')</span><span dir="ltr">' + esc(fmt0(l.cost)) + '</span></div>' +
-      '<div class="kv"><span>تشغيل</span><span dir="ltr">' + esc(fmt0(l.op)) + '</span></div><div class="kv"><b>الربح</b><b dir="ltr" class="' + (pr < 0 ? 'neg' : '') + '">' + esc(fmt0(pr)) + ' (' + pct(pr, e.amtC) + ')</b></div>' +
+      '<div class="kv"><span>تشغيل</span><span dir="ltr">' + esc(fmt0(l.op)) + '</span></div><div class="kv"><b>الربح</b><b dir="ltr" class="' + (pr < 0 ? 'neg' : '') + '">' + esc(fmt0(pr)) + ' (' + (e.amtC ? (pr / e.amtC * 100).toFixed(1) + '%' : '—') + ')</b></div>' +
       '<div class="note">الخام: ' + esc(l.raw) + ' · فاقد ' + esc(fmt(l.loss * 100)) + '%' + (l.man ? ' (معدّل)' : '') + '</div>' + (w ? '<div class="actions"><button class="btn ghost" data-chg="' + e.id + '">تغيير الخام / الفاقد</button></div>' : '') + '</div>'; }).join('') : '<div class="empty">لسه مفيش بيعات اتحسبت تكلفتها.</div>';
   return h;
 }
