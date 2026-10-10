@@ -6,7 +6,9 @@
 <meta name="theme-color" content="#FFFFFF">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
-<title>فيجان فود - الحسابات</title>
+<title>veganfood</title>
+<meta name="apple-mobile-web-app-title" content="veganfood">
+<meta name="application-name" content="veganfood">
 <style>
 #ph{display:none}
 :root{--ink:#17301D;--muted:#5F7566;--line:#E1EBDF;--bg:#F3F7F2;--paper:#fff;--green:#2E7D3E;--green-d:#1F5A2B;--amber:#B36B00;--red:#B3261E;--sh:0 1px 3px rgba(23,48,29,.10),0 4px 14px rgba(23,48,29,.06)}
@@ -1349,7 +1351,7 @@ const csLink = id => { const d = S.docs.get('cl:' + id); return d && !d.deleted 
 /* FIFO: كل شراء دفعة بسعرها، والخروج بياخد من أقدم دفعة (زي ما بتحسب بإيدك) */
 function csStock(upto) {
   const m = new Map(), es = [];
-  for (const e of S.ent.values()) if (!e.deleted && e.prod && (e.dr === CS_RAW || e.cr === CS_RAW) && (!upto || e.date <= upto)) es.push(e);
+  for (const e of S.ent.values()) if (!e.deleted && e.prod && e.stmt !== 'إنتاج منتج تام' && (e.dr === CS_RAW || e.cr === CS_RAW) && (!upto || e.date <= upto)) es.push(e);
   es.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.no || 0) - (b.no || 0));
   for (const e of es) {
     const k = csKey(e.prod), x = m.get(k) || { L:[], last:0, name:cl(e.prod) }; m.set(k, x); if (e.dr === CS_RAW && !x.named) { x.name = cl(e.prod); x.named = 1; }
@@ -1422,13 +1424,14 @@ async function csApplySrc(e, src) {
 /* ---------- المنتج التام: وصفات + عبوات + مخزن منتج تام ---------- */
 const FG_SEED = {"v":2,"ing":{"جردل":{"جزر":6,"فلفل مكسيكي":16,"فلفل ايطالى":20,"قرنبيط":14,"ليمون":7.5,"بصل":55,"حمص":107,"زيتون سليم":82,"زيتون شرائح":110,"زيتون مخلى":110,"خيار قشة":125,"خيار سليم":23,"خيار شرائح":23,"خيار فكوك":80,"زيتون دولسى":85,"فلفل شيري":35,"هلابينو اخضر":16,"هلابينو احمر":18,"فلفل طنطاوى":15,"خيار قشة هندى":110,"زيتون كالاماتا":160,"اسود طبيعي سليم":120,"اسود طبيعي شرائح":150,"لفت":6,"بنجر":25,"هريسة":15,"هريسة (2)":30,"زيت ذرة":115,"زيت زيتون":350},"برطمان":{"جزر":8,"فلفل مكسيكي":20,"فلفل ايطالى":32,"قرنبيط":9,"ليمون":20,"بصل":45,"حمص":107,"زيتون سليم":75,"زيتون شرائح":95,"زيتون مخلى":95,"خيار قشة":125,"خيار شرائح":30,"زيتون دولسى":60,"فلفل شيري":35,"هلابينو اخضر":16,"هلابينو احمر":20,"فلفل طنطاوى":15,"خيار قشة هندى":125,"زيتون كالاماتا":130,"زيتون اسود طبيعى سليم":105,"زيتون اسود طبيعى شرائح":135,"فلفل ايطالى (2)":32,"لفت":8,"هريسة":30,"هريسة (2)":15,"زيتون مشوى":160,"زيت ذرة":115,"زيت زيتون":350}},"cont":[{"id":"c1","n":"برطمان 1050","k":"برطمان","kg":0.55,"pk":[{"n":"البرطمان والغطاء والاستيكر","p":11.5}],"op":[{"n":"مصاريف التشغيل (عمالة ومحلول وتشغيل)","p":5.3}]},{"id":"c2","n":"برطمان 720","k":"برطمان","kg":0.4,"pk":[{"n":"البرطمان والغطاء والاستيكر","p":11}],"op":[{"n":"مصاريف التشغيل (عمالة ومحلول وتشغيل)","p":5.3}]},{"id":"c3","n":"جردل 10 ك","k":"جردل","kg":10.0,"pk":[{"n":"الجردل والكيس والاستيكر","p":33.5}],"op":[{"n":"مصاريف التشغيل (عمالة ومحلول وتشغيل)","p":14}]},{"id":"c4","n":"جردل 12 ك","k":"جردل","kg":12.0,"pk":[{"n":"الجردل والكيس والاستيكر","p":33.5}],"op":[{"n":"مصاريف التشغيل (عمالة ومحلول وتشغيل)","p":14}]},{"id":"c5","n":"جردل 4ك","k":"جردل","kg":4.0,"pk":[{"n":"الجردل والكيس والاستيكر","p":19.5}],"op":[{"n":"مصاريف التشغيل (عمالة ومحلول وتشغيل)","p":14}]},{"id":"c6","n":"جردل 5 ك","k":"جردل","kg":5.0,"pk":[{"n":"الجردل والكيس والاستيكر","p":19.5}],"op":[{"n":"مصاريف التشغيل (عمالة ومحلول وتشغيل)","p":14}]},{"id":"c7","n":"جردل 6 ك","k":"جردل","kg":6.0,"pk":[{"n":"الجردل والكيس والاستيكر","p":19.5}],"op":[{"n":"مصاريف التشغيل (عمالة ومحلول وتشغيل)","p":14}]},{"id":"c8","n":"جردل 8 ك","k":"جردل","kg":8.0,"pk":[{"n":"الجردل والكيس والاستيكر","p":33.5}],"op":[{"n":"مصاريف التشغيل (عمالة ومحلول وتشغيل)","p":14}]}],"prods":[{"n":"مشكل فيجان","k":"جردل","r":[["جزر",0.35],["فلفل مكسيكي",0.03],["قرنبيط",0.15],["ليمون",0.05],["بصل",0.02],["حمص",0.025],["زيتون سليم",0.03],["زيتون شرائح",0.01],["زيتون مخلى",0.01],["خيار قشة",0.02],["خيار سليم",0.02],["خيار شرائح",0.2],["زيتون دولسى",0.05],["فلفل شيري",0.01],["هلابينو اخضر",0.02]],"s":[{"c":"c3","price":550},{"c":"c6","price":275.0}]},{"n":"مشكل ترويقة","k":"جردل","r":[["جزر",0.45],["فلفل مكسيكي",0.02],["قرنبيط",0.15],["ليمون",0.1],["بصل",0.02],["حمص",0.025],["زيتون سليم",0.02],["زيتون شرائح",0.01],["زيتون مخلى",0.015],["خيار قشة",0.02],["خيار شرائح",0.12],["زيتون دولسى",0.02],["فلفل شيري",0.01],["هلابينو اخضر",0.02],["هريسة",0.2]],"s":[{"c":"c3","price":600},{"c":"c6","price":300.0}]},{"n":"بوليف سادة","k":"جردل","r":[["جزر",0.6],["فلفل مكسيكي",0.02],["قرنبيط",0.1],["ليمون",0.1],["بصل",0.03],["زيتون سليم",0.02],["خيار شرائح",0.1],["زيتون دولسى",0.01],["هلابينو اخضر",0.02]],"s":[{"c":"c3","price":350},{"c":"c6","price":200.0}]},{"n":"بوليف محوج","k":"جردل","r":[["جزر",0.6],["فلفل مكسيكي",0.02],["قرنبيط",0.1],["ليمون",0.1],["بصل",0.03],["زيتون سليم",0.02],["خيار شرائح",0.1],["زيتون دولسى",0.01],["هلابينو اخضر",0.02],["هريسة",0.2]],"s":[{"c":"c3","price":400},{"c":"c6","price":225.0}]},{"n":"مشكل تاج","k":"جردل","r":[["جزر",0.65],["فلفل مكسيكي",0.02],["قرنبيط",0.15],["ليمون",0.1],["بصل",0.01],["زيتون سليم",0.01],["خيار شرائح",0.05],["هلابينو اخضر",0.01]],"s":[{"c":"c3","price":270},{"c":"c6","price":135.0}]},{"n":"مشكل ميكس سادة","k":"جردل","r":[["جزر",0.45],["فلفل مكسيكي",0.02],["قرنبيط",0.1],["ليمون",0.1],["زيتون سليم",0.02],["خيار شرائح",0.1],["لفت",0.21]],"s":[{"c":"c3","price":250},{"c":"c6","price":125.0}]},{"n":"مشكل سوبر ميكس","k":"جردل","r":[["جزر",0.45],["فلفل مكسيكي",0.02],["قرنبيط",0.1],["ليمون",0.1],["زيتون سليم",0.02],["خيار شرائح",0.1],["لفت",0.21],["هريسة",0.2]],"s":[{"c":"c3","price":300},{"c":"c6","price":150.0}]},{"n":"مشكل سورى","k":"جردل","r":[["جزر",0.4],["خيار شرائح",0.2],["لفت",0.4]],"s":[{"c":"c3","price":200.0},{"c":"c6","price":100.0}]},{"n":"جزر سادة","k":"جردل","r":[["جزر",1.0]],"s":[{"c":"c3","price":200}]},{"n":"لفت سادة","k":"جردل","r":[["لفت",0.95],["بنجر",0.05]],"s":[{"c":"c3","price":200},{"c":"c6","price":100}]},{"n":"ليمون سادة","k":"جردل","r":[["ليمون",1.0]],"s":[{"c":"c4","price":300},{"c":"c7","price":140}]},{"n":"ليمون معصفر فيجان","k":"جردل","r":[["ليمون",1.0],["هريسة",0.2]],"s":[{"c":"c3","price":340},{"c":"c6","price":170.0}]},{"n":"فلفل طنطاوى عادى","k":"جردل","r":[["فلفل طنطاوى",1.0]],"s":[{"c":"c8","price":280},{"c":"c5","price":140.0}]},{"n":"فلفل طنطاوى صنارة","k":"جردل","r":[["فلفل طنطاوى",0.8]],"s":[{"c":"c3","price":320},{"c":"c6","price":200.0}]},{"n":"فلفل مكسيكى","k":"جردل","r":[["فلفل مكسيكي",0.9]],"s":[{"c":"c3","price":280},{"c":"c6","price":175.0,"chk":1,"xl":97.5}]},{"n":"فلفل هلابينو اخضر شرائح","k":"جردل","r":[["هلابينو اخضر",0.8]],"s":[{"c":"c3","price":280},{"c":"c6","price":140.0}]},{"n":"فلفل هلابينو احمر شرائح","k":"جردل","r":[["هلابينو احمر",0.8]],"s":[{"c":"c3","price":320},{"c":"c6","price":160.0}]},{"n":"بصل سادة","k":"جردل","r":[["بصل",1.0]],"s":[{"c":"c3","price":900.0},{"c":"c6","price":450}]},{"n":"بصل بالقرنبيط","k":"جردل","r":[["قرنبيط",0.7],["بصل",0.3]],"s":[{"c":"c3","price":900.0},{"c":"c6","price":450}]},{"n":"خيار شرائح","k":"جردل","r":[["خيار شرائح",0.9]],"s":[{"c":"c3","price":450}]},{"n":"خيار فيجان","k":"جردل","r":[["خيار شرائح",1.0]],"s":[{"c":"c3","price":450},{"c":"c6","price":225.0,"chk":1,"xl":125.5}]},{"n":"خيار قشة","k":"جردل","r":[["خيار قشة هندى",0.9]],"s":[{"c":"c3","price":2700.0},{"c":"c6","price":1350,"chk":1,"xl":473.5}]},{"n":"ميكس فيجن","k":"جردل","r":[["ليمون",0.1],["حمص",0.15],["زيتون شرائح",0.2],["زيتون مخلى",0.2],["هلابينو اخضر",0.05],["هلابينو احمر",0.05],["هريسة",0.1],["زيت زيتون",0.002]],"s":[{"c":"c6","price":850,"chk":1,"xl":290.2}]},{"n":"حمص بالخلطة","k":"جردل","r":[["ليمون",0.1],["حمص",0.25],["هلابينو اخضر",0.125],["هلابينو احمر",0.125],["هريسة",0.125],["زيت زيتون",0.0015]],"s":[{"c":"c6","price":475,"chk":1,"xl":167.1}]},{"n":"زيتون اخضر جامبو سليم","k":"جردل","r":[["زيتون سليم",1.0]],"s":[{"c":"c3","price":1300}]},{"n":"زيتون اخضر شرائح جامبو","k":"جردل","r":[["زيتون شرائح",0.9]],"s":[{"c":"c3","price":1395}]},{"n":"زيتون اخضر مخلى","k":"جردل","r":[["زيتون مخلى",1.0]],"s":[{"c":"c3","price":1600}]},{"n":"زيتون محشي جزر","k":"جردل","r":[["جزر",0.1],["زيتون مخلى",0.9]],"s":[{"c":"c3","price":1500}]},{"n":"زيتون محشى فلفل","k":"جردل","r":[["زيتون مخلى",0.9],["هلابينو احمر",0.1]],"s":[{"c":"c3","price":1500}]},{"n":"زيتون دولسي جامبو","k":"جردل","r":[["زيتون دولسى",1.0]],"s":[{"c":"c3","price":1500.0},{"c":"c6","price":750}]},{"n":"زيتون كالاماتا جامبو","k":"جردل","r":[["زيتون كالاماتا",1.0]],"s":[{"c":"c3","price":2250},{"c":"c6","price":1175}]},{"n":"زيتون كالاماتا احجام","k":"جردل","r":[["زيتون كالاماتا",1.0]],"s":[{"c":"c3","price":2000}]},{"n":"مشكل مخصوص","k":"جردل","r":[["جزر",0.35],["فلفل مكسيكي",0.15],["خيار شرائح",0.2],["لفت",0.3]],"s":[{"c":"c3","price":600}]},{"n":"قرنبيط","k":"جردل","r":[["قرنبيط",1]],"s":[{"c":"c6","price":0}]},{"n":"مشكل فيجان","k":"برطمان","r":[["جزر",0.45],["فلفل مكسيكي",0.02],["قرنبيط",0.15],["ليمون",0.1],["بصل",0.02],["حمص",0.025],["زيتون سليم",0.02],["زيتون شرائح",0.01],["زيتون مخلى",0.015],["خيار قشة",0.02],["خيار شرائح",0.12],["زيتون دولسى",0.02],["فلفل شيري",0.01],["هلابينو اخضر",0.02]],"s":[{"c":"c2","price":45.52},{"c":"c1","price":53.35}]},{"n":"مشكل ترويقة","k":"برطمان","r":[["جزر",0.45],["فلفل مكسيكي",0.02],["قرنبيط",0.15],["ليمون",0.1],["بصل",0.02],["حمص",0.025],["زيتون سليم",0.02],["زيتون شرائح",0.01],["زيتون مخلى",0.015],["خيار قشة",0.02],["خيار شرائح",0.12],["زيتون دولسى",0.02],["فلفل شيري",0.01],["هلابينو اخضر",0.02],["هريسة (2)",0.2]],"s":[{"c":"c2","price":47.92},{"c":"c1","price":56.65}]},{"n":"بوليف سادة","k":"برطمان","r":[["جزر",0.6],["فلفل مكسيكي",0.02],["قرنبيط",0.1],["ليمون",0.1],["بصل",0.03],["زيتون سليم",0.02],["خيار شرائح",0.1],["زيتون دولسى",0.01],["هلابينو اخضر",0.02]],"s":[{"c":"c2","price":39.2},{"c":"c1","price":44.66}]},{"n":"بوليف محوج","k":"برطمان","r":[["جزر",0.6],["فلفل مكسيكي",0.02],["قرنبيط",0.1],["ليمون",0.1],["بصل",0.03],["زيتون سليم",0.02],["خيار شرائح",0.1],["زيتون دولسى",0.01],["هلابينو اخضر",0.02],["هريسة (2)",0.2]],"s":[{"c":"c2","price":41.6},{"c":"c1","price":47.96}]},{"n":"مشكل ميكس سادة","k":"برطمان","r":[["جزر",0.45],["فلفل مكسيكي",0.02],["قرنبيط",0.1],["ليمون",0.1],["زيتون سليم",0.02],["خيار شرائح",0.1],["لفت",0.21]],"s":[{"c":"c2","price":37.76},{"c":"c1","price":42.69}]},{"n":"مشكل سوبر ميكس","k":"برطمان","r":[["جزر",0.45],["فلفل مكسيكي",0.02],["قرنبيط",0.1],["ليمون",0.1],["زيتون سليم",0.02],["خيار شرائح",0.1],["لفت",0.21],["هريسة (2)",0.2]],"s":[{"c":"c2","price":40.16},{"c":"c1","price":45.99}]},{"n":"مشكل سورى","k":"برطمان","r":[["جزر",0.4],["خيار شرائح",0.2],["لفت",0.4]],"s":[{"c":"c2","price":37.22},{"c":"c1","price":41.94}]},{"n":"جزر سادة","k":"برطمان","r":[["جزر",1.0]],"s":[{"c":"c2","price":33.7},{"c":"c1","price":37.1}]},{"n":"لفت سادة","k":"برطمان","r":[["لفت",1.0]],"s":[{"c":"c2","price":33.7},{"c":"c1","price":37.1}]},{"n":"ليمون سادة","k":"برطمان","r":[["ليمون",1.0]],"s":[{"c":"c2","price":43.3},{"c":"c1","price":50.3}]},{"n":"ليمون معصفر فيجان","k":"برطمان","r":[["ليمون",0.9],["هريسة (2)",0.1]],"s":[{"c":"c2","price":42.9},{"c":"c1","price":49.3}]},{"n":"فلفل طنطاوى عادى","k":"برطمان","r":[["فلفل طنطاوى",0.875]],"s":[{"c":"c2","price":37.8},{"c":"c1","price":40.3,"chk":1,"xl":22.8}]},{"n":"فلفل طنطاوى صنارة","k":"برطمان","r":[["فلفل طنطاوى",0.875]],"s":[{"c":"c2","price":37.8},{"c":"c1","price":40.3,"chk":1,"xl":22.8}]},{"n":"فلفل مكسيكى","k":"برطمان","r":[["فلفل مكسيكي",0.875]],"s":[{"c":"c2","price":41.3},{"c":"c1","price":44.3,"chk":1,"xl":24.8}]},{"n":"فلفل ايطالى","k":"برطمان","r":[["فلفل ايطالى (2)",0.95]],"s":[{"c":"c2","price":51.62},{"c":"c1","price":57.1,"chk":1,"xl":31.2}]},{"n":"فلفل هلابينو اخضر شرائح","k":"برطمان","r":[["هلابينو اخضر",0.95]],"s":[{"c":"c2","price":39.46},{"c":"c1","price":41.1,"chk":1,"xl":23.2}]},{"n":"فلفل هلابينو احمر شرائح","k":"برطمان","r":[["هلابينو احمر",0.95]],"s":[{"c":"c2","price":42.5},{"c":"c1","price":44.3,"chk":1,"xl":24.8}]},{"n":"بصل سادة","k":"برطمان","r":[["بصل",1.0]],"s":[{"c":"c2","price":63.3},{"c":"c1","price":77.8}]},{"n":"خيار شرائح","k":"برطمان","r":[["خيار شرائح",1.0]],"s":[{"c":"c2","price":51.3},{"c":"c1","price":61.3}]},{"n":"خيار فيجان","k":"برطمان","r":[["خيار شرائح",1.5]],"s":[{"c":"c2","price":63.3},{"c":"c1","price":70.3,"chk":1,"xl":37.8}]},{"n":"خيار قشة","k":"برطمان","r":[["خيار قشة هندى",1.0]],"s":[{"c":"c2","price":127.3},{"c":"c1","price":165.8}]},{"n":"حمص بالخلطة","k":"برطمان","r":[["حمص",0.6]],"s":[{"c":"c2","price":83.36,"op":10},{"c":"c1","price":103.62,"op":10}]},{"n":"هريسة محوجة","k":"برطمان","r":[["هريسة",1.8]],"s":[{"c":"c2","price":70.5},{"c":"c1","price":88.3}]},{"n":"هريسة حارة","k":"برطمان","r":[["هريسة (2)",1.8]],"s":[{"c":"c2","price":48.9},{"c":"c1","price":58.3}]},{"n":"زيتون اخضر جامبو سليم","k":"برطمان","r":[["زيتون سليم",1.0]],"s":[{"c":"c2","price":87.3},{"c":"c1","price":110.8}]},{"n":"زيتون اخضر شرائح جامبو","k":"برطمان","r":[["زيتون شرائح",1.0]],"s":[{"c":"c2","price":103.3},{"c":"c1","price":132.8}]},{"n":"زيتون اخضر مخلى","k":"برطمان","r":[["زيتون مخلى",1.0]],"s":[{"c":"c2","price":103.3},{"c":"c1","price":132.8}]},{"n":"زيتون محشي جزر","k":"برطمان","r":[["جزر",0.1],["زيتون مخلى",0.9]],"s":[{"c":"c2","price":96.34},{"c":"c1","price":123.23}]},{"n":"زيتون محشى فلفل","k":"برطمان","r":[["زيتون مخلى",0.9],["هلابينو احمر",0.1]],"s":[{"c":"c2","price":97.3},{"c":"c1","price":124.55}]},{"n":"زيتون اسبانى طبيعى جامبو","k":"برطمان","r":[["زيتون اسود طبيعى سليم",1.0]],"s":[{"c":"c2","price":111.3},{"c":"c1","price":143.8}]},{"n":"زيتون شرائح طبيعي","k":"برطمان","r":[["زيتون اسود طبيعى شرائح",1.0]],"s":[{"c":"c2","price":135.3},{"c":"c1","price":176.8}]},{"n":"زيتون دولسي جامبو","k":"برطمان","r":[["زيتون دولسى",1.0]],"s":[{"c":"c2","price":75.3},{"c":"c1","price":94.3}]},{"n":"زيتون كالاماتا جامبو","k":"برطمان","r":[["زيتون كالاماتا",1.0]],"s":[{"c":"c2","price":131.3},{"c":"c1","price":171.3}]},{"n":"زيتون كالاماتا زيت","k":"برطمان","r":[["زيتون كالاماتا",1.0],["زيت زيتون",0.02]],"s":[{"c":"c2","price":136.9},{"c":"c1","price":179.0}]},{"n":"زيتون مشوى","k":"برطمان","r":[["زيتون مشوى",1.25]],"s":[{"c":"c2","price":187.3},{"c":"c1","price":220.3,"chk":1,"xl":112.8},{"c":"c2","price":42.98,"chk":1,"xl":24.14},{"c":"c2","price":42.78,"chk":1,"xl":24.04}]}]};
 const FG_STOCK = 'مخزن منتج تام';
-function fgData() { const d = S.docs.get('fg'); return d && !d.deleted && d.data.v === 2 ? d.data : null; }
+function fgData() { const d = S.docs.get('fg2'); return d && !d.deleted && d.data.v === 2 ? d.data : null; }
 const fgClone = o => JSON.parse(JSON.stringify(o));
 const fgCont = (D, id) => D.cont.find(c => c.id === id) || { n:'؟', kg:0, pk:[], op:[] };
 const fgSum = a => (a || []).reduce((t, x) => t + (+x.p || 0), 0);
 function fgRawKg(D, p) { const pr = D.ing[p.k] || {}; return p.r.reduce((a, [n, pc]) => a + pc * (+pr[n] || 0), 0); }
 function fgCost(D, p, z) { const c = fgCont(D, z.c); return fgRawKg(D, p) * c.kg + (z.pk != null ? +z.pk : fgSum(c.pk)) + (z.op != null ? +z.op : fgSum(c.op)); }
 const fgName = (D, p, z) => p.n + ' - ' + fgCont(D, z.c).n;
+function fgParts(D, p, z) { const c = fgCont(D, z.c); return { ing:fgRawKg(D, p) * c.kg, pack:z.pk != null ? +z.pk : fgSum(c.pk), op:z.op != null ? +z.op : fgSum(c.op) }; }
 function fgList(D) { const L = []; D.prods.forEach((p, i) => p.s.forEach((z, k) => L.push({ p, i, z, k, name:fgName(D, p, z) }))); return L; }
 function fgMatch(name) { const D = fgData(); if (!D || !name) return null; const k = csKey(name); return fgList(D).find(x => csKey(x.name) === k) || null; }
 /* دفعات الإنتاج والبيع بنظام الأقدم أولاً */
@@ -1457,7 +1460,7 @@ async function fgSaleGen(sale, old, f) {
 }
 /* شاشة المنتج التام */
 function fgHTML(w) {
-  if (!fgData() && w) docSave('fg', 'fg', fgClone(FG_SEED));
+  if (!fgData() && w && !S.fgSeeded) { S.fgSeeded = 1; docSave('fg2', 'fg2', fgClone(FG_SEED)); } /* مرة واحدة بس، عشان ما يعملش دورة مزامنة */
   const D = fgData() || FG_SEED, V = S.fgView || 'p';
   const tabs = '<div class="mrow" style="padding-top:6px"><div class="seg" style="margin:0"><button class="' + (V === 'p' ? 'on' : '') + '" data-fgv="p">المنتجات</button><button class="' + (V === 'c' ? 'on' : '') + '" data-fgv="c">العبوات والتكاليف</button><button class="' + (V === 's' ? 'on' : '') + '" data-fgv="s">مخزن المنتج التام</button></div></div>';
   if (V === 'c') return tabs + fgContHTML(D, w);
@@ -1536,11 +1539,14 @@ function fgRenderI() {
 function openFI() { const D = fgData(); if (!D) return; const K = S.fgKind || Object.keys(D.ing)[0]; S.hs = { type:'fgi' }; S.fgW = { D, K, rows:Object.entries(D.ing[K] || {}).map(([n, p]) => [n, p]) }; fgRenderI(); }
 function openFB() {
   const D = fgData(); if (!D) return; S.hs = { type:'fgb' };
-  const L = fgList(D).sort((a, b) => csColl.compare(a.name, b.name));
+  const L = fgList(D).sort((a, b) => csColl.compare(a.name, b.name)), ca = (() => { try { return JSON.parse(localStorage.getItem('fb_ca')) || {}; } catch (x) { return {}; } })();
+  const sel = (id, def) => '<select id="' + id + '">' + ['المخزون.الخام', 'المصروفات'].map(a => '<option' + ((ca[id] || def) === a ? ' selected' : '') + '>' + a + '</option>').join('') + '</select>';
   $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">تسجيل إنتاج</h2><label for="fb-k">المنتج</label><select id="fb-k"><option value="">اختار المنتج</option>' + L.map(x => '<option value="' + esc(x.name) + '">' + esc(x.name) + '</option>').join('') + '</select>' +
     '<div class="grid"><div><label for="fb-u">العدد المنتج</label>' + fgIn('fb-u', '') + '</div><div><label for="fb-c">تكلفة الوحدة</label>' + fgIn('fb-c', '') + '</div></div><label for="fb-d">التاريخ</label><input id="fb-d" type="date" value="' + todayStr() + '">' +
-    '<div class="note" style="margin-top:8px">تكلفة الوحدة بتتملي من الوصفة، وتقدر تعدلها. التسجيل بيعمل قيد: مدين «' + FG_STOCK + '» ودائن «المصروفات» (تكلفة إنتاج منتج تام).</div><div class="err" id="fb-err"></div><div class="actions"><button class="btn" id="fb-save">حفظ</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
-  $('#fb-k').onchange = () => { const x = fgMatch($('#fb-k').value); if (x) $('#fb-c').value = +fgCost(D, x.p, x.z).toFixed(2); };
+    '<div class="note" style="margin-top:12px"><b>الدائن (اتسحب من فين)</b></div><div class="note" id="fb-parts"></div>' +
+    '<label for="fb-ci">الخامات</label>' + sel('fb-ci', 'المخزون.الخام') + '<label for="fb-cp">العبوات (جردل، كيس، استيكر)</label>' + sel('fb-cp', 'المخزون.الخام') + '<label for="fb-co">التشغيل (عمالة ومحلول)</label>' + sel('fb-co', 'المصروفات') +
+    '<div class="note" style="margin-top:8px">القيد: مدين «' + FG_STOCK + '» ودائن الحسابات اللي فوق. مصاريف التشغيل بتتسحب من المصروفات.</div><div class="err" id="fb-err"></div><div class="actions"><button class="btn" id="fb-save">حفظ</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
+  $('#fb-k').onchange = () => { const x = fgMatch($('#fb-k').value); if (!x) return; const P = fgParts(D, x.p, x.z); $('#fb-c').value = +(P.ing + P.pack + P.op).toFixed(2); $('#fb-parts').textContent = 'للوحدة: خامات ' + fmt(P.ing) + ' · عبوات ' + fmt(P.pack) + ' · تشغيل ' + fmt(P.op); };
   hrRO(); $('#hsheet').classList.remove('hide');
 }
 function fgSheetClick(e) {
@@ -1551,38 +1557,42 @@ function fgSheetClick(e) {
     if (t.closest('#fg-adds')) { fgSyncP(); W.p.s.push({ c:W.D.cont[0].id, price:0 }); fgRenderP(); return true; }
     const rs = t.closest('[data-fgrs]'); if (rs) { fgSyncP(); if (W.p.s.length > 1) W.p.s.splice(+rs.dataset.fgrs, 1); fgRenderP(); return true; }
     if (t.closest('#fg-copy')) { fgSyncP(); W.idx = null; W.p.n += ' (نسخة)'; fgRenderP(); return true; }
-    if (t.closest('#fg-del')) { if (!confirm('تمسح المنتج ده؟')) return true; const D = fgClone(fgData()); D.prods.splice(W.idx, 1); docSave('fg', 'fg', D); closeHS(); renderCS(); return true; }
+    if (t.closest('#fg-del')) { if (!confirm('تمسح المنتج ده؟')) return true; const D = fgClone(fgData()); D.prods.splice(W.idx, 1); docSave('fg2', 'fg2', D); closeHS(); renderCS(); return true; }
     if (t.closest('#fg-save')) {
       fgSyncP(); const D = fgClone(fgData()), p = W.p; if (!cl(p.n)) { $('#fg-err').textContent = 'اكتب اسم المنتج.'; return true; }
       p.r = p.r.filter(r => r[0]); D.ing[p.k] = D.ing[p.k] || fgClone(D.ing[Object.keys(D.ing)[0]] || {});
       for (const [n] of p.r) if (D.ing[p.k][n] == null) D.ing[p.k][n] = 0;
       if (W.idx == null) D.prods.push(p); else D.prods[W.idx] = p;
-      docSave('fg', 'fg', D); S.fgKind = p.k; closeHS(); renderCS(); toast('تم الحفظ'); return true;
+      docSave('fg2', 'fg2', D); S.fgKind = p.k; closeHS(); renderCS(); toast('تم الحفظ'); return true;
     }
   }
   if (S.hs && S.hs.type === 'fgc') {
     const add = t.closest('[data-fcadd]'); if (add) { fgSyncC(); W.c[add.dataset.fcadd].push({ n:'', p:0 }); fgRenderC(); return true; }
     const rm = t.closest('[data-fcrm]'); if (rm) { fgSyncC(); const key = rm.dataset.fcrm.slice(0, 2), j = +rm.dataset.fcrm.slice(2); W.c[key].splice(j, 1); fgRenderC(); return true; }
-    if (t.closest('#fc-del')) { const D = fgClone(fgData()); if (D.prods.some(p => p.s.some(z => z.c === W.c.id))) { $('#fc-err').textContent = 'العبوة دي مستخدمة في منتجات، امسحها منهم الأول.'; return true; } if (!confirm('تمسح العبوة؟')) return true; D.cont.splice(W.idx, 1); docSave('fg', 'fg', D); closeHS(); renderCS(); return true; }
-    if (t.closest('#fc-save')) { fgSyncC(); const D = fgClone(fgData()), c = W.c; if (!cl(c.n)) { $('#fc-err').textContent = 'اكتب اسم العبوة.'; return true; } c.pk = c.pk.filter(r => r.n || r.p); c.op = c.op.filter(r => r.n || r.p); if (W.idx == null) D.cont.push(c); else D.cont[W.idx] = c; docSave('fg', 'fg', D); closeHS(); renderCS(); toast('تم الحفظ'); return true; }
+    if (t.closest('#fc-del')) { const D = fgClone(fgData()); if (D.prods.some(p => p.s.some(z => z.c === W.c.id))) { $('#fc-err').textContent = 'العبوة دي مستخدمة في منتجات، امسحها منهم الأول.'; return true; } if (!confirm('تمسح العبوة؟')) return true; D.cont.splice(W.idx, 1); docSave('fg2', 'fg2', D); closeHS(); renderCS(); return true; }
+    if (t.closest('#fc-save')) { fgSyncC(); const D = fgClone(fgData()), c = W.c; if (!cl(c.n)) { $('#fc-err').textContent = 'اكتب اسم العبوة.'; return true; } c.pk = c.pk.filter(r => r.n || r.p); c.op = c.op.filter(r => r.n || r.p); if (W.idx == null) D.cont.push(c); else D.cont[W.idx] = c; docSave('fg2', 'fg2', D); closeHS(); renderCS(); toast('تم الحفظ'); return true; }
   }
   if (S.hs && S.hs.type === 'fgi') {
     if (t.closest('#fi-add')) { fgSyncI(); W.rows.push(['', 0]); fgRenderI(); return true; }
     const rm = t.closest('[data-fgirm]'); if (rm) { fgSyncI(); W.rows.splice(+rm.dataset.fgirm, 1); fgRenderI(); return true; }
-    if (t.closest('#fi-save')) { fgSyncI(); const D = fgClone(fgData()), o = {}; W.rows.forEach(([n, p]) => { if (n) o[n] = p; }); D.ing[W.K] = o; docSave('fg', 'fg', D); closeHS(); renderCS(); toast('تم حفظ الأسعار'); return true; }
+    if (t.closest('#fi-save')) { fgSyncI(); const D = fgClone(fgData()), o = {}; W.rows.forEach(([n, p]) => { if (n) o[n] = p; }); D.ing[W.K] = o; docSave('fg2', 'fg2', D); closeHS(); renderCS(); toast('تم حفظ الأسعار'); return true; }
   }
   if (S.hs && S.hs.type === 'fgb') {
     if (t.closest('#fb-save')) {
-      const name = g('#fb-k'), units = num(g('#fb-u')), cost = num(g('#fb-c')), date = g('#fb-d'), f = fgMatch(name);
+      const D = fgData(), name = g('#fb-k'), units = num(g('#fb-u')), cost = num(g('#fb-c')), date = g('#fb-d'), f = fgMatch(name);
       if (!f || !(units > 0) || !date) { $('#fb-err').textContent = 'اختار المنتج واكتب العدد والتاريخ.'; return true; }
-      const maxNo = Math.max(0, ...live().map(z => z.no || 0)), amt = units * cost;
-      const en = { id:crypto.randomUUID(), no:maxNo + 1, date, stmt:'إنتاج منتج تام', dr:FG_STOCK, cr:'المصروفات', pa:'', pb:'تكلفة إنتاج منتج تام', prod:f.name, qty:units, disc:0, price:cost, amtD:amt, amtC:amt, star:false, opening:false, deleted:false, updated:Date.now(), dirty:true };
-      S.ent.set(en.id, en); entPut(en).then(() => { docSave('fb', 'fb:' + uid8(), { date, key:f.name, units, cost, e:en.id }); closeHS(); renderCS(); sync(); toast('اتسجل الإنتاج'); }); return true;
+      const P = fgParts(D, f.p, f.z), tot = P.ing + P.pack + P.op, k = tot > 0 ? cost / tot : 0, ca = { 'fb-ci':g('#fb-ci'), 'fb-cp':g('#fb-cp'), 'fb-co':g('#fb-co') };
+      try { localStorage.setItem('fb_ca', JSON.stringify(ca)); } catch (x) { /* ignore */ }
+      const parts = tot > 0 ? [[P.ing * k, ca['fb-ci']], [P.pack * k, ca['fb-cp']], [P.op * k, ca['fb-co']]].filter(x => x[0] > 0.0001) : [[cost, ca['fb-ci']]];
+      const maxNo = Math.max(0, ...live().map(z => z.no || 0)), ids = [], now = Date.now();
+      const ens = parts.map(([u, acc], n) => ({ id:crypto.randomUUID(), no:maxNo + n + 1, date, stmt:'إنتاج منتج تام', dr:FG_STOCK, cr:acc, pa:'', pb:acc === 'المصروفات' ? 'تكلفة إنتاج منتج تام' : '', prod:f.name, qty:units, disc:0, price:u, amtD:u * units, amtC:u * units, star:false, opening:false, deleted:false, updated:now, dirty:true }));
+      Promise.all(ens.map(en => { S.ent.set(en.id, en); ids.push(en.id); return entPut(en); })).then(() => { docSave('fb', 'fb:' + uid8(), { date, key:f.name, units, cost, e:ids }); closeHS(); renderCS(); sync(); toast('اتسجل الإنتاج'); }); return true;
     }
   }
   if (S.hs && S.hs.type === 'fgbd' && t.closest('#fb-del')) {
-    const d = S.docs.get(S.hs.id), x = d && S.ent.get(d.data.e); const fin = () => { docSave('fb', S.hs.id, d.data, true); closeHS(); renderCS(); sync(); toast('اتمسح'); };
-    if (x && !x.deleted) { Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }); entPut(x).then(fin); } else fin(); return true;
+    const d = S.docs.get(S.hs.id), ids = d ? [].concat(d.data.e || []) : [], xs = ids.map(i => S.ent.get(i)).filter(x => x && !x.deleted);
+    xs.forEach(x => Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }));
+    Promise.all(xs.map(x => entPut(x))).then(() => { docSave('fb', S.hs.id, d.data, true); closeHS(); renderCS(); sync(); toast('اتمسح'); }); return true;
   }
   return false;
 }
@@ -1959,12 +1969,17 @@ function appBack() {
 }
 const guard = () => history.pushState({ g:1 }, '');
 function armBack() {
-  if (S.guarded) return; S.guarded = true;
-  history.replaceState({ b:1 }, ''); guard();
+  if (S.guarded) return; S.guarded = true; S.hi = 0;
+  history.replaceState({ b:1 }, '');
+  /* Chrome بيتخطى القيود اللي بتتضاف من غير لمس، فبنزودها مع كل لمسة */
+  const fill = () => { while (S.hi < 5) { history.pushState({ g:1 }, ''); S.hi++; } };
+  S.fillGuard = fill; fill();
+  document.addEventListener('pointerdown', fill, true);
   window.addEventListener('popstate', () => {
     if ($('#app').classList.contains('hide')) return;
-    if (appBack() === 'exit') { history.back(); return; }
-    guard();
+    S.hi = Math.max(0, S.hi - 1);
+    if (appBack() === 'exit') { history.go(-(S.hi + 1)); return; }
+    if (S.hi === 0) fill();
   });
 }
 
