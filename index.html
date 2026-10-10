@@ -129,6 +129,10 @@ table.tb{border-collapse:separate;border-spacing:0;width:auto;font-size:13px;fon
 table.stb{width:100%;table-layout:fixed;border-collapse:collapse;font-size:17px;background:var(--paper)}
 .stb th{position:static;background:var(--green-d);color:#fff;padding:12px 8px;font-size:15px;text-align:center}
 .stb th:first-child{text-align:right}
+#v-cs .stb th{position:sticky;top:calc(var(--hh,64px) + var(--subh,54px));z-index:3}
+#v-cs .stb th:first-child,#v-cs .stb td:first-child{position:sticky;right:0}
+#v-cs .stb th:first-child{z-index:4}
+#v-cs .stb tr:not(.h) td:first-child{background:var(--paper);z-index:1}
 .stb td{padding:13px 8px;border-bottom:1px solid var(--line);vertical-align:middle;line-height:1.5}
 .stb td.l{text-align:right;word-break:normal;overflow-wrap:break-word}
 .stb td.v{direction:ltr;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
@@ -478,7 +482,7 @@ const ACC = [
   ['العملاء','العملاء','users','#A63CA0'], ['الموردين','الموردين','truck','#1E6FE8'], ['المشتريات','المشتريات','box','#3F7CAC'], ['الخزينة','الخزينة','wallet','#2E7D52'],
   ['مبيعات توريد','المبيعات','chart','#E8892B'], ['المصروفات','المصروفات','receipt','#D4A00F'], ['الايرادات','الإيرادات','coin','#1FA38A'],
   ['المرتبات','المرتبات','brief','#4A3FE0'], ['العهد.الماليه','العهد المالية','tag','#2AA7C9'], ['جاري.الشركاء','الشركاء','users','#7A4DD8'],
-  ['ارصده.دائنه.اخري','الديون والأرصدة الدائنة','coin','#C0453A'], ['اصول.ثابتة','الأصول الثابتة','build','#5B6B2A'], ['المخزون.الخام','المخزون الخام','box','#8A5A2B']
+  ['ارصده.دائنه.اخري','الديون والأرصدة الدائنة','coin','#C0453A'], ['اصول.ثابتة','الأصول الثابتة','build','#5B6B2A'], ['المخزون.الخام','المخزون الخام','box','#8A5A2B'], ['مخزن منتج تام','مخزون المنتج التام','box','#C27A1F']
 ];
 const accT = k => (ACC.find(a => a[0] === k) || [k, k])[1];
 const S = { session:null, profile:null, ent:new Map(), accounts:[], statements:[], party:[], closed:new Set(),
@@ -647,7 +651,7 @@ function setPill() {
 
 /* ---------- auth ---------- */
 function showLogin(msg) {
-  $('#app').classList.add('hide'); $('#login').classList.remove('hide');
+  disarmBack(); $('#app').classList.add('hide'); $('#login').classList.remove('hide');
   $('#l-url').value = url(); $('#l-err').textContent = msg || '';
 }
 async function login() {
@@ -904,7 +908,7 @@ function renderAn() {
 function openAcc(A) { S.acc = A; S.expGroup = null; S.accQ = ''; S.accMonth = '*'; $('#acc-q').value = ''; if (S.view !== 'acc') push_('acc'); else go('acc'); }
 
 /* grouping key: inventory by product, assets by asset name, the rest by party name */
-const keyOf = (A, e, s) => A === 'المصروفات' ? expItem(e) : A === 'المشتريات' ? (cl(e.prod) || s.party || cl(e.stmt) || 'بدون اسم') : A === 'المخزون.الخام' ? (cl(e.prod) || s.party) : A === 'اصول.ثابتة' ? (s.party || cl(e.prod)) : s.party;
+const keyOf = (A, e, s) => A === 'المصروفات' ? expItem(e) : A === 'المشتريات' ? (cl(e.prod) || s.party || cl(e.stmt) || 'بدون اسم') : (A === 'المخزون.الخام' || A === 'مخزن منتج تام') ? (cl(e.prod) || s.party) : A === 'اصول.ثابتة' ? (s.party || cl(e.prod)) : s.party;
 const discEgp = e => e.qty && e.disc ? (e.qty - aft(e)) * e.price : 0;
 function sumRows(A, month) {
   const map = new Map();
@@ -922,6 +926,7 @@ function sumCols(A) {
   const N = (h, k, o) => Object.assign({ h, k, t:'n' }, o), T = h => ({ h, k:r => r.name, t:'t' });
   if (A === 'العملاء') return [T('اسم العميل'), N('المبيعات', r => r.d, { sum:1 }), N('الخصومات', r => r.disc, { sum:1, z:1 }), N('المدفوع', r => r.c, { sum:1 }), N('الرصيد', r => r.d - r.c, { sum:1, neg:1 })];
   if (A === 'الموردين') return [T('اسم المورد'), N('المشتريات', r => r.c, { sum:1 }), N('الخصومات', r => r.disc, { sum:1, z:1 }), N('المدفوع', r => r.d, { sum:1 }), N('الرصيد', r => r.c - r.d, { sum:1, neg:1 })];
+  if (A === 'مخزن منتج تام') return [T('اسم المنتج'), N('الوارد (عدد)', r => r.qi, { z:1 }), N('الصادر (عدد)', r => r.qo, { z:1 }), N('الرصيد (عدد)', r => r.qi - r.qo, { neg:1 }), N('الرصيد (مبلغ)', r => r.d - r.c, { sum:1, neg:1 })];
   if (A === 'المخزون.الخام') return [T('اسم الصنف'), N('الوارد (كمية)', r => r.qi, { z:1 }), N('الصادر والفاقد (كمية)', r => r.qo, { z:1 }), N('الرصيد (كمية)', r => r.qi - r.qo, { neg:1 }), N('الرصيد (مبلغ)', r => r.d - r.c, { sum:1, neg:1 })];
   if (A === 'المشتريات') return [T('اسم الصنف'), N('المشتريات', r => r.d, { sum:1 }), N('المردودات', r => r.c, { sum:1, z:1 }), N('صافي المشتريات', r => r.d - r.c, { sum:1, neg:1 })];
   if (A === 'اصول.ثابتة') return [T('اسم الأصل'), N('عدد الوحدات', r => r.qi - r.qo), N('التكلفة', r => r.d, { sum:1 }), N('المستبعد', r => r.c, { sum:1, z:1 }), N('الصافي', r => r.d - r.c, { sum:1, neg:1 })];
@@ -1011,6 +1016,13 @@ function spec(A) {
       N('سعر الوحدة', m => m.e.price, { z:1 }), N('إجمالي مبلغ الكمية', tot, { z:1, sum:1 }), N('المدفوع', paid, { z:1, sum:1 }),
       N('الرصيد المتبقي', m => tot(m) - paid(m), { sum:1, neg:1 }),
       MO({ s:1 }), N('الخصم بالجنيه', m => m.e.qty ? discEgp(m.e) : 0, { z:1, sum:1, s:1 }), N('الرصيد التراكمي', m => sup ? -m.run : m.run, { s:1, neg:1 })];
+  }
+  if (A === 'مخزن منتج تام') {
+    return [ID, DT, MO(), T('المنتج', m => m.e.prod), T('نوع الحركة', m => m.e.stmt), T('الطرف', m => m.who),
+      N('العدد', m => m.e.qty, { z:1 }), N('تكلفة الوحدة', m => m.e.price, { z:1 }),
+      N('الوارد (عدد)', m => m.qin, { z:1, sum:1 }), N('الوارد (مبلغ)', m => m.d, { z:1, sum:1 }),
+      N('الصادر (عدد)', m => m.isIn ? 0 : m.e.qty, { z:1, sum:1 }), N('الصادر (مبلغ)', m => m.c, { z:1, sum:1 }),
+      N('الرصيد (عدد)', m => m.qrun, { neg:1 }), N('الرصيد (مبلغ)', m => m.run, { neg:1 })];
   }
   if (A === 'المخزون.الخام') {
     return [ID, DT, MO(), T('الصنف', m => m.e.prod), T('نوع الحركة', m => m.e.stmt), T('الطرف', m => m.who),
@@ -1186,7 +1198,7 @@ function renderBS() {
   const cap = -n('رأس.مال'), part = -n('جاري.الشركاء'), eq = cap + part + P.np - P.dep, tot = liab + eq, diff = assets - tot;
   const R = [{ l:'الأصول', c:'h' }, { l:'أولاً: الأصول المتداولة', c:'h' },
     { l:'الخزينة', b:n('الخزينة'), k:'الخزينة' }, { l:'الخزينة الخاصة', b:n('خزينة.خاصة') }, { l:'البنك', b:n('البنك') }, { l:'إجمالي النقدية', b:cash, c:'t' },
-    { l:'المخزون الخام', b:n('المخزون.الخام'), k:'المخزون.الخام' }, { l:'مخزن المنتج تام', b:n('مخزن منتج تام') }];
+    { l:'المخزون الخام', b:n('المخزون.الخام'), k:'المخزون.الخام' }, { l:'مخزون المنتج التام', b:n('مخزن منتج تام'), k:'مخزن منتج تام' }];
   if (Math.abs(n('مخزن فلفل')) > 0.005) R.push({ l:'مخزن فلفل', b:n('مخزن فلفل') });
   R.push({ l:'إجمالي المخزون', b:inv, c:'t' }, { l:'العملاء', b:n('العملاء'), k:'العملاء' }, { l:'أرصدة مدينة أخرى', b:n('ارصدة مدينة اخري') }, { l:'العهد المالية', b:n('العهد.الماليه'), k:'العهد.الماليه' },
     { l:'إجمالي المدينون', b:rec, c:'t' }, { l:'إجمالي الأصول المتداولة', b:cur, c:'t' },
@@ -1600,7 +1612,7 @@ function fgSheetClick(e) {
 function openFBD(id) { const d = S.docs.get(id); if (!d) return; S.hs = { type:'fgbd', id }; $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">حركة إنتاج</h2><div class="kv"><span>المنتج</span><span>' + esc(d.data.key) + '</span></div><div class="kv"><span>العدد</span><span dir="ltr">' + esc(fmt0(d.data.units)) + '</span></div><div class="kv"><span>تكلفة الوحدة</span><span dir="ltr">' + esc(fmt(d.data.cost)) + '</span></div><div class="kv"><span>التاريخ</span><span dir="ltr">' + esc(d.data.date) + '</span></div><div class="actions"><button class="btn danger" id="fb-del">حذف الحركة وقيدها</button><button class="btn ghost" id="he-x">إغلاق</button></div>'; hrRO(); $('#hsheet').classList.remove('hide'); }
 const csUnlinked = () => { const st = csStart(); if (!st) return []; return live().filter(e => e.cr === 'مبيعات توريد' && e.date >= st && csTpl(e.prod) && !csLink(e.id)).sort((a, b) => a.date < b.date ? 1 : -1); };
 function renderCS() {
-  csSeed();
+  csSeed(); { const sb = document.querySelector('#v-cs .sub'); if (sb) $('#v-cs').style.setProperty('--subh', sb.offsetHeight + 'px'); }
   const T = S.csTab || 's', w = canWrite();
   for (const [id, k] of [['#cs-t1', 's'], ['#cs-t2', 'k'], ['#cs-t3', 'p'], ['#cs-t4', 'g']]) $(id).classList.toggle('on', T === k);
   $('#cs-body').innerHTML = T === 's' ? csSalesHTML(w) : T === 'k' ? csStockHTML() : T === 'g' ? fgHTML(w) : csProdsHTML(w);
@@ -1969,19 +1981,21 @@ function appBack() {
   if (v === 'form') closeForm(); else if (v === 'acc' && S.acc === 'المصروفات' && S.expGroup != null) accBack(); else if (S.stack.length) back(); else go('home');
 }
 const guard = () => history.pushState({ g:1 }, '');
+function disarmBack() { if (!S.guarded) return; const n = S.hi || 0; S.guarded = false; S.hi = 0; if (n > 0) history.go(-n); }
 function armBack() {
   if (S.guarded) return; S.guarded = true; S.hi = 0;
   history.replaceState({ b:1 }, '');
   /* Chrome بيتخطى القيود اللي بتتضاف من غير لمس، فبنزودها مع كل لمسة */
-  const fill = () => { while (S.hi < 5) { history.pushState({ g:1 }, ''); S.hi++; } };
+  const fill = () => { if (!S.guarded || $('#app').classList.contains('hide')) return; while (S.hi < 5) { history.pushState({ g:1 }, ''); S.hi++; } };
   S.fillGuard = fill; fill();
-  document.addEventListener('pointerdown', fill, true);
-  window.addEventListener('popstate', () => {
-    if ($('#app').classList.contains('hide')) return;
+  if (!S.backBound) { S.backBound = true; document.addEventListener('pointerdown', () => S.fillGuard && S.fillGuard(), true); window.addEventListener('popstate', onPop); }
+}
+function onPop() {
+  { if (!S.guarded || $('#app').classList.contains('hide')) return;
     S.hi = Math.max(0, S.hi - 1);
     if (appBack() === 'exit') { history.go(-(S.hi + 1)); return; }
-    if (S.hi === 0) fill();
-  });
+    if (S.hi === 0 && S.fillGuard) S.fillGuard();
+  }
 }
 
 function renderSettings() {
