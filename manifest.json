@@ -1,16 +1,27 @@
 {
-  "name": "فيجان فود - الحسابات",
-  "short_name": "الحسابات",
+  "name": "veganfood",
+  "short_name": "veganfood",
+  "description": "veganfood - حسابات فيجان فود",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "dir": "rtl",
   "lang": "ar",
-  "background_color": "#F3F5F2",
-  "theme_color": "#1E4D35",
+  "dir": "rtl",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFFFFF",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
