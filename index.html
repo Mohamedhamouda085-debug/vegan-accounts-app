@@ -1510,26 +1510,45 @@ function fgSyncP() {
   const W = S.fgW; if (!W || !$('#fg-n')) return;
   W.p.n = cl($('#fg-n').value) || W.p.n; W.p.k = cl($('#fg-k').value) || W.p.k;
   W.p.r = W.p.r.map((r, j) => [cl($('#fg-rn' + j).value), Math.max(0, num($('#fg-rp' + j).value) / 100)]);
+  W.p.r.forEach((r, j) => { const v = $('#fg-rc' + j).value; if (r[0] && cl(v) !== '') W.prices[r[0]] = Math.max(0, num(v)); });
   W.p.s = W.p.s.map((z, k) => { const o = { ...z, c:$('#fg-sc' + k).value, price:Math.max(0, num($('#fg-sp' + k).value)) }; const a = $('#fg-sk' + k).value, b = $('#fg-so' + k).value; if (cl(a) === '') delete o.pk; else o.pk = num(a); if (cl(b) === '') delete o.op; else o.op = num(b); return o; });
 }
+function fgDx(W) { const D = W.D, k = W.p.k; return { ...D, ing:{ ...D.ing, [k]:{ ...(D.ing[k] || {}), ...W.prices } } }; }
+function fgDetHTML() {
+  const W = S.fgW, p = W.p, Dx = fgDx(W), pr = Dx.ing[p.k] || {}, rows = p.r.filter(r => r[0]);
+  const tot = rows.reduce((a, r) => a + (+r[1] || 0), 0), c2 = x => esc(fmt(x));
+  return p.s.map(z => { const c = fgCont(Dx, z.c), kg = c.kg, ing = rows.reduce((a, r) => a + r[1] * (+pr[r[0]] || 0) * kg, 0), pk = z.pk != null ? +z.pk : fgSum(c.pk), op = z.op != null ? +z.op : fgSum(c.op), all = ing + pk + op, pf = z.price - all;
+    return '<div class="hrow"><div class="n">' + esc(c.n) + ' <small style="color:var(--muted)">(صافي ' + c2(kg) + ' كجم)</small></div>' +
+      '<div style="overflow:visible"><table class="stb"><colgroup><col style="width:40%"><col style="width:18%"><col style="width:20%"><col style="width:22%"></colgroup><thead><tr><th>الخامة</th><th>النسبة</th><th>الوزن كجم</th><th>التكلفة</th></tr></thead><tbody>' +
+      rows.map(r => '<tr><td class="l">' + esc(r[0]) + '</td><td class="v">' + c2(r[1] * 100) + '%</td><td class="v">' + c2(r[1] * kg) + '</td><td class="v">' + c2(r[1] * (+pr[r[0]] || 0) * kg) + '</td></tr>').join('') +
+      '<tr class="h"><td class="l">إجمالي المكونات</td><td class="v">' + c2(tot * 100) + '%</td><td class="v">' + c2(tot * kg) + '</td><td class="v">' + c2(ing) + '</td></tr></tbody></table></div>' +
+      '<div class="kv"><span>خامات التعبئة والتغليف' + (z.pk != null ? ' (معدّل)' : '') + '<small style="display:block;color:var(--muted)">' + esc(c.pk.map(x => x.n + ' ' + fmt(x.p)).join(' + ')) + '</small></span><span dir="ltr">' + c2(pk) + '</span></div>' +
+      '<div class="kv"><span>التشغيل' + (z.op != null ? ' (معدّل)' : '') + '<small style="display:block;color:var(--muted)">' + esc(c.op.map(x => x.n + ' ' + fmt(x.p)).join(' + ')) + '</small></span><span dir="ltr">' + c2(op) + '</span></div>' +
+      '<div class="kv"><b>التكلفة الإجمالية</b><b dir="ltr">' + c2(all) + '</b></div><div class="kv"><span>سعر البيع</span><span dir="ltr">' + c2(z.price) + '</span></div>' +
+      '<div class="kv"><b>الربح</b><b dir="ltr" class="' + (pf < 0 ? 'neg' : '') + '">' + c2(pf) + (all ? ' (' + c2(pf / all * 100) + '%)' : '') + '</b></div></div>'; }).join('');
+}
+function fgLive() { if (!S.hs || S.hs.type !== 'fgp' || !S.fgW || !$('#fg-det')) return; fgSyncP(); const tot = S.fgW.p.r.reduce((a, r) => a + (+r[1] || 0), 0); $('#fg-tot').textContent = fmt(tot * 100) + '%'; $('#fg-det').innerHTML = fgDetHTML(); }
 function fgRenderP() {
-  const W = S.fgW, D = W.D, p = W.p, tot = p.r.reduce((a, r) => a + (+r[1] || 0), 0), pr = D.ing[p.k] || {};
+  const W = S.fgW, D = W.D, p = W.p, pr = { ...(D.ing[p.k] || {}), ...W.prices }, tot = p.r.reduce((a, r) => a + (+r[1] || 0), 0);
   $('#hs-pn').innerHTML = fgDL(D) + '<h2 style="margin:0 0 6px;font-size:18px">' + (W.idx == null ? 'منتج جديد' : 'تعديل منتج') + '</h2>' +
     '<label for="fg-n">اسم المنتج</label>' + fgIn('fg-n', p.n, '', 0) + '<label for="fg-k">مجموعة الأسعار (جردل / برطمان / صفيح ...)</label>' + fgIn('fg-k', p.k, '', 0) +
-    '<div class="note" style="margin-top:12px"><b>الخامات والنسب</b> (نسبة كل خامة من وزن العبوة) — المجموع ' + esc(fmt(tot * 100)) + '%</div>' +
-    p.r.map((r, j) => '<div class="grid" style="align-items:end"><div><input id="fg-rn' + j + '" list="fg-dl" placeholder="الخامة" value="' + esc(r[0]) + '"></div><div style="display:flex;gap:6px">' + fgIn('fg-rp' + j, +(r[1] * 100).toFixed(3), '%') + '<button class="btn danger" data-fgrm="' + j + '" style="width:auto;padding:0 12px">×</button></div></div><div class="note" style="margin:-4px 0 6px">' + (pr[r[0]] != null ? 'سعر الكيلو ' + esc(fmt(pr[r[0]])) : '⚠ مفيش سعر للخامة دي، ضيفها في «أسعار الخامات»') + '</div>').join('') +
+    '<div class="note" style="margin-top:12px"><b>الخامات والنسب</b> — مجموع النسب <b id="fg-tot">' + esc(fmt(tot * 100)) + '%</b></div>' +
+    '<div class="grid" style="font-size:12.5px;color:var(--muted)"><div>الخامة</div><div style="display:flex;gap:6px"><span style="flex:1">النسبة %</span><span style="flex:1">سعر الكيلو</span><span style="width:46px"></span></div></div>' +
+    p.r.map((r, j) => '<div class="grid" style="align-items:end"><div><input id="fg-rn' + j + '" list="fg-dl" placeholder="الخامة" value="' + esc(r[0]) + '"></div><div style="display:flex;gap:6px">' + fgIn('fg-rp' + j, +(r[1] * 100).toFixed(3), '%') + fgIn('fg-rc' + j, pr[r[0]] != null ? pr[r[0]] : '', 'جنيه/كجم') + '<button class="btn danger" data-fgrm="' + j + '" style="width:auto;padding:0 12px">×</button></div></div>').join('') +
     '<div class="actions"><button class="btn ghost" id="fg-addr">＋ خامة</button></div>' +
     '<div class="note" style="margin-top:12px"><b>العبوات والأسعار</b></div>' +
-    p.s.map((z, k) => { const c = fgCont(D, z.c), cost = fgCost(D, p, z);
+    p.s.map((z, k) => { const c = fgCont(D, z.c);
       return '<div class="hrow"><label for="fg-sc' + k + '">العبوة</label><select id="fg-sc' + k + '">' + D.cont.map(x => '<option value="' + x.id + '"' + (x.id === z.c ? ' selected' : '') + '>' + esc(x.n) + '</option>').join('') + '</select>' +
-        '<div class="grid"><div><label for="fg-sp' + k + '">سعر البيع</label>' + fgIn('fg-sp' + k, z.price) + '</div><div><label>التكلفة الحالية</label><div class="kv" style="padding:12px 0"><b dir="ltr">' + esc(fmt0(cost)) + '</b></div></div></div>' +
+        '<label for="fg-sp' + k + '">سعر البيع</label>' + fgIn('fg-sp' + k, z.price) +
         '<div class="grid"><div><label for="fg-sk' + k + '">عبوة وكيس (للمنتج ده بس)</label>' + fgIn('fg-sk' + k, z.pk, fmt(fgSum(c.pk))) + '</div><div><label for="fg-so' + k + '">تشغيل (للمنتج ده بس)</label>' + fgIn('fg-so' + k, z.op, fmt(fgSum(c.op))) + '</div></div>' +
         '<div class="actions"><button class="btn danger" data-fgrs="' + k + '">مسح الحجم</button></div></div>'; }).join('') +
     '<div class="actions"><button class="btn ghost" id="fg-adds">＋ عبوة / حجم</button></div>' +
+    '<div class="note" style="margin-top:12px"><b>تفاصيل التكلفة لكل حجم</b> (بتتحدث وإنت بتعدل)</div><div id="fg-det">' + fgDetHTML() + '</div>' +
     '<div class="err" id="fg-err"></div><div class="actions"><button class="btn" id="fg-save">حفظ</button>' + (W.idx != null ? '<button class="btn ghost" id="fg-copy">نسخ المنتج</button><button class="btn danger" id="fg-del">حذف</button>' : '') + '<button class="btn ghost" id="he-x">إغلاق</button></div>';
+  $('#hs-pn').oninput = fgLive; $('#hs-pn').onchange = fgLive;
   hrRO(); $('#hsheet').classList.remove('hide');
 }
-function openFG(i) { const D = fgData(); if (!D) return; S.hs = { type:'fgp' }; S.fgW = { D, idx:i, p:i == null ? { n:'', k:S.fgKind || 'جردل', r:[], s:[{ c:D.cont[0].id, price:0 }] } : fgClone(D.prods[i]) }; fgRenderP(); }
+function openFG(i) { const D = fgData(); if (!D) return; S.hs = { type:'fgp' }; S.fgW = { D, prices:{}, idx:i, p:i == null ? { n:'', k:S.fgKind || 'جردل', r:[], s:[{ c:D.cont[0].id, price:0 }] } : fgClone(D.prods[i]) }; fgRenderP(); }
 function fgItemsHTML(rows, key) { return rows.map((r, j) => '<div class="grid" style="align-items:end"><div><input id="fc-' + key + 'n' + j + '" placeholder="البند" value="' + esc(r.n) + '"></div><div style="display:flex;gap:6px">' + fgIn('fc-' + key + 'p' + j, r.p, 'جنيه') + '<button class="btn danger" data-fcrm="' + key + j + '" style="width:auto;padding:0 12px">×</button></div></div>').join(''); }
 function fgSyncC() { const W = S.fgW; if (!W || !$('#fc-n')) return; const c = W.c; c.n = cl($('#fc-n').value) || c.n; c.k = cl($('#fc-k').value) || c.k; c.kg = Math.max(0, num($('#fc-kg').value)); for (const key of ['pk', 'op']) c[key] = c[key].map((r, j) => ({ n:cl($('#fc-' + key + 'n' + j).value), p:Math.max(0, num($('#fc-' + key + 'p' + j).value)) })); }
 function fgRenderC() {
@@ -1575,6 +1594,7 @@ function fgSheetClick(e) {
       fgSyncP(); const D = fgClone(fgData()), p = W.p; if (!cl(p.n)) { $('#fg-err').textContent = 'اكتب اسم المنتج.'; return true; }
       p.r = p.r.filter(r => r[0]); D.ing[p.k] = D.ing[p.k] || fgClone(D.ing[Object.keys(D.ing)[0]] || {});
       for (const [n] of p.r) if (D.ing[p.k][n] == null) D.ing[p.k][n] = 0;
+      for (const [n, v] of Object.entries(W.prices)) if (p.r.some(r => r[0] === n)) D.ing[p.k][n] = v;
       if (W.idx == null) D.prods.push(p); else D.prods[W.idx] = p;
       docSave('fg2', 'fg2', D); S.fgKind = p.k; closeHS(); renderCS(); toast('تم الحفظ'); return true;
     }
@@ -1659,7 +1679,7 @@ function csProdsHTML(w) {
     '<div class="note" style="padding:12px 14px 2px"><b>نسبة الفاقد لكل نوع خام</b> (بتتطبق لو الصنف سايب الفاقد فاضي)</div>' +
     csTbl([70, 30], ['الخام', 'الفاقد'], rs.map(r => '<tr' + (w ? ' data-cr="' + r.id + '" style="cursor:pointer"' : '') + '><td class="l">' + esc(r.raw) + '</td><td class="v">' + esc(fmt(r.loss * 100)) + '%</td></tr>').join('')) +
     (w ? '<div class="mrow"><button class="btn ghost" id="cr-new" style="width:100%">＋ نوع خام</button></div>' : '') +
-    '<div class="note" style="padding:8px 14px">خصم البيعة نفسه (3% مثلاً) بيتضاف على نسبة الفاقد تلقائي، زي ما كنت بتعمل في قيد التكاليف.</div>';
+    '<div class="note" style="padding:8px 14px"><b>خصم البيع:</b> بيتاخد من قيد البيع نفسه، وبيختلف من نقلة لنقلة (1% أو 3% أو 7%...). التطبيق بيجمعه على نسبة الفاقد الثابتة اللي فوق، يعني فاقد 30% وخصم 7% في البيعة = 37%، زي ما كنت بتعمل في قيد التكاليف.</div>';
 }
 function openCP(id) {
   const t = id ? { ...S.docs.get(id).data } : { prod:'', raw:'', loss:null, op:1, on:true };
