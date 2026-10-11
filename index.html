@@ -129,10 +129,10 @@ table.tb{border-collapse:separate;border-spacing:0;width:auto;font-size:13px;fon
 table.stb{width:100%;table-layout:fixed;border-collapse:collapse;font-size:17px;background:var(--paper)}
 .stb th{position:static;background:var(--green-d);color:#fff;padding:12px 8px;font-size:15px;text-align:center}
 .stb th:first-child{text-align:right}
-#v-cs .stb th{position:sticky;top:calc(var(--hh,64px) + var(--subh,54px));z-index:3}
-#v-cs .stb th:first-child,#v-cs .stb td:first-child{position:sticky;right:0}
-#v-cs .stb th:first-child{z-index:4}
-#v-cs .stb tr:not(.h) td:first-child{background:var(--paper);z-index:1}
+#v-cs .stb th,#v-pr .stb th{position:sticky;top:calc(var(--hh,64px) + var(--subh,54px));z-index:3}
+#v-cs .stb th:first-child,#v-cs .stb td:first-child,#v-pr .stb th:first-child,#v-pr .stb td:first-child{position:sticky;right:0}
+#v-cs .stb th:first-child,#v-pr .stb th:first-child{z-index:4}
+#v-cs .stb tr:not(.h) td:first-child,#v-pr .stb tr:not(.h) td:first-child{background:var(--paper);z-index:1}
 .stb td{padding:13px 8px;border-bottom:1px solid var(--line);vertical-align:middle;line-height:1.5}
 .stb td.l{text-align:right;word-break:normal;overflow-wrap:break-word}
 .stb td.v{direction:ltr;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
@@ -199,8 +199,31 @@ input[readonly]{background:#EEF3EC}
  .stb{font-size:12px}.stb th{position:static;background:#1F5A2B!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.stb td{padding:5px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.stb tr{break-inside:avoid}
  .sc,.fi{display:none!important}
  #v-cs .stb th,#v-cs .stb td:first-child{position:static!important}
- #v-cs .stb tr[data-fbp],#v-cs .stb tr[data-sd],#v-cs .stb tr[data-fgp],#v-cs .stb tr[data-fc]{cursor:default}
+ #v-cs .np, #v-pr .np, #v-cs .mrow, #v-pr .mrow, #v-cs .seg, #v-pr .seg, #v-cs .actions, #v-pr .actions{display:none!important}
+ #v-cs .stb, #v-pr .stb{font-size:11px}
+ #v-cs .stb td, #v-pr .stb td{padding:3px 5px;line-height:1.3}
+ #v-cs .stb th, #v-pr .stb th{padding:4px 5px;font-size:11px;position:static!important}
+ #v-cs .stb th:first-child, #v-cs .stb td:first-child, #v-pr .stb th:first-child, #v-pr .stb td:first-child{position:static!important}
+ #v-cs .stb small, #v-pr .stb small{font-size:9px;line-height:1.2}
+ #v-cs .stb tr.h td, #v-pr .stb tr.h td{padding:4px 5px;font-size:12px}
+ #v-cs .hrow, #v-pr .hrow{padding:4px 8px;margin:2px 0}
+ #v-cs .hrow .n, #v-pr .hrow .n{font-size:13px}
+ #v-cs .note, #v-pr .note{font-size:11px;padding:2px 8px}
+ #v-cs .stb tr, #v-pr .stb tr{break-inside:avoid}
 }
+body.pm header,body.pm nav,body.pm .sub{display:none!important}
+body.pm #v-cs .np,body.pm #v-pr .np,body.pm #v-cs .mrow,body.pm #v-pr .mrow,body.pm #v-cs .seg,body.pm #v-pr .seg,body.pm #v-cs .actions,body.pm #v-pr .actions{display:none!important}
+body.pm #v-cs .stb,body.pm #v-pr .stb{font-size:11px}
+body.pm #v-cs .stb td,body.pm #v-pr .stb td{padding:3px 5px;line-height:1.3}
+body.pm #v-cs .stb th,body.pm #v-pr .stb th{padding:4px 5px;font-size:11px;position:static!important}
+body.pm #v-cs .stb th:first-child,body.pm #v-cs .stb td:first-child,body.pm #v-pr .stb th:first-child,body.pm #v-pr .stb td:first-child{position:static!important}
+body.pm #v-cs .stb small,body.pm #v-pr .stb small{font-size:9px;line-height:1.2}
+body.pm #v-cs .stb tr.h td,body.pm #v-pr .stb tr.h td{padding:4px 5px;font-size:12px}
+body.pm #v-cs .hrow,body.pm #v-pr .hrow{padding:4px 8px;margin:2px 0}
+body.pm #v-cs .hrow .n,body.pm #v-pr .hrow .n{font-size:13px}
+body.pm #v-cs .note,body.pm #v-pr .note{font-size:11px;padding:2px 8px}
+body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
+
 #toast{position:fixed;left:16px;right:16px;bottom:calc(96px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s;text-align:center}
 #toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
@@ -293,6 +316,11 @@ input[readonly]{background:#EEF3EC}
       <div class="empty" id="tb-e"></div>
     </section>
 
+    <section id="v-pr" class="hide">
+      <div class="sub"><button id="pr-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>الإنتاج</b><button id="pr-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
+      <div class="seg"><button id="pr-t1">أوامر الإنتاج</button><button id="pr-t2">خطة الخامات</button><button id="pr-t3">مخزن المنتج التام</button></div>
+      <div id="pr-body"></div>
+    </section>
     <section id="v-cs" class="hide">
       <div class="sub"><button id="cs-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>التكاليف</b><button id="cs-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
       <div class="seg"><button id="cs-t1">البيعات</button><button id="cs-t2">المخزون الخام</button><button id="cs-t4">المنتج التام</button></div>
@@ -713,18 +741,18 @@ const byDate = (a, b) => b.date.localeCompare(a.date) || (b.no || 0) - (a.no || 
 const balTxt = n => (n >= 0 ? 'مدين' : 'دائن');
 
 /* ---------- views ---------- */
-const VIEWS = ['home', 'list', 'an', 'acc', 'stm', 'form', 'set', 'tb', 'lg', 'gl', 'is', 'bs', 'mp', 'dp', 'db', 'hr', 'cs'];
+const VIEWS = ['home', 'list', 'an', 'acc', 'stm', 'form', 'set', 'tb', 'lg', 'gl', 'is', 'bs', 'mp', 'dp', 'db', 'hr', 'cs', 'pr'];
 function go(v) {
   S.view = v;
   for (const x of VIEWS) $('#v-' + x).classList.toggle('hide', x !== v);
-  const tab = { home:'home', tb:'home', lg:'home', gl:'home', is:'home', bs:'home', mp:'home', dp:'home', db:'home', hr:'home', cs:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
+  const tab = { home:'home', tb:'home', lg:'home', gl:'home', is:'home', bs:'home', mp:'home', dp:'home', db:'home', hr:'home', cs:'home', pr:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
   for (const t of ['home', 'list', 'an', 'set']) $('#n-' + t).classList.toggle('on', t === tab);
   draw(v); window.scrollTo(0, 0);
 }
 function draw(v) {
   if (v === 'home') renderHome(); else if (v === 'list') renderList(); else if (v === 'an') renderAn();
   else if (v === 'acc') renderAcc(); else if (v === 'stm') renderStm(); else if (v === 'set') renderSettings();
-  else if (v === 'tb') renderTB(); else if (v === 'lg') renderLG(); else if (v === 'gl') renderGL(); else if (v === 'is') renderIS(); else if (v === 'bs') renderBS(); else if (v === 'mp') renderMP(); else if (v === 'dp') renderDP(); else if (v === 'db') renderDB(); else if (v === 'hr') renderHR(); else if (v === 'cs') renderCS();
+  else if (v === 'tb') renderTB(); else if (v === 'lg') renderLG(); else if (v === 'gl') renderGL(); else if (v === 'is') renderIS(); else if (v === 'bs') renderBS(); else if (v === 'mp') renderMP(); else if (v === 'dp') renderDP(); else if (v === 'db') renderDB(); else if (v === 'hr') renderHR(); else if (v === 'cs') renderCS(); else if (v === 'pr') renderPR();
   requestAnimationFrame(fitGrids);
 }
 function fitGrids() {
@@ -829,7 +857,14 @@ function fsClick(e) {
 /* printing: whole table, totals only at the end of the last page */
 function doPrint(title) {
   $('#ph-t').textContent = title; S.noCap = true; draw(S.view);
-  const done = () => { window.removeEventListener('afterprint', done); S.noCap = false; draw(S.view); };
+  let fit = null; const root = (S.view === 'cs' || S.view === 'pr') ? $('#v-' + S.view) : null;
+  if (root) {
+    document.body.classList.add('pm'); const w0 = root.style.width; root.style.width = '735px';
+    const h = root.scrollHeight; root.style.width = w0; document.body.classList.remove('pm');
+    const z = Math.max(0.5, Math.min(1, 950 / Math.max(h, 1)));
+    document.querySelectorAll('style[data-pf]').forEach(x => x.remove()); fit = document.createElement('style'); fit.setAttribute('data-pf', '1'); fit.textContent = '@media print{@page{size:A4 portrait;margin:8mm}#v-' + S.view + '{zoom:' + z.toFixed(3) + '}}'; document.head.appendChild(fit);
+  }
+  const done = () => { window.removeEventListener('afterprint', done); if (fit) fit.remove(); S.noCap = false; draw(S.view); };
   window.addEventListener('afterprint', done);
   setTimeout(() => window.print(), 120);
 }
@@ -845,7 +880,7 @@ function rowHTML(e) {
 
 function renderHome() {
   const t = [['new','قيد جديد','plus','#F28C28'], ['list','القيود','list','#1FA38A'], ['db','لوحة المؤشرات','chart','#2E7D52'], ['tb','ميزان المراجعة','scale','#4A3FE0'],
-    ['gl','دفتر الأستاذ العام','book','#7A4DD8'], ['is','قائمة الدخل','chart','#E8892B'], ['bs','المركز المالي','scale','#1E6FE8'], ['mp','صافي الربح الشهري','chart','#1FA38A'], ['dp','إهلاك الأصول','build','#8A5A2B'], ['hr','المرتبات','brief','#4A3FE0'], ['cs','التكاليف','scale','#C2410C'], ['an','التحليلات','coin','#A63CA0'], ['sync','مزامنة','sync','#2AA7C9']];
+    ['gl','دفتر الأستاذ العام','book','#7A4DD8'], ['is','قائمة الدخل','chart','#E8892B'], ['bs','المركز المالي','scale','#1E6FE8'], ['mp','صافي الربح الشهري','chart','#1FA38A'], ['dp','إهلاك الأصول','build','#8A5A2B'], ['hr','المرتبات','brief','#4A3FE0'], ['cs','التكاليف','scale','#C2410C'], ['pr','الإنتاج','box','#2F7A4F'], ['an','التحليلات','coin','#A63CA0'], ['sync','مزامنة','sync','#2AA7C9']];
   if (!canWrite()) t.shift(); /* الشريك: مشاهدة بس، من غير قيد جديد */
   $('#tiles').innerHTML = t.map(x => '<button class="tile" data-k="' + x[0] + '"><span class="i" style="background:' + x[3] + '">' + ico(x[2]) + '</span>' + x[1] + '</button>').join('');
   const cash = agg('الخزينة'), cus = agg('العملاء'), sup = agg('الموردين');
@@ -1506,7 +1541,7 @@ function fgPriceHTML(D, w) {
       if (X) { const c1 = plCost(D, kind, it, '720'), c2 = plCost(D, kind, it, '1050'); return tr0 + '<td class="v">' + (it.p1 != null ? f(it.p1) : '-') + '</td><td class="v">' + (c1 != null ? f(c1) : '') + '</td><td class="v">' + (it.p2 != null ? f(it.p2) : '-') + '</td><td class="v">' + (c2 != null ? f(c2) : '') + '</td></tr>'; }
       const bt = !!it.et; return tr0 + '<td class="v">' + (bt ? esc(it.et) : '720 g') + '</td><td class="v">' + (bt ? '' : '400 g') + '</td><td class="v">' + (it.p1 != null ? f(it.p1) : '-') + '</td><td class="v">' + (bt ? '' : '1050 g') + '</td><td class="v">' + (bt ? '' : '550 g') + '</td><td class="v">' + (it.p2 != null ? f(it.p2) : (bt ? '' : '-')) + '</td></tr>'; }).join('');
   }).join('');
-  return ctl + head + (body ? csTbl(wd, th, body) : '<div class="empty">' + (custom ? 'اختار المنتجات من زرار «اختيار المنتجات».' : 'القائمة فاضية.') + '</div>') + '<div class="note" style="padding:8px 14px">السعر المكتوب هو السعر المعتمد (قطاعي). اضغط على أي صنف تعدل سعره أو وزنه أو ملاحظته. لو عايز قائمة لمنتجات معينة اختار «قائمة مخصصة» وبعدها PDF.</div>';
+  return ctl + head + (body ? csTbl(wd, th, body) : '<div class="empty">' + (custom ? 'اختار المنتجات من زرار «اختيار المنتجات».' : 'القائمة فاضية.') + '</div>') + '<div class="note np" style="padding:8px 14px">السعر المكتوب هو السعر المعتمد (قطاعي). اضغط على أي صنف تعدل سعره أو وزنه أو ملاحظته. لو عايز قائمة لمنتجات معينة اختار «قائمة مخصصة» وبعدها PDF.</div>';
 }
 function openPLI(id, secIdx) {
   const P = plData(); if (!P) return; const K = S.plK === 'برطمان' ? 'J' : 'B', L = P[K]; let si = -1, ii = -1;
@@ -1566,9 +1601,8 @@ function csTitle() {
 function fgHTML(w) {
   if (!fgData() && w && !S.fgSeeded) { S.fgSeeded = 1; docSave('fg2', 'fg2', fgClone(FG_SEED)); } /* مرة واحدة بس، عشان ما يعملش دورة مزامنة */
   const D = fgData() || FG_SEED, V = S.fgView || 'p';
-  const tabs = '<div class="mrow" style="padding-top:6px"><div class="seg" style="margin:0"><button class="' + (V === 'p' ? 'on' : '') + '" data-fgv="p">المنتجات</button><button class="' + (V === 'c' ? 'on' : '') + '" data-fgv="c">العبوات والتكاليف</button><button class="' + (V === 's' ? 'on' : '') + '" data-fgv="s">مخزن المنتج التام</button><button class="' + (V === 'l' ? 'on' : '') + '" data-fgv="l">قائمة الأسعار</button></div></div>';
+  const tabs = '<div class="mrow" style="padding-top:6px"><div class="seg" style="margin:0"><button class="' + (V === 'p' ? 'on' : '') + '" data-fgv="p">المنتجات</button><button class="' + (V === 'c' ? 'on' : '') + '" data-fgv="c">العبوات والتكاليف</button><button class="' + (V === 'l' ? 'on' : '') + '" data-fgv="l">قائمة الأسعار</button></div></div>';
   if (V === 'c') return tabs + fgContHTML(D, w);
-  if (V === 's') return tabs + fgStockHTML(D, w);
   if (V === 'l') return tabs + fgPriceHTML(D, w);
   const groups = [...new Set(D.prods.map(p => p.k))], K = groups.includes(S.fgKind) ? S.fgKind : groups[0];
   const rows = fgList(D).filter(x => x.p.k === K).sort((a, b) => csColl.compare(a.p.n, b.p.n) || a.k - b.k);
@@ -1577,13 +1611,13 @@ function fgHTML(w) {
     '<div style="overflow:visible"><table class="stb"><colgroup><col style="width:42%"><col style="width:20%"><col style="width:20%"><col style="width:18%"></colgroup><thead><tr><th>المنتج / العبوة</th><th>التكلفة</th><th>البيع</th><th>الربح</th></tr></thead><tbody>' +
     rows.map(x => { const c = fgCost(D, x.p, x.z), pf = c ? (x.z.price - c) / c * 100 : 0;
       return '<tr data-fgp="' + x.i + '" style="cursor:pointer"><td class="l">' + esc(x.p.n) + '<small style="display:block;color:var(--muted)">' + esc(fgCont(D, x.z.c).n) + (x.z.chk ? ' ⚠' : '') + '</small></td><td class="v">' + esc(fmt0(c)) + '</td><td class="v">' + esc(fmt0(x.z.price)) + '</td><td class="v' + (pf < 0 ? ' neg' : '') + '">' + esc(fmt0(pf)) + '%</td></tr>'; }).join('') + '</tbody></table></div>' +
-    '<div class="note" style="padding:8px 14px">اضغط على أي صف تعدل خاماته ونسبه وعبواته وسعره. علامة ⚠ معناها إن تكلفة الشيت القديم كانت مختلفة، فراجع النسب.</div>';
+    '<div class="note np" style="padding:8px 14px">اضغط على أي صف تعدل خاماته ونسبه وعبواته وسعره. علامة ⚠ معناها إن تكلفة الشيت القديم كانت مختلفة، فراجع النسب.</div>';
 }
 function fgContHTML(D, w) {
   return '<div class="mrow">' + (w ? '<button class="btn" id="fc-new" style="width:100%">＋ عبوة جديدة (صفيح، زجاج، جردل...)</button>' : '') + '</div>' +
     '<div style="overflow:visible"><table class="stb"><colgroup><col style="width:34%"><col style="width:16%"><col style="width:17%"><col style="width:17%"><col style="width:16%"></colgroup><thead><tr><th>العبوة</th><th>الوزن كجم</th><th>العبوة والكيس</th><th>التشغيل</th><th>الإجمالي</th></tr></thead><tbody>' +
     D.cont.map((c, i) => '<tr data-fc="' + i + '" style="cursor:pointer"><td class="l">' + esc(c.n) + '<small style="display:block;color:var(--muted)">' + esc(c.k) + '</small></td><td class="v">' + esc(fmt(c.kg)) + '</td><td class="v">' + esc(fmt(fgSum(c.pk))) + '</td><td class="v">' + esc(fmt(fgSum(c.op))) + '</td><td class="v">' + esc(fmt(fgSum(c.pk) + fgSum(c.op))) + '</td></tr>').join('') + '</tbody></table></div>' +
-    '<div class="note" style="padding:8px 14px">اضغط على العبوة تعدل أسعار الجردل والكيس والاستيكر، وبنود العمالة والمحلول والتشغيل، وتضيف أو تمسح بنود.</div>';
+    '<div class="note np" style="padding:8px 14px">اضغط على العبوة تعدل أسعار الجردل والكيس والاستيكر، وبنود العمالة والمحلول والتشغيل، وتضيف أو تمسح بنود.</div>';
 }
 function fgKindOf(D, name) { const f = fgMatch(name); return f ? fgCont(D, f.z.c).k : ''; }
 function fgStockHTML(D, w) {
@@ -1597,7 +1631,7 @@ function fgStockHTML(D, w) {
     '<div class="mrow">' + (w ? '<button class="btn" id="fb-new" style="width:100%">＋ تسجيل إنتاج</button>' : '') + '</div>' +
     '<div style="overflow:visible"><table class="stb"><colgroup><col style="width:46%"><col style="width:16%"><col style="width:19%"><col style="width:19%"></colgroup><thead><tr><th>المنتج</th><th>العدد</th><th>تكلفة الوحدة</th><th>القيمة</th></tr></thead><tbody>' +
     (list.length ? list.map(x => '<tr data-fbp="' + esc(x.name) + '" style="cursor:pointer"><td class="l">' + esc(x.name) + '</td><td class="v' + (x.q < 0.0001 ? ' neg' : '') + '">' + esc(fmt0(x.q)) + '</td><td class="v">' + (x.q > 0.0001 ? esc(fmt(x.a / x.q)) : '') + '</td><td class="v">' + esc(fmt0(x.a)) + '</td></tr>').join('') + '<tr class="h"><td class="l">الإجمالي</td><td class="v">' + esc(fmt0(tq)) + '</td><td class="v"></td><td class="v">' + esc(fmt0(ta)) + '</td></tr>' : '<tr><td class="l" colspan="4">المخزن فاضي. سجّل إنتاج.</td></tr>') + '</tbody></table></div>' +
-    '<div class="note" style="padding:8px 14px">اضغط على أي منتج تشوف دفعات إنتاجه وتعدلها أو تمسحها.</div>';
+    '<div class="note np" style="padding:8px 14px">اضغط على أي منتج تشوف دفعات إنتاجه وتعدلها أو تمسحها.</div>';
 }
 /* ---- شاشات التعديل (نسخة شغل بتتحفظ بالحفظ بس) ---- */
 const fgIn = (id, v, ph, dir) => '<input id="' + id + '" ' + (dir === 0 ? '' : 'dir="ltr" inputmode="decimal" ') + 'placeholder="' + esc(ph || '') + '" value="' + esc(v == null ? '' : v) + '">';
@@ -1677,18 +1711,18 @@ function fgProdEntries(D, f, units, k, date, ca) {
   return fgLines(D, f.p, f.z, units, k).map((l, n) => { const acc = ca[l.g], amt = l.q * l.p;
     return { id:crypto.randomUUID(), no:maxNo + n + 1, date, stmt:'إنتاج منتج تام', dr:FG_STOCK, cr:acc, pa:f.name, pb:acc === 'المصروفات' ? 'تشغيل منتج' : '', prod:l.n, qty:l.q, disc:0, price:l.p, amtD:amt, amtC:amt, star:false, opening:false, deleted:false, updated:now, dirty:true }; });
 }
-async function fgKillBatch(id) { const d = S.docs.get(id); if (!d) return; for (const i of [].concat(d.data.e || [])) { const x = S.ent.get(i); if (x && !x.deleted) { Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }); await entPut(x); } } docSave('fb', id, d.data, true); }
-function openFB(bid, prodName) {
+async function fgKillBatch(id, keep) { const d = S.docs.get(id); if (!d) return; for (const i of [].concat(d.data.e || [])) { const x = S.ent.get(i); if (x && !x.deleted) { Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }); await entPut(x); } } docSave('fb', id, d.data, true); if (!keep) docsOf('po').forEach(o => { if (o.data.batch === id) docSave('po', o.id, { ...o.data, st:'p', batch:'', actual:0, xd:'' }); }); }
+function openFB(bid, prodName, oid, units0) {
   const D = fgData(); if (!D) return; const B = bid ? S.docs.get(bid) : null, b = B ? B.data : null;
-  S.hs = { type:'fgb', bid:bid || '' };
+  S.hs = { type:'fgb', bid:bid || '', oid:oid || '' };
   const L = fgList(D).sort((a, b2) => csColl.compare(a.name, b2.name)), kinds = [...new Set(D.cont.map(c => c.k))];
   const cur = b ? b.key : prodName || '', curF = cur ? fgMatch(cur) : null, curK = curF ? fgCont(D, curF.z.c).k : (S.fgSF || (kinds.includes('جردل') ? 'جردل' : kinds[0]));
   const ca = (() => { try { return JSON.parse(localStorage.getItem('fb_ca')) || {}; } catch (x) { return {}; } })();
   const sel = (id, def) => '<select id="' + id + '">' + ['المخزون.الخام', 'المصروفات'].map(a => '<option' + ((ca[id] || def) === a ? ' selected' : '') + '>' + a + '</option>').join('') + '</select>';
   const opts = kd => '<option value="">اختار المنتج</option>' + L.filter(x => fgCont(D, x.z.c).k === kd).map(x => '<option value="' + esc(x.name) + '"' + (x.name === cur ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('');
-  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">' + (b ? 'تعديل دفعة إنتاج' : 'تسجيل إنتاج') + '</h2><label for="fb-t">نوع العبوة</label><select id="fb-t">' + kinds.map(k => '<option' + (k === curK ? ' selected' : '') + '>' + esc(k) + '</option>').join('') + '</select>' +
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">' + (b ? 'تعديل دفعة إنتاج' : oid ? 'تنفيذ أمر إنتاج' : 'تسجيل إنتاج') + '</h2><label for="fb-t">نوع العبوة</label><select id="fb-t">' + kinds.map(k => '<option' + (k === curK ? ' selected' : '') + '>' + esc(k) + '</option>').join('') + '</select>' +
     '<label for="fb-k">المنتج</label><select id="fb-k">' + opts(curK) + '</select>' +
-    '<div class="grid"><div><label for="fb-u">العدد المنتج</label>' + fgIn('fb-u', b ? b.units : '') + '</div><div><label for="fb-c">تكلفة الوحدة</label>' + fgIn('fb-c', b ? b.cost : '') + '</div></div><label for="fb-d">التاريخ</label><input id="fb-d" type="date" value="' + esc(b ? b.date : todayStr()) + '">' +
+    '<div class="grid"><div><label for="fb-u">العدد المنتج</label>' + fgIn('fb-u', b ? b.units : (units0 || '')) + '</div><div><label for="fb-c">تكلفة الوحدة</label>' + fgIn('fb-c', b ? b.cost : '') + '</div></div><label for="fb-d">التاريخ</label><input id="fb-d" type="date" value="' + esc(b ? b.date : todayStr()) + '">' +
     '<div class="note" style="margin-top:12px"><b>القيود اللي هتتعمل:</b> قيد لكل خامة وقيد لكل بند تعبئة وقيد لكل بند تشغيل، كلها مدين «' + FG_STOCK + '». الخامات والعبوات بتتخصم بأسمائها من المخزون الخام (كمية وسعر)، والتشغيل (عمالة ومحلول) بيتسجل دائن على المصروفات في بند «تشغيل منتج» تحت المصروفات التشغيلية.</div><div class="note" id="fb-parts"></div>' +
     '<label for="fb-ci">الخامات تتسحب من</label>' + sel('fb-ci', 'المخزون.الخام') + '<label for="fb-cp">العبوات تتسحب من</label>' + sel('fb-cp', 'المخزون.الخام') + '<label for="fb-co">التشغيل يتسحب من</label>' + sel('fb-co', 'المصروفات') +
     '<div class="err" id="fb-err"></div><div class="actions"><button class="btn" id="fb-save">حفظ</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
@@ -1735,15 +1769,16 @@ function fgSheetClick(e) {
     if (t.closest('#fi-save')) { fgSyncI(); const D = fgClone(fgData()), o = {}; W.rows.forEach(([n, p]) => { if (n) o[n] = p; }); D.ing[W.K] = o; docSave('fg2', 'fg2', D); closeHS(); renderCS(); toast('تم حفظ الأسعار'); return true; }
   }
   if (S.hs && S.hs.type === 'fgb' && t.closest('#fb-save')) {
-    const D = fgData(), name = g('#fb-k'), units = num(g('#fb-u')), cost = num(g('#fb-c')), date = g('#fb-d'), f = fgMatch(name), bid = S.hs.bid;
+    const D = fgData(), name = g('#fb-k'), units = num(g('#fb-u')), cost = num(g('#fb-c')), date = g('#fb-d'), f = fgMatch(name), bid = S.hs.bid, oid = S.hs.oid;
     if (!f || !(units > 0) || !(cost > 0) || !date) { $('#fb-err').textContent = 'اختار المنتج واكتب العدد والتكلفة والتاريخ.'; return true; }
     const base = fgCost(D, f.p, f.z), k = base > 0 ? cost / base : 1, ca = { ing:g('#fb-ci'), pk:g('#fb-cp'), op:g('#fb-co') };
     try { localStorage.setItem('fb_ca', JSON.stringify({ 'fb-ci':ca.ing, 'fb-cp':ca.pk, 'fb-co':ca.op })); } catch (x) { /* ignore */ }
     (async () => {
-      if (bid) await fgKillBatch(bid);
+      if (bid) await fgKillBatch(bid, true);
       const ens = fgProdEntries(D, f, units, k, date, ca); if (!ens.length) { toast('الوصفة مفيهاش تكلفة'); return; }
       for (const en of ens) { S.ent.set(en.id, en); await entPut(en); }
-      docSave('fb', bid || 'fb:' + uid8(), { date, key:f.name, units, cost, e:ens.map(x => x.id) });
+      const nb = bid || 'fb:' + uid8(); docSave('fb', nb, { date, key:f.name, units, cost, e:ens.map(x => x.id) });
+      if (oid) { const o = S.docs.get(oid); if (o) docSave('po', oid, { ...o.data, st:'x', actual:units, batch:nb, xd:date }); }
       closeHS(); renderCS(); sync(); toast(bid ? 'اتعدل الإنتاج' : 'اتسجل الإنتاج (' + ens.length + ' قيد)');
     })(); return true;
   }
@@ -1754,8 +1789,83 @@ function fgSheetClick(e) {
   }
   return false;
 }
+/* ---------- الإنتاج: أوامر الإنتاج (خطة) + خطة الخامات + مخزن المنتج التام. الخطة ما بتعملش تكاليف ولا قيود، التنفيذ بس هو اللي بيسجل الإنتاج ---------- */
+const PO_ST = { p:'مخطط', x:'اتنفذ', c:'ملغي' };
+function poNeeds(D, f, units, stock) {
+  return fgLines(D, f.p, f.z, units, 1).filter(l => l.g !== 'op').map(l => { const st = stock.get(csKey(l.n)); return { n:l.n, g:l.g, need:l.q, have:st ? Math.max(0, st.q) : 0, known:!!st }; });
+}
+function poStatus(r) { const d = r.need - r.have; return !r.known ? '؟ مش في المخزن' : d > 0.0001 ? '✗ ناقص ' + fmt(d) : '✓ متوفر'; }
+function poReqTable(rows) {
+  return csTbl([36, 16, 16, 32], ['البند', 'المطلوب', 'المتاح', 'الحالة'], rows.map(r => '<tr><td class="l">' + esc(r.n) + '<small style="display:block;color:var(--muted)">' + (r.g === 'pk' ? 'عبوة' : 'خامة') + '</small></td><td class="v">' + esc(fmt(r.need)) + '</td><td class="v">' + esc(fmt(r.have)) + '</td><td class="v' + (!r.known || r.need - r.have > 0.0001 ? ' neg' : '') + '">' + esc(poStatus(r)) + '</td></tr>').join(''));
+}
+function prTitle() { const T = S.prTab || 'o'; return 'الإنتاج - ' + (T === 'o' ? 'أوامر الإنتاج' : T === 'g' ? 'خطة الخامات' : 'مخزن المنتج التام'); }
+function renderPR() {
+  csSeed(); { const sb = document.querySelector('#v-pr .sub'); if (sb) $('#v-pr').style.setProperty('--subh', sb.offsetHeight + 'px'); }
+  const T = S.prTab || 'o', w = canWrite(), D = fgData() || (w ? (docSave('fg2', 'fg2', fgClone(FG_SEED)), fgData()) : null) || FG_SEED;
+  for (const [id, k] of [['#pr-t1', 'o'], ['#pr-t2', 'g'], ['#pr-t3', 's']]) $(id).classList.toggle('on', T === k);
+  $('#pr-body').innerHTML = T === 'o' ? poOrdersHTML(D, w) : T === 'g' ? poPlanHTML(D) : fgStockHTML(D, w);
+}
+function poOrdersHTML(D, w) {
+  const os = docsOf('po').filter(d => d.data.key).sort((a, b) => a.data.st === b.data.st ? (a.data.date < b.data.date ? 1 : -1) : (a.data.st === 'p' ? -1 : 1)), stk = fgStockMap();
+  return '<div class="mrow">' + (w ? '<button class="btn" id="po-new" style="width:100%">＋ أمر إنتاج (خطة)</button>' : '') + '</div>' +
+    csTbl([20, 40, 14, 14, 12], ['التاريخ', 'المنتج', 'المخطط', 'الموجود', 'الحالة'], os.length ? os.map(d => { const o = d.data, st = stk.get(csKey(o.key));
+      return '<tr data-po="' + d.id + '" style="cursor:pointer"><td class="l">' + esc(o.date) + '</td><td class="l">' + esc(o.key) + '</td><td class="v">' + esc(fmt0(o.st === 'x' ? o.actual : o.units)) + '</td><td class="v">' + esc(fmt0(st ? st.q : 0)) + '</td><td class="v">' + esc(PO_ST[o.st] || '') + '</td></tr>'; }).join('') : '<tr><td class="l" colspan="5">مفيش أوامر إنتاج. الأمر ده خطة بس، ومبيعملش قيود ولا تكاليف لحد ما تنفذه.</td></tr>') +
+    '<div class="note np" style="padding:8px 14px">أمر الإنتاج خطة بس. اضغط على الأمر تشوف الخامات المطلوبة وهل متوفرة في المخزن، ولما الإنتاج يتم اضغط «تنفيذ» فيتسجل الإنتاج بقيوده ويدخل مخزن المنتج التام.</div>';
+}
+function poPlanHTML(D) {
+  const os = docsOf('po').filter(d => d.data.st === 'p' && d.data.key), stock = csStock(), stk = fgStockMap(), agg = new Map(), prods = new Map();
+  for (const d of os) { const f = fgMatch(d.data.key); if (!f) continue; prods.set(f.name, (prods.get(f.name) || 0) + (+d.data.units || 0)); for (const r of poNeeds(D, f, +d.data.units || 0, stock)) { const k = csKey(r.n), a = agg.get(k) || { n:r.n, g:r.g, need:0, have:r.have, known:r.known }; a.need += r.need; agg.set(k, a); } }
+  const rows = [...agg.values()].sort((a, b) => csColl.compare(a.n, b.n)), short = rows.filter(r => !r.known || r.need - r.have > 0.0001).length;
+  return '<div class="note" style="padding:8px 14px 2px"><b>المنتج التام: المخطط مقابل الموجود</b></div>' +
+    csTbl([44, 18, 18, 20], ['المنتج', 'المخطط', 'الموجود', 'تحتاج إنتاج'], prods.size ? [...prods.entries()].sort((a, b) => csColl.compare(a[0], b[0])).map(([n, u]) => { const q = (stk.get(csKey(n)) || { q:0 }).q; return '<tr><td class="l">' + esc(n) + '</td><td class="v">' + esc(fmt0(u)) + '</td><td class="v">' + esc(fmt0(q)) + '</td><td class="v' + (u > q ? ' neg' : '') + '">' + esc(fmt0(Math.max(0, u - q))) + '</td></tr>'; }).join('') : '<tr><td class="l" colspan="4">مفيش أوامر إنتاج مخططة.</td></tr>') +
+    '<div class="note" style="padding:12px 14px 2px"><b>الخامات والعبوات المطلوبة للخطة كلها</b>' + (rows.length ? ' — ' + (short ? '<span class="neg">فيه ' + short + ' بند ناقص أو مش في المخزن</span>' : 'كل البنود متوفرة') : '') + '</div>' +
+    (rows.length ? poReqTable(rows) : '<div class="empty">اعمل أمر إنتاج الأول.</div>');
+}
+function openPO(oid, prodName) {
+  const D = fgData(); if (!D) return; const O = oid ? S.docs.get(oid) : null, o = O ? O.data : null; S.hs = { type:'po', oid:oid || '' };
+  const L = fgList(D).sort((a, b) => csColl.compare(a.name, b.name)), kinds = [...new Set(D.cont.map(c => c.k))], cur = o ? o.key : prodName || '', cf = cur ? fgMatch(cur) : null, ck = cf ? fgCont(D, cf.z.c).k : (kinds.includes('جردل') ? 'جردل' : kinds[0]);
+  const opts = kd => '<option value="">اختار المنتج</option>' + L.filter(x => fgCont(D, x.z.c).k === kd).map(x => '<option value="' + esc(x.name) + '"' + (x.name === cur ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('');
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">' + (o ? 'تعديل أمر إنتاج' : 'أمر إنتاج (خطة)') + '</h2><label for="po-t">نوع العبوة</label><select id="po-t">' + kinds.map(k => '<option' + (k === ck ? ' selected' : '') + '>' + esc(k) + '</option>').join('') + '</select>' +
+    '<label for="po-k">المنتج</label><select id="po-k">' + opts(ck) + '</select><div class="grid"><div><label for="po-u">العدد المخطط</label>' + fgIn('po-u', o ? o.units : '') + '</div><div><label for="po-d">تاريخ الإنتاج المتوقع</label><input id="po-d" type="date" value="' + esc(o ? o.date : todayStr()) + '"></div></div>' +
+    '<label for="po-n">ملاحظات</label>' + fgIn('po-n', o ? o.note : '', '', 0) + '<div class="note" id="po-info" style="margin-top:8px"></div><div class="err" id="po-err"></div><div class="actions"><button class="btn" id="po-save">حفظ الخطة</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
+  const upd = () => { const f = fgMatch($('#po-k').value); if (!f) { $('#po-info').textContent = ''; return; } const q = (fgStockMap().get(csKey(f.name)) || { q:0 }).q; $('#po-info').textContent = 'الموجود حالياً في مخزن المنتج التام: ' + fmt0(q) + ' وحدة. الخطة مبتعملش قيود ولا تكاليف.'; };
+  $('#po-t').onchange = () => { $('#po-k').innerHTML = opts($('#po-t').value); upd(); }; $('#po-k').onchange = upd; upd();
+  hrRO(); $('#hsheet').classList.remove('hide');
+}
+function openPOD(oid) {
+  const D = fgData(), O = S.docs.get(oid); if (!D || !O) return; const o = O.data, f = fgMatch(o.key), w = canWrite(); S.hs = { type:'pod', oid };
+  const have = (fgStockMap().get(csKey(o.key)) || { q:0 }).q, units = o.st === 'x' ? o.actual : o.units;
+  let body = '<div class="kv"><span>العدد ' + (o.st === 'x' ? 'المنتج فعلياً' : 'المخطط') + '</span><span dir="ltr">' + esc(fmt0(units)) + '</span></div><div class="kv"><span>الموجود حالياً في مخزن المنتج التام</span><span dir="ltr">' + esc(fmt0(have)) + '</span></div><div class="kv"><span>تاريخ ' + (o.st === 'x' ? 'التنفيذ' : 'الإنتاج المتوقع') + '</span><span dir="ltr">' + esc(o.st === 'x' ? o.xd : o.date) + '</span></div><div class="kv"><span>الحالة</span><b>' + esc(PO_ST[o.st] || '') + '</b></div>' + (o.note ? '<div class="note">' + esc(o.note) + '</div>' : '');
+  if (f && o.st === 'p') { const rows = poNeeds(D, f, +o.units, csStock()), c = fgCost(D, f.p, f.z) * o.units; body += '<div class="note" style="margin-top:10px"><b>الخامات والعبوات المطلوبة</b></div>' + poReqTable(rows) + '<div class="kv"><span>التكلفة التقديرية (معلومة بس)</span><span dir="ltr">' + esc(fmt0(c)) + '</span></div>'; }
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">' + esc(o.key) + '</h2>' + body + '<div class="actions">' + (w && o.st === 'p' ? '<button class="btn" id="po-exec">تنفيذ (سجل الإنتاج)</button><button class="btn ghost" id="po-edit">تعديل</button><button class="btn ghost" id="po-cancel">إلغاء الأمر</button>' : '') + (w && o.st !== 'x' ? '<button class="btn danger" id="po-del">حذف</button>' : '') + '<button class="btn ghost" id="he-x">إغلاق</button></div>';
+  $('#hsheet').classList.remove('hide');
+}
+function poSheetClick(e) {
+  const t = e.target, g = id => $(id).value;
+  if (S.hs && S.hs.type === 'po' && t.closest('#po-save')) {
+    const name = g('#po-k'), units = num(g('#po-u')), date = g('#po-d'), f = fgMatch(name); if (!f || !(units > 0) || !date) { $('#po-err').textContent = 'اختار المنتج واكتب العدد والتاريخ.'; return true; }
+    const id = S.hs.oid || 'po:' + uid8(), old = S.docs.get(id); docSave('po', id, { ...(old ? old.data : { st:'p' }), key:f.name, units, date, note:cl(g('#po-n')) }); closeHS(); renderPR(); toast('اتسجلت الخطة'); return true;
+  }
+  if (S.hs && S.hs.type === 'pod') {
+    const oid = S.hs.oid, O = S.docs.get(oid); if (!O) return false;
+    if (t.closest('#po-exec')) { openFB(null, O.data.key, oid, O.data.units); return true; }
+    if (t.closest('#po-edit')) { openPO(oid); return true; }
+    if (t.closest('#po-cancel')) { docSave('po', oid, { ...O.data, st:'c' }); closeHS(); renderPR(); return true; }
+    if (t.closest('#po-del')) { if (!confirm('تمسح الأمر ده؟')) return true; docSave('po', oid, O.data, true); closeHS(); renderPR(); return true; }
+  }
+  return false;
+}
+async function prBodyClick(e) {
+  const t0 = e.target, sf = t0.closest('[data-fgsf]'); if (sf) { S.fgSF = sf.dataset.fgsf; return renderPR(); }
+  const bp = t0.closest('[data-fbp]'); if (bp) return openFBP(bp.dataset.fbp);
+  const po = t0.closest('[data-po]'); if (po) return openPOD(po.dataset.po);
+  if (!canWrite()) return;
+  if (t0.closest('#po-new')) return openPO(null);
+  if (t0.closest('#fb-new')) return openFB();
+}
 const csUnlinked = () => { const st = csStart(); if (!st) return []; return live().filter(e => e.cr === 'مبيعات توريد' && e.date >= st && csTpl(e.prod) && !csLink(e.id)).sort((a, b) => a.date < b.date ? 1 : -1); };
 function renderCS() {
+  if (S.view === 'pr') return renderPR();
   csSeed(); { const sb = document.querySelector('#v-cs .sub'); if (sb) $('#v-cs').style.setProperty('--subh', sb.offsetHeight + 'px'); }
   const T = S.csTab || 's', w = canWrite();
   if (T === 'p') { S.csTab = 'k'; S.rawView = 'p'; }
@@ -1767,12 +1877,12 @@ function csDL() { return '<datalist id="cs-dl">' + [...csStock().values()].map(x
 function csTbl(widths, head, rows) { return '<div style="overflow:visible"><table class="stb"><colgroup>' + widths.map(x => '<col style="width:' + x + '%">').join('') + '</colgroup><thead><tr>' + head.map(h => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>'; }
 function csSalesHTML(w) {
   const st = csStart();
-  let h = '<div class="hrow"><div class="n">الحساب الأوتوماتيك</div><div class="note" style="margin:6px 0">شغال من تاريخ ' + esc(st) + '. أي بيعة صنف مجهّز بعد التاريخ ده بتتحسب تكلفتها لوحدها (من الخام أو من مخزن المنتج التام). البيع من بره بيتسجل بالإجمالي ومش بيتحسب له تكلفة.</div>' +
+  let h = '<div class="hrow np"><div class="n">الحساب الأوتوماتيك</div><div class="note" style="margin:6px 0">شغال من تاريخ ' + esc(st) + '. أي بيعة صنف مجهّز بعد التاريخ ده بتتحسب تكلفتها لوحدها (من الخام أو من مخزن المنتج التام). البيع من بره بيتسجل بالإجمالي ومش بيتحسب له تكلفة.</div>' +
     (w ? '<label for="cs-sd">يشتغل من تاريخ</label><input id="cs-sd" type="date" value="' + esc(st || todayStr()) + '"><div class="actions"><button class="btn ghost" id="cs-start">تغيير التاريخ</button></div>' : '') + '</div>';
   const un = csUnlinked();
   if (un.length) h += '<div class="note" style="padding:8px 14px 2px"><b>بيعات لسه متحسبتش (' + un.length + ')</b></div>' + csTbl([22, 44, 16, 18], ['التاريخ', 'الصنف', 'الكمية', ''], un.slice(0, 20).map(e => '<tr><td class="l">' + esc(e.date) + '</td><td class="l">' + esc(e.prod) + '</td><td class="v">' + esc(fmt0(e.qty)) + '</td><td class="v">' + (w ? '<button class="btn ghost" data-gen="' + e.id + '" style="width:auto;padding:4px 10px;min-height:36px">احسب</button>' : '') + '</td></tr>').join('')) + (w ? '<div class="mrow"><button class="btn" id="cs-all" style="width:100%">احسب الكل</button></div>' : '');
   const ls = docsOf('cl').map(d => d.data).filter(l => S.ent.get(l.sale) && !S.ent.get(l.sale).deleted).sort((a, b) => S.ent.get(a.sale).date < S.ent.get(b.sale).date ? 1 : -1).slice(0, 60);
-  h += '<div class="note" style="padding:8px 14px 2px"><b>بيعات اتحسبت تكلفتها</b> (اضغط على الصف للتفاصيل)</div>' + (ls.length ? csTbl([20, 40, 20, 20], ['التاريخ', 'الصنف', 'التكلفة', 'الربح'], ls.map(l => { const e = S.ent.get(l.sale), tc = l.cost + (l.op || 0), pr = e.amtC - tc;
+  h += '<div class="note" style="padding:8px 14px 2px"><b>بيعات اتحسبت تكلفتها</b> <span class="np">(اضغط على الصف للتفاصيل)</span></div>' + (ls.length ? csTbl([20, 40, 20, 20], ['التاريخ', 'الصنف', 'التكلفة', 'الربح'], ls.map(l => { const e = S.ent.get(l.sale), tc = l.cost + (l.op || 0), pr = e.amtC - tc;
     return '<tr data-sd="' + e.id + '" style="cursor:pointer"><td class="l">' + esc(e.date) + '</td><td class="l">' + esc(e.prod) + '</td><td class="v">' + esc(fmt0(tc)) + '</td><td class="v' + (pr < 0 ? ' neg' : '') + '">' + (e.amtC ? esc(fmt0(pr / e.amtC * 100)) + '%' : '') + '</td></tr>'; }).join('')) : '<div class="empty">لسه مفيش بيعات اتحسبت تكلفتها.</div>');
   return h;
 }
@@ -1797,7 +1907,7 @@ function csStockHTML() {
   csRaws().forEach(r => add(r.raw)); csTpls().forEach(t => add(t.raw));
   rows.sort((a, b) => csColl.compare(a.name, b.name));
   const tq = rows.reduce((a, x) => a + x.q, 0), ta = rows.reduce((a, x) => a + x.a, 0);
-  return '<div class="note" style="padding:8px 14px">الكميات والقيم من قيود «المخزون.الخام» (الرصيد الافتتاحي والمشتريات ناقص اللي اتخصم في التكاليف). الصنف اللي رصيده صفر معناه إن اللي اتخصم منه وصل لكل اللي اتسجل شراؤه.</div>' +
+  return '<div class="note np" style="padding:8px 14px">الكميات والقيم من قيود «المخزون.الخام» (الرصيد الافتتاحي والمشتريات ناقص اللي اتخصم في التكاليف). الصنف اللي رصيده صفر معناه إن اللي اتخصم منه وصل لكل اللي اتسجل شراؤه.</div>' +
     '<div style="overflow:visible"><table class="stb"><colgroup><col style="width:40%"><col style="width:20%"><col style="width:22%"><col style="width:18%"></colgroup><thead><tr><th>الصنف</th><th>الكمية</th><th>القيمة</th><th>سعر الكيلو</th></tr></thead><tbody>' +
     rows.map(x => '<tr><td class="l">' + esc(x.name) + '</td><td class="v' + (x.q < 0.01 ? ' neg' : '') + '">' + esc(fmt0(x.q)) + '</td><td class="v">' + esc(fmt0(x.a)) + '</td><td class="v">' + (x.q > 0.01 ? esc(fmt(x.a / x.q)) : '') + '</td></tr>').join('') +
     '<tr class="h"><td class="l">الإجمالي</td><td class="v">' + esc(fmt0(tq)) + '</td><td class="v">' + esc(fmt0(ta)) + '</td><td class="v"></td></tr></tbody></table></div>';
@@ -1806,10 +1916,10 @@ function csProdsHTML(w) {
   const ts = csTpls().sort((a, b) => csColl.compare(a.prod, b.prod)), rs = csRaws().sort((a, b) => csColl.compare(a.raw, b.raw));
   return (w ? '<div class="mrow" style="padding-top:6px"><button class="btn" id="cp-new" style="width:100%">＋ إضافة صنف جديد (فاقد وتشغيل)</button></div>' : '') +
     csTbl([34, 28, 18, 20], ['صنف البيع', 'الخام', 'الفاقد', 'التشغيل/كجم'], ts.map(t => '<tr' + (w ? ' data-cp="' + t.id + '" style="cursor:pointer"' : '') + '><td class="l">' + esc(t.prod) + (t.on === false ? ' (موقوف)' : '') + '</td><td class="l">' + esc(t.raw) + '</td><td class="v">' + (t.loss == null || t.loss === '' ? 'حسب الخام' : esc(fmt(t.loss * 100)) + '%') + '</td><td class="v">' + esc(fmt(t.op)) + '</td></tr>').join('')) +
-    '<div class="note" style="padding:12px 14px 2px"><b>نسبة الفاقد لكل نوع خام</b> (بتتطبق لو الصنف سايب الفاقد فاضي)</div>' +
+    '<div class="note" style="padding:12px 14px 2px"><b>نسبة الفاقد لكل نوع خام</b> <span class="np">(بتتطبق لو الصنف سايب الفاقد فاضي)</span></div>' +
     csTbl([70, 30], ['الخام', 'الفاقد'], rs.map(r => '<tr' + (w ? ' data-cr="' + r.id + '" style="cursor:pointer"' : '') + '><td class="l">' + esc(r.raw) + '</td><td class="v">' + esc(fmt(r.loss * 100)) + '%</td></tr>').join('')) +
     (w ? '<div class="mrow"><button class="btn ghost" id="cr-new" style="width:100%">＋ نوع خام</button></div>' : '') +
-    '<div class="note" style="padding:8px 14px"><b>خصم البيع:</b> بيتاخد من قيد البيع نفسه، وبيختلف من نقلة لنقلة (1% أو 3% أو 7%...). التطبيق بيجمعه على نسبة الفاقد الثابتة اللي فوق، يعني فاقد 30% وخصم 7% في البيعة = 37%، زي ما كنت بتعمل في قيد التكاليف.</div>';
+    '<div class="note np" style="padding:8px 14px"><b>خصم البيع:</b> بيتاخد من قيد البيع نفسه، وبيختلف من نقلة لنقلة (1% أو 3% أو 7%...). التطبيق بيجمعه على نسبة الفاقد الثابتة اللي فوق، يعني فاقد 30% وخصم 7% في البيعة = 37%، زي ما كنت بتعمل في قيد التكاليف.</div>';
 }
 function openCP(id) {
   const t = id ? { ...S.docs.get(id).data } : { prod:'', raw:'', loss:null, op:1, on:true };
@@ -1842,6 +1952,7 @@ function csSheetClick(e) {
   const g = id => $(id).value;
   if (fgSheetClick(e)) return true;
   if (plSheetClick(e)) return true;
+  if (poSheetClick(e)) return true;
   if (e.target.closest('#sd-chg')) { const sid = S.hs.sid; openChg(sid); return true; }
   if (e.target.closest('#cr-save')) { const raw = cl(g('#cr-raw')); if (!raw) { $('#cr-err').textContent = 'اكتب الخام.'; return true; } docSave('cr', S.hs.id || 'cr:' + uid8(), { raw, loss:Math.min(0.95, Math.max(0, num(g('#cr-loss')) / 100)) }); closeHS(); renderCS(); toast('تم الحفظ'); return true; }
   if (e.target.closest('#cr-del')) { docSave('cr', S.hs.id, S.docs.get(S.hs.id).data, true); closeHS(); renderCS(); return true; }
@@ -2456,7 +2567,7 @@ async function init() {
   $('#acc-tb').onclick = e => { const r = e.target.closest('tr[data-k]'); if (!r) return; const row = gst(S.accGid).fr[+r.dataset.k]; if (!row) return;
     if (S.accMode === 'g') { S.expGroup = row.name; renderAcc(); } else openStm(row.name); };
   $('#acc-allx').onclick = () => { S.expGroup = '*'; renderAcc(); };
-  $('#hr-back').onclick = back; $('#cs-back').onclick = back; $('#e-cr').addEventListener('change', csSrcUpdate);
+  $('#hr-back').onclick = back; $('#cs-back').onclick = back; $('#pr-back').onclick = back; $('#pr-t1').onclick = () => { S.prTab = 'o'; renderPR(); }; $('#pr-t2').onclick = () => { S.prTab = 'g'; renderPR(); }; $('#pr-t3').onclick = () => { S.prTab = 's'; renderPR(); }; $('#pr-body').onclick = prBodyClick; $('#pr-pdf').onclick = () => doPrint(prTitle()); $('#e-cr').addEventListener('change', csSrcUpdate);
   $('#cs-t1').onclick = () => { S.csTab = 's'; renderCS(); }; $('#cs-t2').onclick = () => { S.csTab = 'k'; renderCS(); }; $('#cs-t4').onclick = () => { S.csTab = 'g'; renderCS(); }; $('#cs-body').onclick = csBodyClick; $('#cs-body').oninput = e => { if (e.target.id === 'pl-title') S.plTitle = e.target.value; }; $('#cs-pdf').onclick = () => doPrint(csTitle()); $('#hr-pdf').onclick = () => { if (S.hrTab === 'p') doPrint($('#ph-t').textContent); else toast('الطباعة من تبويب كشف الرواتب'); };
   $('#hr-t1').onclick = () => { S.hrTab = 'p'; renderHR(); }; $('#hr-t2').onclick = () => { S.hrTab = 'a'; renderHR(); }; $('#hr-t3').onclick = () => { S.hrTab = 'e'; renderHR(); };
   $('#hr-month').onchange = e => { S.hrMonth = e.target.value; hrPayroll(); };
@@ -2506,7 +2617,7 @@ async function init() {
   $('#lock-pw').onclick = async () => { $('#lock').classList.add('hide'); await softLogout(''); };
   $('#tiles').onclick = e => {
     const b = e.target.closest('.tile'); if (!b) return; const k = b.dataset.k;
-    if (k === 'new') openForm(null); else if (k === 'list') push_('list'); else if (k === 'tb') { S.tbMonth = '*'; push_('tb'); } else if (k === 'gl') push_('gl'); else if (k === 'is') { S.isMonth = '*'; push_('is'); } else if (k === 'bs') { S.bsMonth = '*'; push_('bs'); } else if (k === 'db') { S.dbMonth = '*'; push_('db'); } else if (k === 'hr') { S.hrTab = 'p'; S.hrMonth = ''; push_('hr'); } else if (k === 'cs') { S.csTab = 's'; push_('cs'); } else if (k === 'mp') push_('mp'); else if (k === 'dp') { S.dpMonth = '*'; push_('dp'); } else if (k === 'an') push_('an');
+    if (k === 'new') openForm(null); else if (k === 'list') push_('list'); else if (k === 'tb') { S.tbMonth = '*'; push_('tb'); } else if (k === 'gl') push_('gl'); else if (k === 'is') { S.isMonth = '*'; push_('is'); } else if (k === 'bs') { S.bsMonth = '*'; push_('bs'); } else if (k === 'db') { S.dbMonth = '*'; push_('db'); } else if (k === 'hr') { S.hrTab = 'p'; S.hrMonth = ''; push_('hr'); } else if (k === 'cs') { S.csTab = 's'; push_('cs'); } else if (k === 'pr') { S.prTab = 'o'; push_('pr'); } else if (k === 'mp') push_('mp'); else if (k === 'dp') { S.dpMonth = '*'; push_('dp'); } else if (k === 'an') push_('an');
     else if (k === 'sync') { toast('بنزامن…'); sync(); } else openAcc(k);
   };
   $('#an-list').onclick = e => { const b = e.target.closest('.an'); if (b) openAcc(b.dataset.k); };
