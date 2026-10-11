@@ -1709,7 +1709,7 @@ function fgLines(D, p, z, units, k) {
 function fgProdEntries(D, f, units, k, date, ca) {
   const maxNo = Math.max(0, ...live().map(z => z.no || 0)), now = Date.now();
   return fgLines(D, f.p, f.z, units, k).map((l, n) => { const acc = ca[l.g], amt = l.q * l.p;
-    return { id:crypto.randomUUID(), no:maxNo + n + 1, date, stmt:'إنتاج منتج تام', dr:FG_STOCK, cr:acc, pa:f.name, pb:acc === 'المصروفات' ? 'تشغيل منتج' : '', prod:l.n, qty:l.q, disc:0, price:l.p, amtD:amt, amtC:amt, star:false, opening:false, deleted:false, updated:now, dirty:true }; });
+    return { id:crypto.randomUUID(), no:maxNo + n + 1, date, stmt:'إنتاج منتج تام', dr:FG_STOCK, cr:acc, pa:f.name, pb:acc === 'المصروفات' ? 'تشغيل منتج' : '', prod:l.g === 'op' ? l.n : fgAlName(l.n), qty:l.q, disc:0, price:l.p, amtD:amt, amtC:amt, star:false, opening:false, deleted:false, updated:now, dirty:true }; });
 }
 async function fgKillBatch(id, keep) { const d = S.docs.get(id); if (!d) return; for (const i of [].concat(d.data.e || [])) { const x = S.ent.get(i); if (x && !x.deleted) { Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }); await entPut(x); } } docSave('fb', id, d.data, true); if (!keep) docsOf('po').forEach(o => { if (o.data.batch === id) docSave('po', o.id, { ...o.data, st:'p', batch:'', actual:0, xd:'' }); }); }
 function openFB(bid, prodName, oid, units0) {
@@ -1790,13 +1790,26 @@ function fgSheetClick(e) {
   return false;
 }
 /* ---------- الإنتاج: أوامر الإنتاج (خطة) + خطة الخامات + مخزن المنتج التام. الخطة ما بتعملش تكاليف ولا قيود، التنفيذ بس هو اللي بيسجل الإنتاج ---------- */
+/* ربط أسماء الوصفة والعبوات بأسماء المخزون الخام (اختياري): من غير ربط الأسماء بتتقارن زي ما هي بالظبط */
+const fgAlMap = () => { const d = S.docs.get('fgal'); return d && !d.deleted && d.data && d.data.m ? d.data.m : {}; };
+const fgAlName = n => fgAlMap()[csKey(n)] || n;
+function openAL(name, back) {
+  const m = fgAlMap(), cur = m[csKey(name)] || '', k0 = csKey(name);
+  const names = [...csStock().values()].map(x => ({ n:x.name, q:x.q })).sort((a, b) => { const A = csKey(a.n).includes(k0) || k0.includes(csKey(a.n)) ? 0 : 1, B = csKey(b.n).includes(k0) || k0.includes(csKey(b.n)) ? 0 : 1; return A - B || csColl.compare(a.n, b.n); });
+  S.hs = { type:'poal', n:name, back:back || '' };
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">ربط الاسم بالمخزون</h2><div class="note">الاسم في الوصفة / العبوة: <b>' + esc(name) + '</b></div><label for="al-s">الاسم في المخزن الخام</label><select id="al-s"><option value="">اختار البند من المخزون</option>' + names.map(x => '<option value="' + esc(x.n) + '"' + (csKey(x.n) === csKey(cur) ? ' selected' : '') + '>' + esc(x.n) + ' (الرصيد ' + esc(fmt(x.q)) + ')</option>').join('') + '</select>' +
+    '<div class="note" style="margin-top:8px">الربط بيأثر على الخطة وعلى خصم الخامات وقت التنفيذ بس. الوصفة والأسعار زي ما هي.</div><div class="err" id="al-err"></div><div class="actions"><button class="btn" id="al-save">حفظ الربط</button>' + (cur ? '<button class="btn danger" id="al-del">شيل الربط</button>' : '') + '<button class="btn ghost" id="al-back">رجوع</button></div>';
+  hrRO(); $('#hsheet').classList.remove('hide');
+}
 const PO_ST = { p:'مخطط', x:'اتنفذ', c:'ملغي' };
 function poNeeds(D, f, units, stock) {
-  return fgLines(D, f.p, f.z, units, 1).filter(l => l.g !== 'op').map(l => { const st = stock.get(csKey(l.n)); return { n:l.n, g:l.g, need:l.q, have:st ? Math.max(0, st.q) : 0, known:!!st }; });
+  return fgLines(D, f.p, f.z, units, 1).filter(l => l.g !== 'op').map(l => { const sn = fgAlName(l.n), st = stock.get(csKey(sn)); return { n:l.n, sn, g:l.g, need:l.q, have:st ? Math.max(0, st.q) : 0, known:!!st }; });
 }
 function poStatus(r) { const d = r.need - r.have; return !r.known ? '؟ مش في المخزن' : d > 0.0001 ? '✗ ناقص ' + fmt(d) : '✓ متوفر'; }
 function poReqTable(rows) {
-  return csTbl([36, 16, 16, 32], ['البند', 'المطلوب', 'المتاح', 'الحالة'], rows.map(r => '<tr><td class="l">' + esc(r.n) + '<small style="display:block;color:var(--muted)">' + (r.g === 'pk' ? 'عبوة' : 'خامة') + '</small></td><td class="v">' + esc(fmt(r.need)) + '</td><td class="v">' + esc(fmt(r.have)) + '</td><td class="v' + (!r.known || r.need - r.have > 0.0001 ? ' neg' : '') + '">' + esc(poStatus(r)) + '</td></tr>').join(''));
+  const w = canWrite(), bad = rows.some(r => !r.known);
+  return csTbl([36, 16, 16, 32], ['البند', 'المطلوب', 'المتاح', 'الحالة'], rows.map(r => '<tr' + (w ? ' data-poal="' + esc(r.n) + '" style="cursor:pointer"' : '') + '><td class="l">' + esc(r.n) + '<small style="display:block;color:var(--muted)">' + (r.g === 'pk' ? 'عبوة' : 'خامة') + (r.sn && csKey(r.sn) !== csKey(r.n) ? ' · مربوط بـ ' + esc(r.sn) : '') + '</small></td><td class="v">' + esc(fmt(r.need)) + '</td><td class="v">' + esc(fmt(r.have)) + '</td><td class="v' + (!r.known || r.need - r.have > 0.0001 ? ' neg' : '') + '">' + esc(poStatus(r)) + '</td></tr>').join('')) +
+    (w && bad ? '<div class="note np" style="padding:8px 14px">البند اللي قدامه «؟ مش في المخزن» اضغط عليه واربطه بالاسم الصح في المخزن الخام.</div>' : '');
 }
 function prTitle() { const T = S.prTab || 'o'; return 'الإنتاج - ' + (T === 'o' ? 'أوامر الإنتاج' : T === 'g' ? 'خطة الخامات' : 'مخزن المنتج التام'); }
 function renderPR() {
@@ -1814,7 +1827,7 @@ function poOrdersHTML(D, w) {
 }
 function poPlanHTML(D) {
   const os = docsOf('po').filter(d => d.data.st === 'p' && d.data.key), stock = csStock(), stk = fgStockMap(), agg = new Map(), prods = new Map();
-  for (const d of os) { const f = fgMatch(d.data.key); if (!f) continue; prods.set(f.name, (prods.get(f.name) || 0) + (+d.data.units || 0)); for (const r of poNeeds(D, f, +d.data.units || 0, stock)) { const k = csKey(r.n), a = agg.get(k) || { n:r.n, g:r.g, need:0, have:r.have, known:r.known }; a.need += r.need; agg.set(k, a); } }
+  for (const d of os) { const f = fgMatch(d.data.key); if (!f) continue; prods.set(f.name, (prods.get(f.name) || 0) + (+d.data.units || 0)); for (const r of poNeeds(D, f, +d.data.units || 0, stock)) { const k = csKey(r.known ? r.sn : r.n), a = agg.get(k) || { n:r.n, sn:r.sn, g:r.g, need:0, have:r.have, known:r.known }; a.need += r.need; agg.set(k, a); } }
   const rows = [...agg.values()].sort((a, b) => csColl.compare(a.n, b.n)), short = rows.filter(r => !r.known || r.need - r.have > 0.0001).length;
   return '<div class="note" style="padding:8px 14px 2px"><b>المنتج التام: المخطط مقابل الموجود</b></div>' +
     csTbl([44, 18, 18, 20], ['المنتج', 'المخطط', 'الموجود', 'تحتاج إنتاج'], prods.size ? [...prods.entries()].sort((a, b) => csColl.compare(a[0], b[0])).map(([n, u]) => { const q = (stk.get(csKey(n)) || { q:0 }).q; return '<tr><td class="l">' + esc(n) + '</td><td class="v">' + esc(fmt0(u)) + '</td><td class="v">' + esc(fmt0(q)) + '</td><td class="v' + (u > q ? ' neg' : '') + '">' + esc(fmt0(Math.max(0, u - q))) + '</td></tr>'; }).join('') : '<tr><td class="l" colspan="4">مفيش أوامر إنتاج مخططة.</td></tr>') +
@@ -1848,6 +1861,7 @@ function poSheetClick(e) {
   }
   if (S.hs && S.hs.type === 'pod') {
     const oid = S.hs.oid, O = S.docs.get(oid); if (!O) return false;
+    const alr = t.closest('[data-poal]'); if (alr && canWrite()) { openAL(alr.dataset.poal, oid); return true; }
     if (t.closest('#po-exec')) { openFB(null, O.data.key, oid, O.data.units); return true; }
     if (t.closest('#po-edit')) { openPO(oid); return true; }
     if (t.closest('#po-cancel')) { docSave('po', oid, { ...O.data, st:'c' }); closeHS(); renderPR(); return true; }
@@ -1855,10 +1869,19 @@ function poSheetClick(e) {
   }
   return false;
 }
+function poAlClick(e) {
+  if (!S.hs || S.hs.type !== 'poal') return false;
+  const t = e.target, n = S.hs.n, back = S.hs.back, done = () => { if (back) openPOD(back); else { closeHS(); renderPR(); } };
+  if (t.closest('#al-back')) { done(); return true; }
+  if (t.closest('#al-save')) { const v = $('#al-s').value; if (!v) { $('#al-err').textContent = 'اختار البند من المخزون.'; return true; } const m = { ...fgAlMap() }; m[csKey(n)] = v; docSave('fgal', 'fgal', { m }); toast('اتحفظ الربط'); done(); return true; }
+  if (t.closest('#al-del')) { const m = { ...fgAlMap() }; delete m[csKey(n)]; docSave('fgal', 'fgal', { m }); toast('اتشال الربط'); done(); return true; }
+  return false;
+}
 async function prBodyClick(e) {
   const t0 = e.target, sf = t0.closest('[data-fgsf]'); if (sf) { S.fgSF = sf.dataset.fgsf; return renderPR(); }
   const bp = t0.closest('[data-fbp]'); if (bp) return openFBP(bp.dataset.fbp);
   const po = t0.closest('[data-po]'); if (po) return openPOD(po.dataset.po);
+  const al = t0.closest('[data-poal]'); if (al && canWrite()) return openAL(al.dataset.poal, '');
   if (!canWrite()) return;
   if (t0.closest('#po-new')) return openPO(null);
   if (t0.closest('#fb-new')) return openFB();
@@ -1952,6 +1975,7 @@ function csSheetClick(e) {
   const g = id => $(id).value;
   if (fgSheetClick(e)) return true;
   if (plSheetClick(e)) return true;
+  if (poAlClick(e)) return true;
   if (poSheetClick(e)) return true;
   if (e.target.closest('#sd-chg')) { const sid = S.hs.sid; openChg(sid); return true; }
   if (e.target.closest('#cr-save')) { const raw = cl(g('#cr-raw')); if (!raw) { $('#cr-err').textContent = 'اكتب الخام.'; return true; } docSave('cr', S.hs.id || 'cr:' + uid8(), { raw, loss:Math.min(0.95, Math.max(0, num(g('#cr-loss')) / 100)) }); closeHS(); renderCS(); toast('تم الحفظ'); return true; }
