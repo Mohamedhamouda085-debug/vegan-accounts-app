@@ -1475,30 +1475,92 @@ async function fgSaleGen(sale, old, f) {
   return lk;
 }
 /* شاشة المنتج التام */
-function fgPriceCtx(D) {
-  const kinds = [...new Set(D.cont.map(c => c.k))], K = kinds.includes(S.plK) ? S.plK : (kinds.includes('جردل') ? 'جردل' : kinds[0]), cs = D.cont.filter(c => c.k === K), C = cs.find(c => c.id === S.plC) || cs[0];
-  const rows = D.prods.flatMap(p => p.s.filter(z => z.c === C.id).map(z => ({ p, z }))).sort((a, b) => csColl.compare(a.p.n, b.p.n));
-  return { kinds, K, cs, C, rows };
+const PL_SEED = {"B":{"k":"جردل","head":"شركة Vegan Foods للصناعات الغذائية المنطقه الصناعيه الكيلو 28 طريق إسكندرية الصحراوي س . ت :- 136730 ب . ض :- 766236927","contact":"للتواصل إدارة المصنع :01119476148 إدارة المبيعات :01030688080","secs":[{"t":"انواع المشكلات","items":[{"m":1,"n":"مشكل ترويقه","e":16,"d":10,"pk":60,"note":"مفرز وعالى الجوده بخلطة فيجن + هريسة شطة","link":"مشكل ترويقة","id":"i1"},{"m":2,"n":"مشكل فيجن","e":16,"d":10,"pk":55,"note":"مفرز وعالى الجوده","link":"مشكل فيجان","id":"i2"},{"m":3,"n":"بوليف ساده","e":16,"d":10,"pk":40,"link":"بوليف سادة","id":"i3"},{"m":4,"n":"بوليف محوج","e":16,"d":10,"pk":45,"link":"بوليف محوج","id":"i4"},{"m":5,"n":"ميكس ساده","e":16,"d":10,"pk":30,"link":"مشكل ميكس سادة","id":"i5"},{"m":6,"n":"سوبر ميكس","e":16,"d":10,"pk":35,"link":"مشكل سوبر ميكس","id":"i6"},{"m":7,"n":"مشكل سوري","e":16,"d":10,"pk":20,"link":"مشكل سورى","id":"i7"},{"m":8,"n":"جزر ساده","e":16,"d":10,"pk":20,"link":"جزر سادة","id":"i8"},{"m":9,"n":"لفت ساده","e":16,"d":10,"pk":20,"link":"لفت سادة","id":"i9"}]},{"t":"مخللات مصري","items":[{"m":10,"n":"ليمون ساده","e":17,"d":12,"pk":25,"link":"ليمون سادة","id":"i10"},{"m":11,"n":"ليمون معصفر فيجن","e":17,"d":12,"pk":28,"link":"ليمون معصفر فيجان","id":"i11"},{"m":12,"n":"فلفل طنطاوي","e":15,"d":8,"pk":35,"link":"فلفل طنطاوى عادى","id":"i12"},{"m":13,"n":"فلفل طنطاوي صناره","e":15,"d":8,"pk":40,"link":"فلفل طنطاوى صنارة","id":"i13"},{"m":14,"n":"فلفل مكسيكي","e":15,"d":8,"pk":35,"link":"فلفل مكسيكى","id":"i14"},{"m":15,"n":"فلفل ايطالى","e":15,"d":8,"pk":50,"link":"فلفل ايطالى","id":"i15"},{"m":16,"n":"هالبينو احمر شرائح","e":15,"d":8,"pk":40,"link":"فلفل هلابينو احمر شرائح","id":"i16"},{"m":17,"n":"هالبينو اخضر شرائح","e":15,"d":8,"pk":35,"link":"فلفل هلابينو اخضر شرائح","id":"i17"},{"m":18,"n":"بصل ساده","e":8,"d":5,"pk":90,"link":"بصل سادة","id":"i18"},{"m":19,"n":"بصل بالقرنبيط","e":8,"d":5,"pk":90,"link":"بصل بالقرنبيط","id":"i19"},{"m":20,"n":"باذنجان مقدوس","e":5,"d":5,"pk":180,"id":"i20"},{"m":21,"n":"خيار فكوك","e":15,"d":9,"pk":50,"id":"i21"},{"m":22,"n":"خيار بلدى","e":15,"d":9,"pk":45,"id":"i22"},{"m":23,"n":"خيار اسكندرانى","e":15,"d":9,"pk":30,"id":"i23"},{"m":24,"n":"خيار شرائح","e":15,"d":9,"pk":50,"link":"خيار شرائح","id":"i24"},{"m":25,"n":"خيار بخلطه فيجن","e":15,"d":9,"pk":50,"link":"خيار فيجان","id":"i25"},{"m":26,"n":"خيار قشه زيرو","e":15,"d":5,"pk":270,"link":"خيار قشة","id":"i26"},{"m":27,"n":"خيار محشى","e":15,"d":9,"pk":70,"id":"i27"}]},{"t":"ميكسات فيجان","items":[{"m":28,"n":"ميكس فيجن","e":8,"d":4,"pk":170,"note":"مفروز وعالى الجوده بخلطة فيجن","link":"ميكس فيجن","id":"i28"},{"m":29,"n":"ميكس حمص خلطه","e":8,"d":5,"pk":95,"note":"مفروز وعالى الجوده بخلطة فيجن","link":"حمص بالخلطة","id":"i29"},{"m":30,"n":"ميكس زيتون مخلى","e":7,"d":4,"pk":160,"id":"i30"},{"m":31,"n":"ميكس زيتون شرائح","e":7,"d":4,"pk":160,"id":"i31"},{"m":32,"n":"هريسه حاره","e":5,"d":5,"pk":50,"link":"هريسة حارة","id":"i32"},{"m":33,"n":"هرسيه محوجه","e":5,"d":5,"pk":50,"link":"هريسة محوجة","id":"i33"}]},{"t":"انواع الزيتون","items":[{"m":34,"n":"زيتون اخضر جامبو","e":16,"d":10,"pk":130,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون اخضر جامبو سليم","id":"i34"},{"m":35,"n":"زيتون اخضر احجام","e":16,"d":10,"pk":120,"id":"i35"},{"m":36,"n":"زيتون اخضر شرائح جامبو","e":15,"d":9,"pk":155,"link":"زيتون اخضر شرائح جامبو","id":"i36"},{"m":37,"n":"زيتون اخضر شرائح احجام","e":15,"d":9,"pk":145,"id":"i37"},{"m":38,"n":"زيتون اخضر مخلي","e":16,"d":10,"pk":160,"link":"زيتون اخضر مخلى","id":"i38"},{"m":39,"n":"زيتون اخضر محشي جزر","e":16,"d":10,"pk":150,"link":"زيتون محشي جزر","id":"i39"},{"m":40,"n":"زيتون اخضر محشي فلفل","e":16,"d":10,"pk":150,"link":"زيتون محشى فلفل","id":"i40"},{"m":41,"n":"زيتون اسود طبيعى جامبو","e":8,"d":5,"pk":200,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون اسبانى طبيعى جامبو","id":"i41"},{"m":42,"n":"زيتون دولسى جامبو","e":8,"d":5,"pk":150,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون دولسي جامبو","id":"i42"},{"m":43,"n":"زيتون اسود طبيعي احجام","e":8,"d":5,"pk":180,"id":"i43"},{"m":44,"n":"زيتون اسود طبيعى شرائح","e":8,"d":5,"pk":190,"link":"زيتون شرائح طبيعي","id":"i44"},{"m":45,"n":"زيتون كالاماتا جامبو","e":8,"d":5,"pk":235,"link":"زيتون كالاماتا جامبو","id":"i45"},{"m":46,"n":"زيتون كالاماتا بالزيت","e":8,"d":5,"pk":290,"note":"مفروز وعالى الجوده مطعم بزيت زيتون","link":"زيتون كالاماتا زيت","id":"i46"},{"m":47,"n":"زيتون مشوي","e":5,"d":5,"pk":180,"note":"مفروز وعالى الجوده مطعم بزيت زيتون","link":"زيتون مشوى","id":"i47"}]},{"t":"زيت الزيتون","items":[{"m":49,"n":"زجاجة زيت زيتون","et":"كجم 250","pk":165,"note":"معصور على البارد عالى الجوده","id":"i48"},{"m":50,"n":"زجاجة زيت زيتون","et":"كجم 500","pk":315,"id":"i49"},{"m":51,"n":"زجاجة زيت زيتون","et":"كيلو 1","pk":600,"id":"i50"}]}]},"J":{"k":"برطمان","head":"شركة Vegan Foods للصناعات الغذائية المنطقه الصناعيه الكيلو 28 طريق إسكندرية الصحراوي س . ت :- 136730 ب . ض :- 766236927","contact":"للتواصل إدارة المصنع :01119476148 إدارة المبيعات :01030688080","secs":[{"t":"انواع المشكلات","items":[{"m":1,"n":"مشكل ترويقه","p1":47,"p2":55,"link":"مشكل ترويقة","id":"i51"},{"m":2,"n":"مشكل فيجن","p1":44,"p2":52,"link":"مشكل فيجان","id":"i52"},{"m":3,"n":"بوليف ساده","p1":38,"p2":42,"link":"بوليف سادة","id":"i53"},{"m":4,"n":"بوليف محوج","p1":40,"p2":46,"link":"بوليف محوج","id":"i54"},{"m":5,"n":"ميكس ساده","p1":36,"p2":40,"link":"مشكل ميكس سادة","id":"i55"},{"m":6,"n":"سوبر ميكس","p1":38,"p2":43,"link":"مشكل سوبر ميكس","id":"i56"},{"m":7,"n":"مشكل سوري","p1":35,"p2":39,"link":"مشكل سورى","id":"i57"},{"m":8,"n":"جزر ساده","p1":32,"p2":35,"link":"جزر سادة","id":"i58"},{"m":9,"n":"لفت ساده","p1":32,"p2":35,"link":"لفت سادة","id":"i59"}]},{"t":"مخللات مصري","items":[{"m":10,"n":"ليمون ساده","p1":33,"p2":37,"link":"ليمون سادة","id":"i60"},{"m":11,"n":"ليمون معصفر فيجن","p1":34,"p2":37,"link":"ليمون معصفر فيجان","id":"i61"},{"m":12,"n":"فلفل طنطاوي","p1":38,"p2":40,"link":"فلفل طنطاوى عادى","id":"i62"},{"m":13,"n":"فلفل طنطاوي صناره","p1":38,"p2":40,"link":"فلفل طنطاوى صنارة","id":"i63"},{"m":14,"n":"فلفل مكسيكي","p1":39,"p2":41,"link":"فلفل مكسيكى","id":"i64"},{"m":15,"n":"فلفل ايطالى","p1":46,"p2":51,"link":"فلفل ايطالى","id":"i65"},{"m":16,"n":"هالبينو احمر شرائح","p1":41,"p2":43,"link":"فلفل هلابينو احمر شرائح","id":"i66"},{"m":17,"n":"هالبينو اخضر شرائح","p1":39,"p2":41,"link":"فلفل هلابينو اخضر شرائح","id":"i67"},{"m":18,"n":"بصل ساده","p1":71,"p2":89,"link":"بصل سادة","id":"i68"},{"m":19,"n":"بصل بالقرنبيط","link":"بصل بالقرنبيط","id":"i69"},{"m":20,"n":"باذنجان مقدوس","id":"i70"},{"m":21,"n":"خيار فكوك","id":"i71"},{"m":22,"n":"خيار بلدى","id":"i72"},{"m":23,"n":"خيار اسكندرانى","id":"i73"},{"m":24,"n":"خيار شرائح","p1":46,"p2":54,"link":"خيار شرائح","id":"i74"},{"m":25,"n":"خيار بخلطه فيجن","p1":55,"p2":61,"link":"خيار فيجان","id":"i75"},{"m":26,"n":"خيار قشه زيرو","p1":175,"p2":232,"link":"خيار قشة","id":"i76"},{"m":27,"n":"خيار محشى","id":"i77"}]},{"t":"ميكسات فيجان","items":[{"m":28,"n":"ميكس فيجن","p1":87,"p2":109,"note":"مفروز وعالى الجوده بخلطة فيجن","link":"ميكس فيجن","id":"i78"},{"m":29,"n":"ميكس حمص خلطه","p1":83,"p2":104,"note":"مفروز وعالى الجوده بخلطة فيجن","link":"حمص بالخلطة","id":"i79"},{"m":32,"n":"هريسه حاره","p1":49,"p2":58,"link":"هريسة حارة","id":"i80"},{"m":33,"n":"هرسيه محوجه","p1":71,"p2":88,"link":"هريسة محوجة","id":"i81"}]},{"t":"انواع الزيتون","items":[{"m":34,"n":"زيتون اخضر جامبو","p1":95,"p2":122,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون اخضر جامبو سليم","id":"i82"},{"m":36,"n":"زيتون اخضر شرائح جامبو","p1":111,"p2":144,"link":"زيتون اخضر شرائح جامبو","id":"i83"},{"m":38,"n":"زيتون اخضر مخلي","p1":109,"p2":141,"link":"زيتون اخضر مخلى","id":"i84"},{"m":39,"n":"زيتون اخضر محشي جزر","p1":101,"p2":130,"link":"زيتون محشي جزر","id":"i85"},{"m":40,"n":"زيتون اخضر محشي فلفل","p1":102,"p2":131,"link":"زيتون محشى فلفل","id":"i86"},{"m":41,"n":"زيتون اسود طبيعى جامبو","p1":123,"p2":160,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون اسبانى طبيعى جامبو","id":"i87"},{"m":42,"n":"زيتون دولسى جامبو","p1":91,"p2":116,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون دولسي جامبو","id":"i88"},{"m":44,"n":"زيتون اسود طبيعى شرائح","p1":147,"p2":193,"link":"زيتون شرائح طبيعي","id":"i89"},{"m":45,"n":"زيتون كالاماتا جامبو","p1":155,"p2":204,"link":"زيتون كالاماتا جامبو","id":"i90"},{"m":47,"n":"زيتون كالاماتا بالزيت","p1":161,"p2":212,"note":"مفروز وعالى الجوده مطعم بزيت زيتون","link":"زيتون كالاماتا زيت","id":"i91"},{"m":48,"n":"زيتون مشوي","p1":167,"p2":196,"note":"مفروز وعالى الجوده مطعم بزيت زيتون","link":"زيتون مشوى","id":"i92"}]},{"t":"زيت الزيتون","items":[{"m":49,"n":"زجاجة زيت زيتون","p1":165,"et":"كجم 250","note":"معصور على البارد عالى الجوده","id":"i93"},{"m":50,"n":"زجاجة زيت زيتون","p1":315,"et":"كجم 500","id":"i94"},{"m":51,"n":"زجاجة زيت زيتون","p1":600,"et":"كيلو 1","id":"i95"}]}]}};
+function plData() { const d = S.docs.get('pl2'); return d && !d.deleted && d.data.v === 1 ? d.data : null; }
+function plSelGet(K) { if (!S.plSel) S.plSel = {}; if (!S.plSel[K]) { try { S.plSel[K] = new Set(JSON.parse(localStorage.getItem('pl_sel_' + K)) || []); } catch (x) { S.plSel[K] = new Set(); } } return S.plSel[K]; }
+function plSelSave(K) { try { localStorage.setItem('pl_sel_' + K, JSON.stringify([...plSelGet(K)])); } catch (x) { /* ignore */ } }
+function plProd(D, kind, link) { return link ? D.prods.find(p => p.k === kind && csKey(p.n) === csKey(link)) : null; }
+function plCost(D, kind, it, which) {
+  const p = plProd(D, kind, it.link); if (!p) return null;
+  const z = kind === 'جردل' ? (p.s.find(z => Math.abs(fgCont(D, z.c).kg - (it.d || 0)) < 0.01) || p.s[0]) : p.s.find(z => fgCont(D, z.c).n.includes(which));
+  return z ? fgCost(D, p, z) : null;
 }
-function fgPriceHTML(D) {
-  const { kinds, K, cs, C, rows } = fgPriceCtx(D), M = S.plMode === 'i' ? 'i' : 'c', f = x => esc(fmt0(x)), kg = C.kg || 1;
-  const info = esc(C.n) + ' — المصفي ' + esc(fmt(kg)) + ' كجم' + (C.gw ? ' · الوزن الكلي ' + esc(fmt(C.gw)) + ' كجم' : '');
-  const head = M === 'c' ? ['الصنف', 'كيلو قطاعي', 'العبوة قطاعي', 'كيلو جملة', 'العبوة جملة'] : ['الصنف', 'قطاعي', 'جملة', 'التكلفة', 'الربح'];
-  const wd = M === 'c' ? [36, 16, 16, 16, 16] : [36, 16, 16, 16, 16];
-  const body = rows.map(({ p, z }) => { const r = +z.price || 0, wp = z.wp != null ? +z.wp : Math.round(r * 0.8), c = fgCost(D, p, z);
-    return '<tr><td class="l">' + esc(p.n) + '</td>' + (M === 'c' ? '<td class="v">' + f(r / kg) + '</td><td class="v">' + f(r) + '</td><td class="v">' + f(wp / kg) + '</td><td class="v">' + f(wp) + '</td>' : '<td class="v">' + f(r) + '</td><td class="v">' + f(wp) + '</td><td class="v">' + f(c) + '</td><td class="v' + (r < c ? ' neg' : '') + '">' + (c ? f((r - c) / c * 100) + '%' : '') + '</td>') + '</tr>'; }).join('');
-  return '<div class="mrow"><div class="seg" style="margin:0">' + kinds.map(k => '<button class="' + (k === K ? 'on' : '') + '" data-plk="' + esc(k) + '">' + esc(k) + '</button>').join('') + '</div></div>' +
-    '<div class="mrow"><select id="pl-c">' + cs.map(c => '<option value="' + c.id + '"' + (c.id === C.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</select></div>' +
-    '<div class="mrow"><div class="seg" style="margin:0"><button class="' + (M === 'c' ? 'on' : '') + '" data-plm="c">للعملاء</button><button class="' + (M === 'i' ? 'on' : '') + '" data-plm="i">داخلية (بالتكلفة والربح)</button></div></div>' +
-    '<div class="note" style="padding:4px 14px 8px">' + info + '. سعر الجملة لو مش مكتوب بيتحسب 80% من القطاعي، وتقدر تكتبه لكل منتج من تعديل المنتج. للتصدير اضغط PDF فوق.</div>' +
-    csTbl(wd, head, body);
+function fgPriceHTML(D, w) {
+  if (!plData() && w && !S.plSeeded) { S.plSeeded = 1; docSave('pl2', 'pl2', Object.assign({ v:1 }, fgClone(PL_SEED))); }
+  const P = plData() || Object.assign({ v:1 }, PL_SEED), K = S.plK === 'برطمان' ? 'J' : 'B', L = P[K], kind = K === 'J' ? 'برطمان' : 'جردل', custom = S.plMode === 'c', X = !!S.plX, sel = plSelGet(K), f = x => esc(fmt0(x));
+  const ctl = '<div class="mrow"><div class="seg" style="margin:0"><button class="' + (K === 'B' ? 'on' : '') + '" data-plk="جردل">جرادل</button><button class="' + (K === 'J' ? 'on' : '') + '" data-plk="برطمان">برطمانات</button></div></div>' +
+    '<div class="mrow"><div class="seg" style="margin:0"><button class="' + (custom ? '' : 'on') + '" data-plm="f">قائمة كاملة</button><button class="' + (custom ? 'on' : '') + '" data-plm="c">قائمة مخصصة</button></div></div>' +
+    (custom ? '<div class="mrow"><input id="pl-title" placeholder="اسم العميل / عنوان القائمة (اختياري)" value="' + esc(S.plTitle || '') + '"></div><div class="mrow"><button class="btn" id="pl-sel" style="width:100%">اختيار المنتجات (' + [...sel].filter(id => L.secs.some(s => s.items.some(i => i.id === id))).length + ')</button></div>' : '') +
+    '<div class="mrow" style="display:flex;gap:8px"><button class="btn ghost" data-plx="1" style="flex:1">' + (X ? 'إخفاء التكلفة والربح' : 'إظهار التكلفة والربح') + '</button>' + (w && !custom ? '<button class="btn ghost" id="pl-add" style="flex:1">＋ صنف</button><button class="btn ghost" id="pl-adds" style="flex:1">＋ قسم</button>' : '') + '</div>';
+  const head = '<div class="hrow" style="text-align:center"><div class="n">' + esc(L.head) + '</div><div class="note">' + esc(L.contact) + '</div>' + (custom && cl(S.plTitle) ? '<div class="n" style="margin-top:6px">' + esc(S.plTitle) + '</div>' : '') + '</div>';
+  let no = 0, cols, wd, th;
+  if (K === 'B') { th = X ? ['م', 'الصنف', 'سعر الجردل', 'التكلفة', 'الربح', '%'] : ['م', 'الصنف', 'وزن الصافي', 'وزن المصفي', 'سعر الكيلو', 'سعر الجردل']; wd = X ? [7, 37, 16, 14, 13, 13] : [7, 33, 14, 14, 16, 16]; }
+  else { th = X ? ['م', 'الصنف', 'سعر 720', 'تكلفة 720', 'سعر 1050', 'تكلفة 1050'] : ['م', 'الصنف', 'الصافي', 'المصفي', 'سعر 720', 'الصافي', 'المصفي', 'سعر 1050']; wd = X ? [7, 33, 15, 15, 15, 15] : [6, 29, 10, 10, 12, 10, 10, 13]; }
+  cols = th.length;
+  const wt = (g, d, et) => et || (g ? fmt(g) : '');
+  const body = L.secs.map(sec => {
+    const items = sec.items.filter(it => !custom || sel.has(it.id)); if (!items.length) return '';
+    return '<tr class="h"><td class="l" colspan="' + cols + '">' + esc(sec.t) + '</td></tr>' + items.map(it => { no++; const m = custom ? no : it.m, pb = it.pk && it.d ? it.pk * it.d : null, tr0 = '<tr' + (w && !custom ? ' data-pli="' + it.id + '" style="cursor:pointer"' : '') + '><td class="v">' + esc(m) + '</td><td class="l">' + esc(it.n) + (it.note ? '<small style="display:block;color:var(--muted)">' + esc(it.note) + '</small>' : '') + '</td>';
+      if (K === 'B') { if (X) { const c = plCost(D, kind, it), pr = pb != null ? pb : it.pk; return tr0 + '<td class="v">' + f(pr) + '</td><td class="v">' + (c != null ? f(c) : '') + '</td><td class="v">' + (c != null ? f(pr - c) : '') + '</td><td class="v' + (c != null && pr < c ? ' neg' : '') + '">' + (c ? f((pr - c) / c * 100) + '%' : '') + '</td></tr>'; }
+        return tr0 + '<td class="v">' + esc(it.et || wt(it.e)) + '</td><td class="v">' + esc(it.d ? fmt(it.d) : '') + '</td><td class="v">' + (it.pk != null ? f(it.pk) : '-') + '</td><td class="v">' + (pb != null ? f(pb) : '') + '</td></tr>'; }
+      if (X) { const c1 = plCost(D, kind, it, '720'), c2 = plCost(D, kind, it, '1050'); return tr0 + '<td class="v">' + (it.p1 != null ? f(it.p1) : '-') + '</td><td class="v">' + (c1 != null ? f(c1) : '') + '</td><td class="v">' + (it.p2 != null ? f(it.p2) : '-') + '</td><td class="v">' + (c2 != null ? f(c2) : '') + '</td></tr>'; }
+      const bt = !!it.et; return tr0 + '<td class="v">' + (bt ? esc(it.et) : '720 g') + '</td><td class="v">' + (bt ? '' : '400 g') + '</td><td class="v">' + (it.p1 != null ? f(it.p1) : '-') + '</td><td class="v">' + (bt ? '' : '1050 g') + '</td><td class="v">' + (bt ? '' : '550 g') + '</td><td class="v">' + (it.p2 != null ? f(it.p2) : (bt ? '' : '-')) + '</td></tr>'; }).join('');
+  }).join('');
+  return ctl + head + (body ? csTbl(wd, th, body) : '<div class="empty">' + (custom ? 'اختار المنتجات من زرار «اختيار المنتجات».' : 'القائمة فاضية.') + '</div>') + '<div class="note" style="padding:8px 14px">السعر المكتوب هو السعر المعتمد (قطاعي). اضغط على أي صنف تعدل سعره أو وزنه أو ملاحظته. لو عايز قائمة لمنتجات معينة اختار «قائمة مخصصة» وبعدها PDF.</div>';
+}
+function openPLI(id, secIdx) {
+  const P = plData(); if (!P) return; const K = S.plK === 'برطمان' ? 'J' : 'B', L = P[K]; let si = -1, ii = -1;
+  if (id) L.secs.forEach((s2, a) => s2.items.forEach((it, b) => { if (it.id === id) { si = a; ii = b; } })); else si = secIdx != null ? secIdx : 0;
+  const it = id ? L.secs[si].items[ii] : { m:Math.max(0, ...L.secs.flatMap(s2 => s2.items.map(i => +i.m || 0))) + 1, n:'' };
+  S.hs = { type:'pli', K, id:id || '', si };
+  const prods = (S.fgW && S.fgW.D ? S.fgW.D : fgData() || { prods:[] }).prods.filter(p => p.k === (K === 'J' ? 'برطمان' : 'جردل')).map(p => p.n);
+  $('#hs-pn').innerHTML = '<datalist id="pli-dl">' + prods.map(n => '<option value="' + esc(n) + '">').join('') + '</datalist><h2 style="margin:0 0 6px;font-size:18px">' + (id ? 'تعديل صنف في القائمة' : 'صنف جديد في القائمة') + '</h2>' +
+    '<label for="pli-sec">القسم</label><select id="pli-sec">' + L.secs.map((s2, a) => '<option value="' + a + '"' + (a === si ? ' selected' : '') + '>' + esc(s2.t) + '</option>').join('') + '</select>' +
+    '<div class="grid"><div><label for="pli-m">م</label>' + fgIn('pli-m', it.m) + '</div><div><label for="pli-n">الصنف</label>' + fgIn('pli-n', it.n, '', 0) + '</div></div><label for="pli-note">ملاحظات</label>' + fgIn('pli-note', it.note, '', 0) +
+    (K === 'B' ? '<div class="grid"><div><label for="pli-e">وزن الصافي كجم</label>' + fgIn('pli-e', it.e) + '</div><div><label for="pli-d">وزن المصفي كجم</label>' + fgIn('pli-d', it.d) + '</div></div><label for="pli-pk">سعر الكيلو (القطاعي المعتمد)</label>' + fgIn('pli-pk', it.pk) + '<div class="note" id="pli-hint"></div><label for="pli-et">وزن بنص (للزجاجات مثلاً: كجم 250)</label>' + fgIn('pli-et', it.et, '', 0)
+      : '<div class="grid"><div><label for="pli-p1">سعر البرطمان 720 (قطاعي)</label>' + fgIn('pli-p1', it.p1) + '</div><div><label for="pli-p2">سعر البرطمان 1050 (قطاعي)</label>' + fgIn('pli-p2', it.p2) + '</div></div><label for="pli-et">وزن بنص (للزجاجات: كجم 250)</label>' + fgIn('pli-et', it.et, '', 0)) +
+    '<label for="pli-link">المنتج المرتبط (للتكلفة والربح)</label>' + fgIn('pli-link', it.link, 'اختياري', 0).replace('<input ', '<input list="pli-dl" ') +
+    '<div class="err" id="pli-err"></div><div class="actions"><button class="btn" id="pli-save">حفظ</button>' + (id ? '<button class="btn danger" id="pli-del">حذف</button>' : '') + '<button class="btn ghost" id="he-x">إغلاق</button></div>';
+  if (K === 'B') { const upd = () => { const a = num($('#pli-pk').value), d = num($('#pli-d').value); $('#pli-hint').textContent = a && d ? 'سعر الجردل = ' + fmt0(a * d) : ''; }; $('#pli-pk').oninput = upd; $('#pli-d').oninput = upd; upd(); }
+  hrRO(); $('#hsheet').classList.remove('hide');
+}
+function openPLS() {
+  const P = plData(); if (!P) return; const K = S.plK === 'برطمان' ? 'J' : 'B', L = P[K], sel = plSelGet(K); S.hs = { type:'pls', K };
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">اختيار المنتجات للقائمة</h2><div class="actions"><button class="btn ghost" id="pls-all">تحديد الكل</button><button class="btn ghost" id="pls-none">مسح الكل</button></div>' +
+    L.secs.map(sec => '<div class="note" style="margin-top:10px"><b>' + esc(sec.t) + '</b></div>' + sec.items.map(it => '<label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><input type="checkbox" data-sel="' + it.id + '" style="width:22px;height:22px;min-height:0"' + (sel.has(it.id) ? ' checked' : '') + '> ' + esc(it.n) + (it.et ? ' (' + esc(it.et) + ')' : '') + '</label>').join('')).join('') +
+    '<div class="actions"><button class="btn" id="pls-ok">تم</button></div>';
+  $('#hsheet').classList.remove('hide');
+}
+function plSheetClick(e) {
+  const t = e.target, g = id => $(id).value;
+  if (S.hs && S.hs.type === 'pls') {
+    const K = S.hs.K, sel = plSelGet(K), P = plData();
+    if (t.matches && t.matches('[data-sel]')) { if (t.checked) sel.add(t.dataset.sel); else sel.delete(t.dataset.sel); plSelSave(K); return false; }
+    if (t.closest('#pls-all')) { P[K].secs.forEach(s2 => s2.items.forEach(i => sel.add(i.id))); plSelSave(K); openPLS(); return true; }
+    if (t.closest('#pls-none')) { sel.clear(); plSelSave(K); openPLS(); return true; }
+    if (t.closest('#pls-ok')) { closeHS(); renderCS(); return true; }
+  }
+  if (S.hs && S.hs.type === 'pli') {
+    const K = S.hs.K, P = fgClone(plData()), L = P[K];
+    if (t.closest('#pli-del')) { if (!confirm('تمسح الصنف من القائمة؟')) return true; L.secs.forEach(s2 => { s2.items = s2.items.filter(i => i.id !== S.hs.id); }); docSave('pl2', 'pl2', P); closeHS(); renderCS(); return true; }
+    if (t.closest('#pli-save')) {
+      const n = cl(g('#pli-n')); if (!n) { $('#pli-err').textContent = 'اكتب اسم الصنف.'; return true; }
+      const it = { id:S.hs.id || 'n' + uid8(), m:cl(g('#pli-m')) === '' ? 0 : num(g('#pli-m')), n };
+      const note = cl(g('#pli-note')); if (note) it.note = note; const et = cl(g('#pli-et')); if (et) it.et = et; const link = cl(g('#pli-link')); if (link) it.link = link;
+      if (K === 'B') { for (const [k, id] of [['e', '#pli-e'], ['d', '#pli-d'], ['pk', '#pli-pk']]) if (cl(g(id)) !== '') it[k] = num(g(id)); } else { for (const [k, id] of [['p1', '#pli-p1'], ['p2', '#pli-p2']]) if (cl(g(id)) !== '') it[k] = num(g(id)); }
+      L.secs.forEach(s2 => { s2.items = s2.items.filter(i => i.id !== it.id); });
+      L.secs[+g('#pli-sec')].items.push(it); L.secs.forEach(s2 => s2.items.sort((a, b) => (+a.m || 0) - (+b.m || 0)));
+      docSave('pl2', 'pl2', P); closeHS(); renderCS(); toast('تم الحفظ'); return true;
+    }
+  }
+  return false;
 }
 function csTitle() {
   const D = fgData(), T = S.csTab || 's';
   if (T === 's') return 'التكاليف - البيعات';
   if (T === 'k') return S.rawView === 'p' ? 'التكاليف - أصناف الفاقد والتشغيل' : 'التكاليف - المخزون الخام';
   const V = S.fgView || 'p';
-  if (V === 'l' && D) { const { C } = fgPriceCtx(D); return 'قائمة الأسعار - ' + C.n + (S.plMode === 'i' ? ' (داخلية)' : ''); }
+  if (V === 'l') return 'قائمة الأسعار - ' + (S.plK === 'برطمان' ? 'برطمانات' : 'جرادل') + (S.plMode === 'c' && cl(S.plTitle) ? ' - ' + S.plTitle : '');
   return 'المنتج التام - ' + (V === 'c' ? 'العبوات والتكاليف' : V === 's' ? 'مخزن المنتج التام' : 'المنتجات');
 }
 function fgHTML(w) {
@@ -1507,7 +1569,7 @@ function fgHTML(w) {
   const tabs = '<div class="mrow" style="padding-top:6px"><div class="seg" style="margin:0"><button class="' + (V === 'p' ? 'on' : '') + '" data-fgv="p">المنتجات</button><button class="' + (V === 'c' ? 'on' : '') + '" data-fgv="c">العبوات والتكاليف</button><button class="' + (V === 's' ? 'on' : '') + '" data-fgv="s">مخزن المنتج التام</button><button class="' + (V === 'l' ? 'on' : '') + '" data-fgv="l">قائمة الأسعار</button></div></div>';
   if (V === 'c') return tabs + fgContHTML(D, w);
   if (V === 's') return tabs + fgStockHTML(D, w);
-  if (V === 'l') return tabs + fgPriceHTML(D);
+  if (V === 'l') return tabs + fgPriceHTML(D, w);
   const groups = [...new Set(D.prods.map(p => p.k))], K = groups.includes(S.fgKind) ? S.fgKind : groups[0];
   const rows = fgList(D).filter(x => x.p.k === K).sort((a, b) => csColl.compare(a.p.n, b.p.n) || a.k - b.k);
   return tabs + '<div class="mrow"><div class="seg" style="margin:0">' + groups.map(g => '<button class="' + (g === K ? 'on' : '') + '" data-fgk="' + esc(g) + '">' + esc(g) + '</button>').join('') + '</div></div>' +
@@ -1613,7 +1675,7 @@ function fgLines(D, p, z, units, k) {
 function fgProdEntries(D, f, units, k, date, ca) {
   const maxNo = Math.max(0, ...live().map(z => z.no || 0)), now = Date.now();
   return fgLines(D, f.p, f.z, units, k).map((l, n) => { const acc = ca[l.g], amt = l.q * l.p;
-    return { id:crypto.randomUUID(), no:maxNo + n + 1, date, stmt:'إنتاج منتج تام', dr:FG_STOCK, cr:acc, pa:f.name, pb:acc === 'المصروفات' ? l.n : '', prod:(acc === 'المصروفات' && l.g === 'op') ? f.name : l.n, qty:l.q, disc:0, price:l.p, amtD:amt, amtC:amt, star:false, opening:false, deleted:false, updated:now, dirty:true }; });
+    return { id:crypto.randomUUID(), no:maxNo + n + 1, date, stmt:'إنتاج منتج تام', dr:FG_STOCK, cr:acc, pa:f.name, pb:acc === 'المصروفات' ? 'تشغيل منتج' : '', prod:l.n, qty:l.q, disc:0, price:l.p, amtD:amt, amtC:amt, star:false, opening:false, deleted:false, updated:now, dirty:true }; });
 }
 async function fgKillBatch(id) { const d = S.docs.get(id); if (!d) return; for (const i of [].concat(d.data.e || [])) { const x = S.ent.get(i); if (x && !x.deleted) { Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }); await entPut(x); } } docSave('fb', id, d.data, true); }
 function openFB(bid, prodName) {
@@ -1627,7 +1689,7 @@ function openFB(bid, prodName) {
   $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">' + (b ? 'تعديل دفعة إنتاج' : 'تسجيل إنتاج') + '</h2><label for="fb-t">نوع العبوة</label><select id="fb-t">' + kinds.map(k => '<option' + (k === curK ? ' selected' : '') + '>' + esc(k) + '</option>').join('') + '</select>' +
     '<label for="fb-k">المنتج</label><select id="fb-k">' + opts(curK) + '</select>' +
     '<div class="grid"><div><label for="fb-u">العدد المنتج</label>' + fgIn('fb-u', b ? b.units : '') + '</div><div><label for="fb-c">تكلفة الوحدة</label>' + fgIn('fb-c', b ? b.cost : '') + '</div></div><label for="fb-d">التاريخ</label><input id="fb-d" type="date" value="' + esc(b ? b.date : todayStr()) + '">' +
-    '<div class="note" style="margin-top:12px"><b>القيود اللي هتتعمل:</b> قيد لكل خامة وقيد لكل بند تعبئة وقيد لكل بند تشغيل، كلها مدين «' + FG_STOCK + '». الخامات والعبوات بتتخصم بأسمائها من المخزون الخام (كمية وسعر).</div><div class="note" id="fb-parts"></div>' +
+    '<div class="note" style="margin-top:12px"><b>القيود اللي هتتعمل:</b> قيد لكل خامة وقيد لكل بند تعبئة وقيد لكل بند تشغيل، كلها مدين «' + FG_STOCK + '». الخامات والعبوات بتتخصم بأسمائها من المخزون الخام (كمية وسعر)، والتشغيل (عمالة ومحلول) بيتسجل دائن على المصروفات في بند «تشغيل منتج» تحت المصروفات التشغيلية.</div><div class="note" id="fb-parts"></div>' +
     '<label for="fb-ci">الخامات تتسحب من</label>' + sel('fb-ci', 'المخزون.الخام') + '<label for="fb-cp">العبوات تتسحب من</label>' + sel('fb-cp', 'المخزون.الخام') + '<label for="fb-co">التشغيل يتسحب من</label>' + sel('fb-co', 'المصروفات') +
     '<div class="err" id="fb-err"></div><div class="actions"><button class="btn" id="fb-save">حفظ</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
   const upd = () => { const x = fgMatch($('#fb-k').value); if (!x) { $('#fb-parts').textContent = ''; return; } const un = Math.max(1, num($('#fb-u').value) || 1), base = fgCost(D, x.p, x.z); if (!$('#fb-c').value) $('#fb-c').value = +base.toFixed(2); const k = base > 0 ? num($('#fb-c').value) / base : 1, L2 = fgLines(D, x.p, x.z, un, k); $('#fb-parts').textContent = 'خامات ' + fmt(L2.filter(l => l.g === 'ing').reduce((a, l) => a + l.q * l.p, 0) / un) + ' · عبوات ' + fmt(L2.filter(l => l.g === 'pk').reduce((a, l) => a + l.q * l.p, 0) / un) + ' · تشغيل ' + fmt(L2.filter(l => l.g === 'op').reduce((a, l) => a + l.q * l.p, 0) / un) + ' (للوحدة)'; };
@@ -1779,6 +1841,7 @@ function openChg(sid) {
 function csSheetClick(e) {
   const g = id => $(id).value;
   if (fgSheetClick(e)) return true;
+  if (plSheetClick(e)) return true;
   if (e.target.closest('#sd-chg')) { const sid = S.hs.sid; openChg(sid); return true; }
   if (e.target.closest('#cr-save')) { const raw = cl(g('#cr-raw')); if (!raw) { $('#cr-err').textContent = 'اكتب الخام.'; return true; } docSave('cr', S.hs.id || 'cr:' + uid8(), { raw, loss:Math.min(0.95, Math.max(0, num(g('#cr-loss')) / 100)) }); closeHS(); renderCS(); toast('تم الحفظ'); return true; }
   if (e.target.closest('#cr-del')) { docSave('cr', S.hs.id, S.docs.get(S.hs.id).data, true); closeHS(); renderCS(); return true; }
@@ -1808,6 +1871,11 @@ async function csBodyClick(e) {
   const sd = t0.closest('[data-sd]'); if (sd) return openSD(sd.dataset.sd);
   const pk = t0.closest('[data-plk]'); if (pk) { S.plK = pk.dataset.plk; S.plC = ''; return renderCS(); }
   const pm = t0.closest('[data-plm]'); if (pm) { S.plMode = pm.dataset.plm; return renderCS(); }
+  if (t0.closest('[data-plx]')) { S.plX = !S.plX; return renderCS(); }
+  if (t0.closest('#pl-sel')) return openPLS();
+  const pli = t0.closest('[data-pli]'); if (pli && canWrite()) return openPLI(pli.dataset.pli);
+  if (t0.closest('#pl-add') && canWrite()) return openPLI(null, 0);
+  if (t0.closest('#pl-adds') && canWrite()) { const nm = cl(prompt('اسم القسم الجديد')); if (nm) { const P = fgClone(plData()), K = S.plK === 'برطمان' ? 'J' : 'B'; P[K].secs.push({ t:nm, items:[] }); docSave('pl2', 'pl2', P); renderCS(); } return; }
   const rv = t0.closest('[data-rv]'); if (rv) { S.rawView = rv.dataset.rv; return renderCS(); }
   const sf = t0.closest('[data-fgsf]'); if (sf) { S.fgSF = sf.dataset.fgsf; return renderCS(); }
   const bp = t0.closest('[data-fbp]'); if (bp) return openFBP(bp.dataset.fbp);
@@ -2389,7 +2457,7 @@ async function init() {
     if (S.accMode === 'g') { S.expGroup = row.name; renderAcc(); } else openStm(row.name); };
   $('#acc-allx').onclick = () => { S.expGroup = '*'; renderAcc(); };
   $('#hr-back').onclick = back; $('#cs-back').onclick = back; $('#e-cr').addEventListener('change', csSrcUpdate);
-  $('#cs-t1').onclick = () => { S.csTab = 's'; renderCS(); }; $('#cs-t2').onclick = () => { S.csTab = 'k'; renderCS(); }; $('#cs-t4').onclick = () => { S.csTab = 'g'; renderCS(); }; $('#cs-body').onclick = csBodyClick; $('#cs-body').onchange = e => { if (e.target.id === 'pl-c') { S.plC = e.target.value; renderCS(); } }; $('#cs-pdf').onclick = () => doPrint(csTitle()); $('#hr-pdf').onclick = () => { if (S.hrTab === 'p') doPrint($('#ph-t').textContent); else toast('الطباعة من تبويب كشف الرواتب'); };
+  $('#cs-t1').onclick = () => { S.csTab = 's'; renderCS(); }; $('#cs-t2').onclick = () => { S.csTab = 'k'; renderCS(); }; $('#cs-t4').onclick = () => { S.csTab = 'g'; renderCS(); }; $('#cs-body').onclick = csBodyClick; $('#cs-body').oninput = e => { if (e.target.id === 'pl-title') S.plTitle = e.target.value; }; $('#cs-pdf').onclick = () => doPrint(csTitle()); $('#hr-pdf').onclick = () => { if (S.hrTab === 'p') doPrint($('#ph-t').textContent); else toast('الطباعة من تبويب كشف الرواتب'); };
   $('#hr-t1').onclick = () => { S.hrTab = 'p'; renderHR(); }; $('#hr-t2').onclick = () => { S.hrTab = 'a'; renderHR(); }; $('#hr-t3').onclick = () => { S.hrTab = 'e'; renderHR(); };
   $('#hr-month').onchange = e => { S.hrMonth = e.target.value; hrPayroll(); };
   $('#hr-tb').onclick = e => { const r = e.target.closest('tr[data-id]'); if (r && r.dataset.id) openSlip(r.dataset.id); };
