@@ -238,6 +238,19 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
 #toast{position:fixed;left:16px;right:16px;bottom:calc(96px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s;text-align:center}
 #toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
+.aup{margin:10px 12px 0;background:var(--paper);border-radius:14px;box-shadow:var(--sh);padding:13px}
+.aug{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.aum small{display:block;color:var(--muted);font-size:13px}.aum b{font-size:21px;font-variant-numeric:tabular-nums}.aum b.neg{color:var(--red)}
+.auf{display:flex;gap:8px;margin-top:12px}.auf input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;background:#fff;color:var(--ink)}.auf .btn{min-height:44px;padding:8px 14px}
+.aur{margin-top:10px;font-size:15px}.aur .bad{color:var(--red);font-weight:800;font-size:17px}.aur .ok{color:var(--green-d);font-weight:800}
+.auc{display:flex;gap:8px;overflow-x:auto;padding:6px 12px 8px;-webkit-overflow-scrolling:touch}
+.auc button{flex:none;border:1.5px solid var(--line);background:var(--paper);border-radius:20px;padding:7px 13px;font-weight:700;color:var(--muted);white-space:nowrap;font-size:14px}
+.auc button.on{background:var(--green);border-color:var(--green);color:#fff}
+.auc button b{margin-inline-start:6px;font-variant-numeric:tabular-nums}
+.aucard .aub{display:inline-block;font-size:12px;font-weight:700;border-radius:8px;padding:2px 8px;margin-bottom:6px}
+.aucard .aud,.aucard .aux{color:var(--muted);font-size:13px;margin-top:3px}
+.aucard .auf2{color:var(--green-d);font-size:13.5px;margin-top:6px}
+.aucard .actions{margin-top:10px}
 </style>
 </head>
 <body>
@@ -361,7 +374,9 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
 
     <section id="v-au" class="hide">
       <div class="sub"><button id="au-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>الرقيب</b></div>
+      <div id="au-top"></div>
       <div class="count" id="au-sum"></div>
+      <div class="auc" id="au-cats"></div>
       <div id="au-list"></div>
     </section>
 
@@ -897,48 +912,156 @@ function rowHTML(e) {
     (e.pb ? '<span>' + esc(e.pb) + '</span>' : '') + (e.prod ? '<span>' + esc(e.prod) + '</span>' : '') + '</div></button>';
 }
 
-/* ---------- الرقيب: مراجعة القيود والأرصدة وتنبيهات الأخطاء المحتملة ---------- */
+/* ---------- الرقيب: رقابة محاسبية على القيود والخزينة والأرصدة ---------- */
 const AU_AUTO = /^(تكاليف|إنتاج منتج تام|تسوية جرد)$/;
+const AU_CATS = [['cash', 'الخزينة'], ['data', 'بيانات ناقصة'], ['calc', 'حسابات'], ['dup', 'تكرار'], ['price', 'أسعار ومبالغ'], ['bal', 'أرصدة وأسماء'], ['seq', 'ترقيم']];
+const auCatN = k => (AU_CATS.find(c => c[0] === k) || [k, k])[1];
 const auIgn = k => { const d = S.docs.get('ign:' + k); return !!(d && !d.deleted); };
+const auMed = a => { const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : 0; };
+/* رصيد الخزينة يوم بيوم (بنفس منطق الدفاتر: مدين زيادة، دائن نقص) */
+function auCash() {
+  const m = new Map();
+  for (const e of live()) { const s = side(e, 'الخزينة'); if (!s) continue; let o = m.get(e.date); if (!o) m.set(e.date, o = { d:0, c:0, es:[] }); o.d += s.d; o.c += s.c; o.es.push({ e, in:s.d, out:s.c }); }
+  const rows = []; let bal = 0, negDays = 0;
+  for (const k of [...m.keys()].sort()) { const o = m.get(k), prev = bal; bal += o.d - o.c; if (bal < -0.5) negDays++; rows.push({ date:k, prev, bal, d:o.d, c:o.c, es:o.es }); }
+  return { rows, bal, negDays };
+}
 function auChecks() {
-  const out = [], all = live().filter(e => !e.opening && !AU_AUTO.test(cl(e.stmt))), today = todayStr();
-  const add = (key, sev, title, e, extra) => out.push({ key, sev, title, e, extra: extra || '' });
+  const out = [], today = todayStr(), full = live();
+  const all = full.filter(e => !e.opening && !AU_AUTO.test(cl(e.stmt)));
+  const add = (cat, key, sev, title, e, extra, fix) => out.push({ cat, key, sev, title, e, extra: extra || '', fix: fix || '' });
   const pairs = new Map(); for (const e of all) if (e.dr && e.cr) { const st = cl(e.stmt), m = pairs.get(st) || new Map(), k = e.dr + '|' + e.cr; m.set(k, (m.get(k) || 0) + 1); pairs.set(st, m); }
-  const seen = new Map(), nos = new Map();
+  const nos = new Map(), grp = new Map(), mon = new Map(), amtG = new Map(), prG = new Map();
   for (const e of all) {
-    if (PARTY_ACC.includes(e.dr) && !cl(e.pa)) add('np:' + e.id + ':d', 'e', 'اسم الطرف المدين فاضي (' + accT(e.dr) + ')', e);
-    if (PARTY_ACC.includes(e.cr) && !cl(e.pb)) add('np:' + e.id + ':c', 'e', 'اسم الطرف الدائن فاضي (' + accT(e.cr) + ')', e);
-    if (!(e.amtD > 0) || Math.abs(e.amtD - e.amtC) > 0.005) add('am:' + e.id, 'e', 'المبلغ صفر أو المدين مش بيساوي الدائن', e);
-    if (e.date > today && dAt(e.date) - dAt(today) > 86400000) add('fd:' + e.id, 'e', 'تاريخ في المستقبل', e);
-    if (!e.dr || !e.cr || e.dr === e.cr) add('ac:' + e.id, 'e', 'حساب مدين أو دائن ناقص أو متكرر', e);
-    if (e.qty > 0 && e.price > 0) { const c = e.qty * (1 - (e.disc || 0)) * e.price; if (Math.abs(c - e.amtD) > Math.max(1, e.amtD * 0.01)) add('mm:' + e.id, 'w', 'المبلغ مش مطابق (الكمية بعد الخصم × السعر = ' + fmt(c) + ')', e); }
-    if (e.qty > 0 && !cl(e.prod) && (e.dr === 'المشتريات' || /^مبيعات/.test(e.cr || ''))) add('np2:' + e.id, 'w', 'كمية من غير منتج', e);
-    if ((e.dr === 'المصروفات' || e.cr === 'المصروفات') && (expItem(e) === 'بدون اسم' || EXP_GEN.has(expItem(e)))) add('ex:' + e.id, 'w', 'مصروف من غير بند محدد', e);
-    const m = pairs.get(cl(e.stmt)); if (m && e.dr && e.cr) { let tot = 0, best = '', bn = 0; for (const [k, c] of m) { tot += c; if (c > bn) { bn = c; best = k; } } if (tot >= 6 && bn / tot >= 0.9 && best !== e.dr + '|' + e.cr) add('us:' + e.id, 'w', 'حسابات غير معتادة للبيان ده — المعتاد: ' + best.replace('|', ' ← '), e);
+    const SALE = e.cr === 'مبيعات توريد', BUY = e.dr === 'المشتريات';
+    /* بيانات ناقصة */
+    if (PARTY_ACC.includes(e.dr) && !cl(e.pa)) add('data', 'np:' + e.id + ':d', 'e', 'اسم الطرف المدين فاضي (' + accT(e.dr) + ')', e, '', 'افتح القيد واختار الاسم');
+    if (PARTY_ACC.includes(e.cr) && !cl(e.pb)) add('data', 'np:' + e.id + ':c', 'e', 'اسم الطرف الدائن فاضي (' + accT(e.cr) + ')', e, '', 'افتح القيد واختار الاسم');
+    if (!e.dr || !e.cr || e.dr === e.cr) add('data', 'ac:' + e.id, 'e', 'حساب مدين أو دائن ناقص أو متكرر', e, '', 'افتح القيد وصحّح الحسابات');
+    if (e.date > today && dAt(e.date) - dAt(today) > 86400000) add('data', 'fd:' + e.id, 'e', 'تاريخ في المستقبل', e, '', 'راجع التاريخ');
+    if (e.qty > 0 && !cl(e.prod) && (BUY || /^مبيعات/.test(e.cr || ''))) add('data', 'np2:' + e.id, 'w', 'كمية من غير منتج', e, '', 'اكتب اسم المنتج');
+    if ((e.dr === 'المصروفات' || e.cr === 'المصروفات') && (expItem(e) === 'بدون اسم' || EXP_GEN.has(expItem(e)))) add('data', 'ex:' + e.id, 'w', 'مصروف من غير بند محدد', e, '', 'حدد بند المصروف عشان يتحلل صح');
+    if ((e.dr === 'الخزينة' || e.cr === 'الخزينة') && !cl(e.stmt)) add('cash', 'cs:' + e.id, 'w', 'قيد خزينة من غير بيان', e, '', 'اكتب بيان للقيد عشان تقدر تراجعه');
+    /* حسابات */
+    if (!(e.amtD > 0) || Math.abs(e.amtD - e.amtC) > 0.005) add('calc', 'am:' + e.id, 'e', 'المبلغ صفر أو المدين مش بيساوي الدائن', e, 'مدين ' + fmt(e.amtD) + ' · دائن ' + fmt(e.amtC), 'صحّح المبلغ');
+    if (e.qty > 0 && e.price > 0) { const c = e.qty * (1 - (e.disc || 0)) * e.price, d = e.amtD - c; if (Math.abs(d) > Math.max(1, e.amtD * 0.01)) add('calc', 'mm:' + e.id, 'e', 'المبلغ مش بيساوي الكمية × السعر', e, 'المبلغ ' + fmt(e.amtD) + ' · الكمية بعد الخصم × السعر = ' + fmt(c) + ' · الفرق ' + fmt(d), 'راجع الكمية والسعر والخصم أو صحّح المبلغ'); }
+    if ((SALE || BUY) && e.amtD > 0) {
+      if (e.qty > 0 && !(e.price > 0)) add('calc', 'nq:' + e.id, 'w', (SALE ? 'بيع' : 'شراء') + ' فيه كمية من غير سعر', e, '', 'اكتب سعر الوحدة');
+      else if (e.price > 0 && !(e.qty > 0)) add('calc', 'nq:' + e.id, 'w', (SALE ? 'بيع' : 'شراء') + ' فيه سعر من غير كمية', e, '', 'اكتب الكمية');
     }
-    const dk = [e.date, cl(e.stmt), e.dr, e.cr, cl(e.pa), cl(e.pb), cl(e.prod), e.amtD].join('|'); if (seen.has(dk)) { add('du:' + e.id, 'w', 'شبه مكرر لقيد رقم ' + seen.get(dk).no, e); } else seen.set(dk, e);
-    if (e.no) { if (nos.has(e.no)) add('dn:' + e.id, 'e', 'رقم القيد مكرر مع قيد تاني', e); else nos.set(e.no, e); }
+    const m = pairs.get(cl(e.stmt)); if (m && e.dr && e.cr) { let tot = 0, best = '', bn = 0; for (const [k, c] of m) { tot += c; if (c > bn) { bn = c; best = k; } } if (tot >= 6 && bn / tot >= 0.9 && best !== e.dr + '|' + e.cr) add('data', 'us:' + e.id, 'w', 'حسابات غير معتادة للبيان ده', e, 'المعتاد: ' + best.replace('|', ' ← '), 'اتأكد إن الحسابين صح');
+    }
+    /* ترقيم */
+    if (e.no) { if (nos.has(e.no)) add('seq', 'dn:' + e.id, 'e', 'رقم القيد مكرر مع قيد تاني', e, 'نفس الرقم في قيد ' + nos.get(e.no).date, 'غيّر رقم أحد القيدين'); else nos.set(e.no, e); }
+    /* تجميع للمقارنات */
+    const sg = [cl(e.stmt), e.dr, e.cr, cl(e.pa), cl(e.pb), cl(e.prod), e.qty || 0, e.amtD].join('|');
+    const dg = e.date + '|' + sg; let L = grp.get(dg); if (!L) grp.set(dg, L = []); L.push(e);
+    let ms = mon.get(sg); if (!ms) mon.set(sg, ms = new Set()); ms.add(e.date.slice(0, 7));
+    if (e.amtD > 0 && e.dr && e.cr && !(e.qty > 0)) { const ak = cl(e.stmt) + '|' + e.dr + '|' + e.cr; let A = amtG.get(ak); if (!A) amtG.set(ak, A = []); A.push(e); }
+    if ((SALE || BUY) && e.qty > 0 && e.price > 0 && cl(e.prod)) { const pk = (SALE ? 's|' : 'b|') + cl(e.prod); let P = prG.get(pk); if (!P) prG.set(pk, P = []); P.push(e); }
   }
-  const bal = (A, sign, title) => { for (const r of sumRows(A, '*')) { const b = sign * (r.d - r.c); if (b < -0.5 && r.name !== NONAME) add('bl:' + A + ':' + r.name, 'w', title + ' — ' + r.name, null, 'الرصيد ' + fmt(b)); } };
+  /* تكرار: نفس التاريخ وكل التفاصيل، وقيدين قريبين في الترقيم. اللي بيتكرر كل شهر بشكل منتظم مش بنعتبره تكرار */
+  for (const [dg, L] of grp) {
+    if (L.length < 2) continue;
+    const sg = dg.slice(dg.indexOf('|') + 1); if ((mon.get(sg) || { size:0 }).size >= 3) continue;
+    L.sort((a, b) => (a.no || 0) - (b.no || 0));
+    for (let i = 1; i < L.length; i++) if ((L[i].no || 0) - (L[i - 1].no || 0) <= 10) add('dup', 'du:' + L[i].id, 'w', 'احتمال قيد متكرر بالغلط (زي قيد ' + L[i - 1].no + ')', L[i], 'نفس التاريخ والحسابات والأسماء والكمية والمبلغ', 'لو متكرر بالغلط امسحه. لو عملية حقيقية تانية دوس تجاهل');
+  }
+  /* مبالغ شاذة عن المعتاد لنفس البيان والحسابات (غالبًا صفر زيادة أو ناقص) */
+  for (const L of amtG.values()) {
+    if (L.length < 12) continue; const med = auMed(L.map(x => x.amtD)); if (!(med > 0)) continue;
+    for (const e of L) if (e.amtD >= med * 10 || e.amtD <= med / 20) add('price', 'ol:' + e.id, 'w', e.amtD > med ? 'مبلغ أكبر بكتير من المعتاد للبيان ده' : 'مبلغ أصغر بكتير من المعتاد للبيان ده', e, 'المعتاد حوالي ' + fmt(med) + ' · القيد ده ' + fmt(e.amtD), 'اتأكد إن مفيش صفر زيادة أو ناقص');
+  }
+  /* سعر الوحدة بعيد عن اللي اتباع/اتشرى بيه نفس المنتج في الشهرين حواليه */
+  for (const L of prG.values()) {
+    if (L.length < 5) continue; L.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    for (const e of L) {
+      const nb = L.filter(x => x !== e && Math.abs(dAt(x.date) - dAt(e.date)) <= 45 * 86400000); if (nb.length < 4) continue;
+      const med = auMed(nb.map(x => x.price)); if (!(med > 0) || Math.abs(e.price - med) / med <= 0.4) continue;
+      if (nb.filter(x => Math.abs(x.price - e.price) < 0.005).length >= 2) continue;
+      add('price', 'pr:' + e.id, 'w', 'سعر الوحدة بعيد عن المعتاد للمنتج ده', e, 'السعر ' + fmt(e.price) + ' · المعتاد حوالي ' + fmt(med) + ' (من ' + nb.length + ' قيد حواليه)', 'لو السعر صح دوس تجاهل');
+    }
+  }
+  /* أرصدة */
+  const bal = (A, sign, title) => { for (const r of sumRows(A, '*')) { const b = sign * (r.d - r.c); if (b < -0.5 && r.name !== NONAME) add('bal', 'bl:' + A + ':' + r.name, 'w', title + ' — ' + r.name, null, 'الرصيد ' + fmt(b), 'راجع قيود الطرف ده: ممكن دفعة اتسجلت مرتين أو فاتورة ناقصة'); } };
   bal('العملاء', 1, 'عميل رصيده دائن (دفع أكتر من المطلوب)'); bal('الموردين', -1, 'مورد اتدفع له أكتر من المستحق'); bal('العهد.الماليه', 1, 'اتصرف من العهدة أكتر من اللي اتسلّم');
-  for (const x of csStock().values()) if (x.q < -0.001) add('ns:' + csKey(x.name), 'w', 'رصيد مخزون خام بالسالب — ' + x.name, null, 'الكمية ' + fmt(x.q));
+  for (const x of csStock().values()) if (x.q < -0.001) add('bal', 'ns:' + csKey(x.name), 'w', 'رصيد مخزون خام بالسالب — ' + x.name, null, 'الكمية ' + fmt(x.q), 'راجع قيود الوارد والصادر للصنف ده');
+  /* أسماء الأطراف: نفس الاسم بأكتر من شكل بيقسّم الرصيد */
+  for (const A of PARTY_ACC) {
+    const g = new Map();
+    for (const e of full) { const s = side(e, A), raw = s && cl(s.party); if (!raw) continue; const k = nrm(raw); let o = g.get(k); if (!o) g.set(k, o = new Map()); o.set(raw, (o.get(raw) || 0) + 1); }
+    for (const [k, o] of g) if (o.size > 1) add('bal', 'sp:' + A + ':' + k, 'w', 'نفس الاسم مكتوب بأكتر من شكل (' + accT(A) + ')', null, [...o.entries()].sort((a, b) => b[1] - a[1]).map(x => x[0] + ' (' + x[1] + ')').join(' · '), 'وحّد الاسم في القيود عشان الرصيد ميتقسمش');
+  }
+  /* اسم ظهر مرة أو اتنين بس ومش في قائمة الأسماء المعتمدة: غالبًا غلطة إملائية */
+  const listed = new Map(); for (const p of S.party || []) { let s = listed.get(p.account); if (!s) listed.set(p.account, s = new Set()); s.add(nrm(cl(p.name))); }
+  for (const A of PARTY_ACC) {
+    const L = listed.get(A); if (!L || L.size < 3) continue; const g = new Map();
+    for (const e of full) { const s = side(e, A), raw = s && cl(s.party); if (!raw || L.has(nrm(raw))) continue; const k = nrm(raw), o = g.get(k) || { raw, n:0, e }; o.n++; o.e = e; g.set(k, o); }
+    for (const [k, o] of g) if (o.n <= 2) add('bal', 'ul:' + A + ':' + k, 'w', 'اسم مش في قائمة ' + accT(A) + ' — ' + o.raw, o.e, 'ظهر في ' + o.n + ' قيد بس', 'لو غلطة إملائية صحّحها. لو طرف جديد ضيفه للقائمة');
+  }
+  /* أرقام قيود ناقصة خالص (مش محذوفة): ممكن تكون قيود ضاعت */
+  const nums = new Set(); let mx = 0; for (const e of S.ent.values()) if (e.no > 0) { nums.add(e.no); if (e.no > mx) mx = e.no; }
+  for (let i = 1, n = 0; i <= mx && n < 40; i++) if (!nums.has(i)) { let j = i; while (j < mx && !nums.has(j + 1)) j++; n++; add('seq', 'gp:' + i + '-' + j, 'w', i === j ? 'رقم قيد ناقص: ' + i : 'أرقام قيود ناقصة من ' + i + ' إلى ' + j + ' (' + (j - i + 1) + ' قيد)', null, '', 'لو القيود دي اتمسحت بالغلط رجّعها من الإكسل. لو متأكد إنها مش موجودة دوس تجاهل'); i = j; }
+  /* الخزينة */
+  for (const r of auCash().rows) if (r.bal < -0.5 && r.prev >= -0.5) {
+    const sus = r.es.slice().sort((a, b) => b.out - a.out)[0];
+    add('cash', 'cn:' + r.date, 'e', 'الخزينة نزلت تحت الصفر يوم ' + r.date, sus ? sus.e : null, 'الرصيد قبل اليوم ' + fmt(r.prev) + ' · داخل ' + fmt(r.d) + ' · خارج ' + fmt(r.c) + ' · بعده ' + fmt(r.bal), 'القيد المعروض أكبر صرف في اليوم ده. راجع قيود الخزينة قبله');
+  }
   return out;
 }
-const auCount = () => { try { return auChecks().filter(a => !auIgn(a.key)).length; } catch (x) { return 0; } };
+let _au = null, _auSig = '';
+function auAll() {
+  let m = 0, dm = 0; for (const e of S.ent.values()) if (e.updated > m) m = e.updated; for (const d of S.docs.values()) if (d.updated > dm) dm = d.updated;
+  const sig = [S.ent.size, m, S.docs.size, dm, (S.party || []).length, todayStr()].join(':');
+  if (!_au || sig !== _auSig) { _au = auChecks(); _auSig = sig; }
+  return _au;
+}
+const auCount = () => { try { return auAll().filter(a => !auIgn(a.key)).length; } catch (x) { return 0; } };
+function auCashHTML(C) {
+  const raw = S.auCash || '', has = raw !== '' && /\d/.test(raw);
+  let res = '';
+  if (has) {
+    const diff = num(raw) - C.bal, ad = Math.abs(diff);
+    if (ad < 0.5) res = '<div class="aur"><span class="ok">✓ الخزينة متطابقة مع الدفاتر</span></div>';
+    else {
+      res = '<div class="aur"><span class="bad">' + (diff < 0 ? 'عجز ' : 'زيادة ') + fmt(ad) + '</span> <span style="color:var(--muted)">(الفعلي ' + fmt(num(raw)) + ' − الدفاتر ' + fmt(C.bal) + ')</span></div>';
+      const cand = [], near = (x, y) => Math.abs(x - y) <= 0.51, rec = diff < 0 ? 'in' : 'out', kind = diff < 0 ? 'قبض' : 'صرف';
+      for (const r of C.rows) for (const x of r.es) { const v = x[rec]; if (!(v > 0)) continue; if (near(v, ad)) cand.push({ x, why:kind + ' بنفس مبلغ الفرق — ممكن يكون اتسجل مرتين' }); else if (near(v * 2, ad)) cand.push({ x, why:kind + ' مبلغه نص الفرق — ممكن كان المفروض يتسجل بالاتجاه التاني' }); }
+      cand.sort((a, b) => b.x.e.date.localeCompare(a.x.e.date));
+      res += cand.length ? '<div class="aux" style="margin-top:8px">قيود تستاهل المراجعة:</div>' + cand.slice(0, 8).map(c => '<div class="kv" style="padding:8px 0"><span>' + esc(c.x.e.no) + ' · ' + esc(c.x.e.date) + ' · ' + esc(c.x.e.stmt || '—') + (c.x.e.pa || c.x.e.pb ? ' · ' + esc(c.x.e.pa || c.x.e.pb) : '') + '<br><small style="color:var(--muted)">' + esc(c.why) + '</small></span><span><span dir="ltr">' + fmt(c.x[rec]) + '</span> <button class="btn ghost" style="min-height:36px;padding:4px 10px" data-auo="' + c.x.e.id + '">افتح</button></span></div>').join('') :
+        '<div class="aux" style="margin-top:8px">مفيش قيد خزينة بالمبلغ ده. غالبًا فيه صرف أو قبض اتعمل ومتسجلش، شوف تبويب «ترقيم» لو فيه قيود ناقصة.</div>';
+    }
+  }
+  return '<div class="aup"><div class="aug"><div class="aum"><small>رصيد الخزينة بالدفاتر</small><b dir="ltr" class="' + (C.bal < -0.5 ? 'neg' : '') + '">' + fmt(C.bal) + '</b></div><div class="aum"><small>أيام الرصيد فيها سالب</small><b class="' + (C.negDays ? 'neg' : '') + '">' + C.negDays + '</b></div></div>' +
+    '<div class="auf"><input id="au-cc" inputmode="decimal" dir="ltr" placeholder="الفلوس الفعلية في الخزنة" value="' + esc(raw) + '"><button class="btn" id="au-cc-go">احسب العجز</button></div>' + res + '</div>';
+}
 function renderAU() {
-  const A = auChecks(), act = A.filter(a => !auIgn(a.key)), ign = A.filter(a => auIgn(a.key)), show = S.auIgn ? A : act, w = canWrite();
-  const er = act.filter(a => a.sev === 'e').length;
-  $('#au-sum').innerHTML = act.length ? '<b style="color:var(--red)">' + er + ' أخطاء</b> · ' + (act.length - er) + ' تنبيهات للمراجعة' + (ign.length ? ' · <a href="#" id="au-tg">' + (S.auIgn ? 'إخفاء' : 'عرض') + ' المتجاهَل (' + ign.length + ')</a>' : '') : '✓ مفيش أخطاء ولا تنبيهات' + (ign.length ? ' · <a href="#" id="au-tg">عرض المتجاهَل (' + ign.length + ')</a>' : '');
-  const ord = { e:0, w:1 }; show.sort((a, b) => ord[a.sev] - ord[b.sev]);
-  $('#au-list').innerHTML = show.slice(0, 200).map(a => { const e = a.e, ig = auIgn(a.key);
-    return '<div class="hrow np" style="' + (ig ? 'opacity:.55' : '') + '"><div class="n" style="color:' + (a.sev === 'e' ? 'var(--red)' : 'inherit') + '">' + (a.sev === 'e' ? '✗ ' : '⚠ ') + esc(a.title) + '</div>' +
-      (e ? '<div class="kv"><span>قيد ' + esc(e.no) + ' · ' + esc(e.date) + ' · ' + esc(e.stmt) + '</span><span dir="ltr">' + esc(fmt(e.amtD)) + '</span></div><div style="color:var(--muted);font-size:13px">' + esc(e.dr) + (e.pa ? ' (' + esc(e.pa) + ')' : '') + ' ← ' + esc(e.cr) + (e.pb ? ' (' + esc(e.pb) + ')' : '') + '</div>' : '<div style="color:var(--muted);font-size:13px">' + esc(a.extra) + '</div>') +
-      '<div class="actions">' + (e ? '<button class="btn" data-auo="' + e.id + '">افتح القيد</button>' : '') + (w ? '<button class="btn ghost" data-aui="' + esc(a.key) + '">' + (ig ? 'رجّع التنبيه' : 'تجاهل') + '</button>' : '') + '</div></div>'; }).join('') + (show.length > 200 ? '<div class="empty">أول 200 بس. صلّح اللي فوق وهتظهر الباقي.</div>' : '');
+  if (S.auCash == null) { try { S.auCash = localStorage.getItem('au_cash') || ''; } catch (x) { S.auCash = ''; } }
+  const A = auAll(), w = canWrite(), act = A.filter(a => !auIgn(a.key)), ign = A.length - act.length;
+  const er = act.filter(a => a.sev === 'e').length, cat = S.auCat || '*', lim = S.auLim || 40;
+  $('#au-top').innerHTML = auCashHTML(auCash());
+  $('#au-sum').innerHTML = (act.length ? '<b style="color:var(--red)">' + er + ' خطأ</b> · <span style="color:var(--amber);font-weight:700">' + (act.length - er) + ' تنبيه</span>' : '✓ مفيش أخطاء ولا تنبيهات') + (ign ? ' · <a href="#" id="au-tg">' + (S.auIgn ? 'إخفاء' : 'عرض') + ' المتجاهَل (' + ign + ')</a>' : '');
+  const pool = S.auIgn ? A : act, cnt = {}; for (const a of pool) cnt[a.cat] = (cnt[a.cat] || 0) + 1;
+  $('#au-cats').innerHTML = '<button data-auc="*" class="' + (cat === '*' ? 'on' : '') + '">الكل<b>' + pool.length + '</b></button>' + AU_CATS.filter(c => cnt[c[0]]).map(c => '<button data-auc="' + c[0] + '" class="' + (cat === c[0] ? 'on' : '') + '">' + c[1] + '<b>' + cnt[c[0]] + '</b></button>').join('');
+  const ci = k => AU_CATS.findIndex(c => c[0] === k), ord = { e:0, w:1 };
+  const show = pool.filter(a => cat === '*' || a.cat === cat).sort((a, b) => ord[a.sev] - ord[b.sev] || ci(a.cat) - ci(b.cat) || ((b.e && b.e.date) || '').localeCompare((a.e && a.e.date) || ''));
+  $('#au-list').innerHTML = show.slice(0, lim).map(a => { const e = a.e, ig = auIgn(a.key), c = a.sev === 'e' ? 'var(--red)' : 'var(--amber)';
+    return '<div class="hrow aucard" style="border-inline-start:5px solid ' + c + ';' + (ig ? 'opacity:.55' : '') + '"><span class="aub" style="background:' + (a.sev === 'e' ? '#FDE4E2' : '#FFF1D6') + ';color:' + c + '">' + (a.sev === 'e' ? 'خطأ' : 'تنبيه') + ' · ' + esc(auCatN(a.cat)) + '</span>' +
+      '<div class="n">' + esc(a.title) + '</div>' +
+      (e ? '<div class="kv"><span>قيد ' + esc(e.no) + ' · ' + esc(e.date) + ' · ' + esc(e.stmt || '—') + '</span><span dir="ltr">' + esc(fmt(e.amtD)) + '</span></div><div class="aud">' + esc(e.dr) + (e.pa ? ' (' + esc(e.pa) + ')' : '') + ' ← ' + esc(e.cr) + (e.pb ? ' (' + esc(e.pb) + ')' : '') + (e.prod ? ' · ' + esc(e.prod) + (e.qty ? ' ' + esc(fmt(e.qty)) + (e.price ? ' × ' + esc(fmt(e.price)) : '') : '') : '') + '</div>' : '') +
+      (a.extra ? '<div class="aux">' + esc(a.extra) + '</div>' : '') + (a.fix ? '<div class="auf2">الحل: ' + esc(a.fix) + '</div>' : '') +
+      '<div class="actions">' + (e ? '<button class="btn" data-auo="' + e.id + '">افتح القيد</button>' : '') + (w ? '<button class="btn ghost" data-aui="' + esc(a.key) + '">' + (ig ? 'رجّع التنبيه' : 'تجاهل') + '</button>' : '') + '</div></div>'; }).join('') +
+    (show.length > lim ? '<div style="padding:4px 12px 16px"><button class="btn ghost" id="au-more" style="width:100%">عرض المزيد (باقي ' + (show.length - lim) + ')</button></div>' : '') +
+    (!show.length && act.length === 0 ? '' : !show.length ? '<div class="empty">مفيش حاجة في القسم ده.</div>' : '');
 }
 function auClick(e) {
-  if (e.target.id === 'au-tg') { e.preventDefault(); S.auIgn = !S.auIgn; return renderAU(); }
-  const o = e.target.closest('[data-auo]'); if (o) return openForm(o.dataset.auo);
-  const i = e.target.closest('[data-aui]'); if (i && canWrite()) { const k = i.dataset.aui; docSave('ded', 'ign:' + k, { ign:1 }, auIgn(k)); renderAU(); }
+  const t = e.target;
+  if (t.id === 'au-tg') { e.preventDefault(); S.auIgn = !S.auIgn; return renderAU(); }
+  const c = t.closest('[data-auc]'); if (c) { S.auCat = c.dataset.auc; S.auLim = 40; return renderAU(); }
+  if (t.closest('#au-more')) { S.auLim = (S.auLim || 40) + 40; return renderAU(); }
+  if (t.closest('#au-cc-go')) { S.auCash = $('#au-cc').value.trim(); try { localStorage.setItem('au_cash', S.auCash); } catch (x) { /* ignore */ } return renderAU(); }
+  const o = t.closest('[data-auo]'); if (o) return openForm(o.dataset.auo);
+  const i = t.closest('[data-aui]'); if (i && canWrite()) { const k = i.dataset.aui; docSave('ded', 'ign:' + k, { ign:1 }, auIgn(k)); renderAU(); }
 }
 function renderHome() {
   const t = [['new','قيد جديد','plus','#F28C28'], ['list','القيود','list','#1FA38A'], ['db','لوحة المؤشرات','chart','#2E7D52'], ['tb','ميزان المراجعة','scale','#4A3FE0'],
@@ -2872,7 +2995,7 @@ async function init() {
   $('#acc-tb').onclick = e => { const r = e.target.closest('tr[data-k]'); if (!r) return; const row = gst(S.accGid).fr[+r.dataset.k]; if (!row) return;
     if (S.accMode === 'g') { S.expGroup = row.name; renderAcc(); } else openStm(row.name); };
   $('#acc-allx').onclick = () => { S.expGroup = '*'; renderAcc(); };
-  $('#au-back').onclick = back; $('#au-list').onclick = auClick; $('#hr-back').onclick = back; $('#hr-slips').onclick = () => printSlips(hrRows(S.hrMonth).map(r => r.emp.id)); $('#hsheet').onchange = e => { const o = e.target.closest('[data-hro]'); if (!o || !canWrite()) return; docSave('ded', 'dedo:' + o.dataset.hro, { m:o.value }); const eid = S.hs && S.hs.eid; if (eid) openSlip(eid); renderHR(); }; $('#cs-back').onclick = back; $('#pr-back').onclick = back; $('#pr-t1').onclick = () => { S.prTab = 'o'; renderPR(); }; $('#pr-t2').onclick = () => { S.prTab = 'g'; renderPR(); }; $('#pr-t3').onclick = () => { S.prTab = 's'; renderPR(); }; $('#pr-t4').onclick = () => { S.prTab = 'i'; renderPR(); }; $('#pr-body').oninput = prBodyInput; $('#pr-body').onclick = prBodyClick; $('#pr-pdf').onclick = () => doPrint(prTitle()); $('#e-cr').addEventListener('change', csSrcUpdate);
+  $('#au-back').onclick = back; $('#v-au').onclick = auClick; $('#hr-back').onclick = back; $('#hr-slips').onclick = () => printSlips(hrRows(S.hrMonth).map(r => r.emp.id)); $('#hsheet').onchange = e => { const o = e.target.closest('[data-hro]'); if (!o || !canWrite()) return; docSave('ded', 'dedo:' + o.dataset.hro, { m:o.value }); const eid = S.hs && S.hs.eid; if (eid) openSlip(eid); renderHR(); }; $('#cs-back').onclick = back; $('#pr-back').onclick = back; $('#pr-t1').onclick = () => { S.prTab = 'o'; renderPR(); }; $('#pr-t2').onclick = () => { S.prTab = 'g'; renderPR(); }; $('#pr-t3').onclick = () => { S.prTab = 's'; renderPR(); }; $('#pr-t4').onclick = () => { S.prTab = 'i'; renderPR(); }; $('#pr-body').oninput = prBodyInput; $('#pr-body').onclick = prBodyClick; $('#pr-pdf').onclick = () => doPrint(prTitle()); $('#e-cr').addEventListener('change', csSrcUpdate);
   $('#cs-t1').onclick = () => { S.csTab = 's'; renderCS(); }; $('#cs-t2').onclick = () => { S.csTab = 'k'; renderCS(); }; $('#cs-t4').onclick = () => { S.csTab = 'g'; renderCS(); }; $('#cs-body').onclick = csBodyClick; $('#cs-body').oninput = e => { if (e.target.id === 'pl-title') S.plTitle = e.target.value; }; $('#cs-pdf').onclick = () => doPrint(csTitle()); $('#hr-pdf').onclick = () => { if (S.hrTab === 'p') doPrint($('#ph-t').textContent); else toast('الطباعة من تبويب كشف الرواتب'); };
   $('#hr-t1').onclick = () => { S.hrTab = 'p'; renderHR(); }; $('#hr-t2').onclick = () => { S.hrTab = 'a'; renderHR(); }; $('#hr-t3').onclick = () => { S.hrTab = 'e'; renderHR(); };
   $('#hr-month').onchange = e => { S.hrMonth = e.target.value; hrPayroll(); };
