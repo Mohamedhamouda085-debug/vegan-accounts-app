@@ -23,6 +23,7 @@ header img{height:36px;width:auto;display:block}
 header .t{flex:1;line-height:1.25}
 header h1{margin:0;font-size:18px;font-weight:800;color:var(--green-d)}
 header small{color:var(--muted);font-size:12px}
+.jb{border:0;background:#E6F3E4;color:var(--green-d);border-radius:99px;width:38px;height:38px;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;flex:none}.jb:disabled{opacity:.35}
 .pill{border:0;border-radius:99px;padding:6px 12px 6px 10px;font-size:13px;background:#E6F3E4;color:var(--green-d);display:flex;align-items:center;gap:7px}
 .pill i{width:9px;height:9px;border-radius:50%;background:#2FB45A;display:block}
 .pill.warn{background:#FFF1D6;color:var(--amber)}.pill.warn i{background:#E59A1A}
@@ -286,6 +287,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
   <header id="hdr">
     <img src="logo.png" alt="Vegan">
     <div class="t"><h1>Vegan food</h1><small>الإدارة المالية</small></div>
+    <button class="jb hide" id="j-undo" aria-label="رجوع خطوة" title="رجوع خطوة" disabled>↶</button><button class="jb hide" id="j-redo" aria-label="إعادة" title="إعادة" disabled>↷</button>
     <button class="pill off" id="pill" aria-live="polite"><i></i><span id="pill-t">أوفلاين</span></button>
   </header>
   <main>
@@ -487,8 +489,10 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
       </div></details>
 
       <details class="sec hide" id="s-imp"><summary>استيراد قيود من ملف</summary><div class="in">
-        <p class="note" style="margin-top:0">للمالك فقط. اختار ملف القيود (JSON) من الموبايل.</p>
-        <input id="s-file" type="file" accept=".json,application/json" style="margin-top:8px">
+        <p class="note" style="margin-top:0">للمالك فقط. اختار ملف القيود: نفس ملف CSV اللي بتصدره من «تصدير القيود»، أو JSON. القيود الموجودة قبل كده بتتخطى والباقي بيتضاف.</p>
+        <input id="s-file" type="file" accept=".csv,.json,text/csv,application/json" style="margin-top:8px">
+        <p class="note">مقارنة بالملف: اختار الملف عشان تشوف القيود اللي في التطبيق وملهاش وجود فيه، وتحذف اللي تحب منها (المحذوف بيتسجل وتقدر ترجعه بسهم الرجوع).</p>
+        <input id="s-cmp" type="file" accept=".csv,.json,text/csv,application/json" style="margin-top:4px">
       </div></details>
 
       <details class="sec hide" id="s-adm"><summary>إدارة المستخدمين</summary><div class="in">
@@ -572,13 +576,92 @@ const kvGet = k => req('kv', 'readonly', s => s.get(k));
 const kvSet = (k, v) => req('kv', 'readwrite', s => s.put(v, k));
 const kvDel = k => req('kv', 'readwrite', s => s.delete(k));
 const entAll = () => req('entries', 'readonly', s => s.getAll());
-const entPut = e => req('entries', 'readwrite', s => s.put(e));
-const entPutMany = a => req('entries', 'readwrite', s => { a.forEach(e => s.put(e)); });
+const entPut0 = e => req('entries', 'readwrite', s => s.put(e));
+const entPut = e => { jRecEnt(e); return entPut0(e); };
+const entPutMany0 = a => req('entries', 'readwrite', s => { a.forEach(e => s.put(e)); });
+const entPutMany = a => { jShadowMany(a); return entPutMany0(a); };
 const entClear = () => req('entries', 'readwrite', s => s.clear());
 const docsAll = () => req('docs', 'readonly', s => s.getAll());
 const docPut = d => req('docs', 'readwrite', s => s.put(d));
 const docPutMany = a => req('docs', 'readwrite', s => { a.forEach(d => s.put(d)); });
 const docsClear = () => req('docs', 'readwrite', s => s.clear());
+
+/*J-START*/
+/* ---------- سجل الرجوع والإعادة (↶ ↷): كل تعديل بيتسجل بقبله وبعده، والرجوع بيعمل تعديل عكسي (مفيش مسح نهائي أبداً) ---------- */
+const J = { u:[], r:[], shadow:new Map(), busy:0, hold:0, last:0, cur:null, ready:false, work:0, lim:40, gap:700, t:0 };
+const jClone = o => JSON.parse(JSON.stringify(o));
+const jShadowSet = e => { J.shadow.set(e.id, JSON.stringify(e)); };
+function jShadowMany(a) { if (J.ready) for (const e of a) jShadowSet(e); }
+const jNorm = o => { if (!o) return ''; const c = { ...o }; delete c.updated; delete c.dirty; return JSON.stringify(c); };
+function jGroup() {
+  const t = Date.now();
+  if (!J.cur || (!J.hold && t - J.last > J.gap)) { J.cur = { t, recs:[] }; J.u.push(J.cur); if (J.u.length > J.lim) J.u.shift(); J.r.length = 0; }
+  J.last = t; return J.cur;
+}
+function jAdd(rec) {
+  if (!J.ready || J.busy || !canWrite()) return;
+  if (jNorm(rec.b) === jNorm(rec.a)) return;
+  jGroup().recs.push(rec); jSave(); jUI();
+}
+function jRecEnt(e) {
+  if (!J.ready) return;
+  const b = J.shadow.get(e.id); jShadowSet(e);
+  jAdd({ k:'e', id:e.id, b:b ? JSON.parse(b) : null, a:jClone(e) });
+}
+function jRecDoc(old, d) { jAdd({ k:'d', id:d.id, b:old ? jClone(old) : null, a:jClone(d) }); }
+function jBatch(fn) {
+  J.hold++; J.cur = null; const done = () => { J.hold--; J.cur = null; };
+  try { const r = fn(); if (r && r.then) return r.finally(done); done(); return r; } catch (e) { done(); throw e; }
+}
+function jSave() { clearTimeout(J.t); J.t = setTimeout(() => { try { kvSet('journal', { u:J.u, r:J.r }).catch(() => {}); } catch (e) {} }, 600); }
+function jUI() {
+  const a = $('#j-undo'), b = $('#j-redo'); if (!a || !b) return;
+  const w = canWrite(); a.classList.toggle('hide', !w); b.classList.toggle('hide', !w);
+  a.disabled = !J.u.length || !!J.work; b.disabled = !J.r.length || !!J.work;
+}
+async function jInit() {
+  J.shadow.clear(); for (const e of S.ent.values()) jShadowSet(e);
+  const j = await kvGet('journal'); J.u = (j && j.u) || []; J.r = (j && j.r) || []; J.cur = null; J.ready = true; jUI();
+}
+function jReset() { J.u = []; J.r = []; J.cur = null; J.ready = false; J.shadow.clear(); jUI(); }
+const J_KIND = { emp:'موظف', att:'حضور', hm:'شهر مرتب', ded:'خصم', dedo:'خصم', cl:'ربط تكلفة بيعة', cp:'صنف تكاليف', cr:'نسبة فاقد', cpset:'تاريخ التكاليف', fg2:'المنتج التام', fb:'إنتاج', fa:'تسوية', po:'أمر إنتاج', pl2:'قائمة الأسعار' };
+function jLabel(g) {
+  const es = g.recs.filter(r => r.k === 'e');
+  if (es.length) { const r = es[0], x = r.a || r.b, k = new Set(es.map(z => z.id)).size, n = k > 1 ? ' وغيره (' + k + ' قيد)' : ''; return 'قيد رقم ' + (x.no || '') + (x.stmt ? ' ' + x.stmt : '') + n; }
+  const d = g.recs[0]; return J_KIND[(d.a || d.b).kind] || 'تعديل';
+}
+async function jSetEnt(id, snap) {
+  const cur = S.ent.get(id); let e;
+  if (snap) e = { ...snap, dirty:true, updated:Date.now() };
+  else if (cur) e = { ...cur, deleted:true, dirty:true, updated:Date.now() };
+  else return;
+  if (!e.deleted && e.no && live().some(x => x.no === e.no && x.id !== e.id)) e.no = Math.max(0, ...live().map(x => x.no || 0)) + 1;
+  S.ent.set(e.id, e); await entPut0(e); jShadowSet(e);
+}
+async function jSetDoc(id, snap) {
+  const cur = S.docs.get(id); let d;
+  if (snap) d = { id, kind:snap.kind, data:snap.data, deleted:!!snap.deleted };
+  else if (cur) d = { id, kind:cur.kind, data:cur.data, deleted:true };
+  else return;
+  d.updated = Math.max(Date.now(), cur ? cur.updated + 1 : 0); d.dirty = true;
+  S.docs.set(id, d); await docPut(d);
+}
+async function jStep(dir) {
+  if (!canWrite() || J.work || J.busy) return;
+  const from = dir < 0 ? J.u : J.r, to = dir < 0 ? J.r : J.u, g = from[from.length - 1];
+  if (!g) { toast(dir < 0 ? 'مفيش حاجة ترجعها' : 'مفيش حاجة تعيدها'); return; }
+  if (S.profile.role === 'accountant' && g.recs.some(r => r.k === 'e' && [r.b, r.a].some(x => x && S.closed.has(String(x.date).slice(0, 7))))) { toast('فيه قيد في شهر مقفول'); return; }
+  J.work = 1; J.busy++; jUI();
+  try {
+    const recs = dir < 0 ? [...g.recs].reverse() : g.recs;
+    for (const r of recs) { const snap = dir < 0 ? r.b : r.a; if (r.k === 'e') await jSetEnt(r.id, snap); else await jSetDoc(r.id, snap); }
+    from.pop(); to.push(g);
+  } catch (e) { console.error(e); toast('حصلت مشكلة في الرجوع'); }
+  finally { J.busy--; J.work = 0; J.cur = null; }
+  jSave(); jUI(); try { closeHS(); } catch (e) {} render(); sync();
+  toast((dir < 0 ? 'اتراجع عن: ' : 'اتعاد: ') + jLabel(g));
+}
+/*J-END*/
 
 /* ---------- server calls ---------- */
 const url = () => localStorage.getItem('sb_url') || CFG.defUrl;
@@ -727,7 +810,7 @@ async function login() {
   try {
     const j = await http('/auth/v1/token?grant_type=password', { method:'POST', body:{ email, password:pw } });
     const old = await kvGet('uid');
-    if (old && old !== j.user.id) { await entClear(); S.ent.clear(); await docsClear(); S.docs.clear(); await kvDel('lastPull'); await kvDel('lastPullDocs'); }
+    if (old && old !== j.user.id) { await entClear(); S.ent.clear(); await docsClear(); S.docs.clear(); await kvDel('lastPull'); await kvDel('lastPullDocs'); await kvDel('journal'); }
     await kvSet('uid', j.user.id); await saveSession(j);
     $('#l-pass').value = '';
     S.skipLock = true; await start(); S.skipLock = false; offerBio();
@@ -743,7 +826,8 @@ async function logout() {
   const n = pending();
   if (n && !confirm('فيه ' + n + ' قيد لسه ما اترفعش للسيرفر. لو خرجت هيتمسحوا. تكمل؟')) return;
   await entClear(); S.ent.clear(); await docsClear(); S.docs.clear();
-  for (const k of ['session', 'uid', 'lastPull', 'lastPullDocs', 'lists', 'profile', 'lastSync', 'bio']) await kvDel(k);
+  for (const k of ['session', 'uid', 'lastPull', 'lastPullDocs', 'lists', 'profile', 'lastSync', 'bio', 'journal']) await kvDel(k);
+  jReset();
   S.session = null; S.profile = null; showLogin('');
 }
 async function changePw() {
@@ -796,7 +880,7 @@ function fitGrids() {
     w.style.maxHeight = Math.max(240, window.innerHeight - Math.max(w.getBoundingClientRect().top, 110) - nh - 6) + 'px';
   }
 }
-function render() { draw(S.view); $('#n-add').classList.toggle('hide', !canWrite()); setPill(); }
+function render() { draw(S.view); $('#n-add').classList.toggle('hide', !canWrite()); setPill(); jUI(); }
 function push_(v) { S.stack.push(S.view); go(v); }
 function back() { go(S.stack.pop() || 'home'); }
 
@@ -1472,7 +1556,7 @@ const docsOf = k => [...S.docs.values()].filter(d => d.kind === k && !d.deleted)
 const uid8 = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random().toString(16).slice(2)).replace(/-/g, '').slice(0, 12);
 function docSave(kind, id, data, del) {
   const old = S.docs.get(id), d = { id, kind, data, deleted:!!del, updated:Math.max(Date.now(), old ? old.updated + 1 : 0), dirty:true };
-  S.docs.set(id, d); docPut(d); setPill(); clearTimeout(S.dsT); S.dsT = setTimeout(() => sync(), 1200); return d;
+  jRecDoc(old, d); S.docs.set(id, d); docPut(d); setPill(); clearTimeout(S.dsT); S.dsT = setTimeout(() => sync(), 1200); return d;
 }
 
 /* ---------- payroll (المرتبات) ---------- */
@@ -1585,9 +1669,10 @@ const CS_DEFAULTS = { cp:[['لفت مكعبات مخلل', 'لفت يابانى 
 function csSeed() {
   if (!canWrite() || csSeed.done) return;
   if (!S.lastSync || S.docsErr) return; /* ما نزرعش إعدادات افتراضية قبل أول مزامنة كاملة (كانت بتتكرر وتغيّر الأرقام) */
-  csSeed.done = 1;
+  csSeed.done = 1; J.busy++;
   if (!docsOf('cp').length) for (const [prod, raw, loss, op] of CS_DEFAULTS.cp) docSave('cp', 'cp:' + uid8(), { prod, raw, loss, op, on:true });
   if (!docsOf('cr').length) for (const [raw, loss] of CS_DEFAULTS.cr) docSave('cr', 'cr:' + uid8(), { raw, loss });
+  J.busy--;
 }
 const csStart = () => { const d = S.docs.get('cpset'); return d && !d.deleted && d.data.start ? d.data.start : CS_START_DEF; };
 const csLink = id => { const d = S.docs.get('cl:' + id); return d && !d.deleted ? d.data : null; };
@@ -1618,6 +1703,7 @@ async function csGen(sale, force) {
   csSeed();
   const old = csLink(sale.id), fgm = /^مبيعات/.test(sale.cr || '') ? fgMatch(sale.prod) : null;
   if ((old && old.fg) || fgm) return fgSaleGen(sale, old, fgm);
+  if (!old && !sale.deleted) { const ad = csAdopt(sale); if (ad) return ad; } /* لو قيود تكلفتها موجودة بالفعل بنربطها بس ومنكررهاش */
   if (old) for (const id of [old.e1, old.e2, ...(old.ex || [])]) { const x = id && S.ent.get(id); if (x && !x.deleted) { Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }); await entPut(x); } }
   const drop = () => { if (old) docSave('cl', 'cl:' + sale.id, old, true); return null; };
   if (sale.deleted || sale.cr !== 'مبيعات توريد') return drop();
@@ -1669,7 +1755,7 @@ function csSame(e, old, src) {
 }
 async function csApplySrc(e, src) {
   if (src == null) return csGen(e);
-  const t = csTpl(e.prod), old = csLink(e.id);
+  const t = csTpl(e.prod), old = csLink(e.id) || csAdopt(e);
   if (!t) return csGen(e);
   localStorage.setItem('cs_src:' + csKey(e.prod), src);
   if (old && csSame(e, old, src)) return old.out ? null : old; /* نفس الصنف والمصدر والكمية: القيود اللي اتسجلت تفضل زي ما هي */
@@ -2261,7 +2347,8 @@ function csSalesHTML(w) {
   const st = csStart();
   let h = '<div class="hrow np"><div class="n">الحساب الأوتوماتيك</div><div class="note" style="margin:6px 0">شغال من تاريخ ' + esc(st) + '. أي بيعة صنف مجهّز بعد التاريخ ده بتتحسب تكلفتها لوحدها (من الخام أو من مخزن المنتج التام). البيع من بره بيتسجل بالإجمالي ومش بيتحسب له تكلفة.</div>' +
     (w ? '<label for="cs-sd">يشتغل من تاريخ</label><input id="cs-sd" type="date" value="' + esc(st || todayStr()) + '"><div class="actions"><button class="btn ghost" id="cs-start">تغيير التاريخ</button></div>' : '') + '</div>';
-  const un = csUnlinked();
+  const un = csUnlinked(), pl = w ? csAdoptPlan(un).length : 0;
+  if (pl) h += '<div class="note" style="padding:8px 14px 2px"><b>' + pl + ' بيعة قيود تكلفتها موجودة بالفعل لكنها مش مربوطة</b><br>الربط بيحفظ الصلة بس ومش بيعمل قيود جديدة ولا بيغير حاجة.</div><div class="mrow"><button class="btn" id="cs-link" style="width:100%">اربط ' + pl + ' بيعة بقيودها</button></div>';
   if (un.length) h += '<div class="note" style="padding:8px 14px 2px"><b>بيعات لسه متحسبتش (' + un.length + ')</b></div>' + csTbl([22, 44, 16, 18], ['التاريخ', 'الصنف', 'الكمية', ''], un.slice(0, 20).map(e => '<tr><td class="l">' + esc(e.date) + '</td><td class="l">' + esc(e.prod) + '</td><td class="v">' + esc(fmt0(e.qty)) + '</td><td class="v">' + (w ? '<button class="btn ghost" data-gen="' + e.id + '" style="width:auto;padding:4px 10px;min-height:36px">احسب</button>' : '') + '</td></tr>').join('')) + (w ? '<div class="mrow"><button class="btn" id="cs-all" style="width:100%">احسب الكل</button></div>' : '') + (w ? '<div class="mrow"><button class="btn ghost" id="cs-audit" style="width:100%">مراجعة قيود التكاليف (زيادة / حسبة قديمة / تكرار)</button></div>' : '');
   const ls = docsOf('cl').map(d => d.data).filter(l => S.ent.get(l.sale) && !S.ent.get(l.sale).deleted).sort((a, b) => S.ent.get(a.sale).date < S.ent.get(b.sale).date ? 1 : -1).slice(0, 60);
   h += '<div class="note" style="padding:8px 14px 2px"><b>بيعات اتحسبت تكلفتها</b> <span class="np">(اضغط على الصف للتفاصيل)</span></div>' + (ls.length ? csTbl([20, 40, 20, 20], ['التاريخ', 'الصنف', 'التكلفة', 'الربح'], ls.map(l => { const e = S.ent.get(l.sale), tc = l.cost + (l.op || 0), pr = e.amtC - tc;
@@ -2330,6 +2417,65 @@ function openChg(sid) {
     '<div class="err" id="cg-err"></div><div class="actions"><button class="btn" id="cg-save">حفظ وإعادة الحساب</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
   $('#hsheet').classList.remove('hide');
 }
+/* ---------- ربط البيعات بقيود تكلفتها الموجودة (من غير ما نعمل قيود جديدة) ---------- */
+function csAdoptPlan(sales) {
+  const st = csStart(), used = csLinkedIds(), out = [];
+  const cands = live().filter(x => csIsCost(x) && !used.has(x.id)).sort((a, b) => (a.no || 0) - (b.no || 0));
+  for (const sale of [...sales].sort((a, b) => (a.no || 0) - (b.no || 0))) {
+    if (!st || sale.deleted || sale.cr !== 'مبيعات توريد' || sale.date < st || !csTpl(sale.prod) || csLink(sale.id)) continue;
+    const disc = +sale.disc || 0, outQ = (+sale.qty || 0) * (1 - disc); if (!(outQ > 0)) continue;
+    const tol = Math.max(0.05, outQ * 0.003);
+    const x = cands.find(c => !used.has(c.id) && c.cr === CS_RAW && c.date === sale.date && Math.abs((+c.qty || 0) * (1 - (+c.disc || 0)) - outQ) <= tol);
+    if (!x) continue; used.add(x.id);
+    const y = cands.find(c => !used.has(c.id) && c.cr === 'المصروفات' && c.date === x.date && csKey(c.prod) === csKey(x.prod) && Math.abs((+c.qty || 0) - (+x.qty || 0)) < 0.01);
+    if (y) used.add(y.id);
+    out.push({ sale:sale.id, e1:x.id, e2:y ? y.id : '', raw:cl(x.prod), loss:Math.max(0, (+x.disc || 0) - disc), man:true, rawQ:+x.qty || 0, avg:(+x.amtD || 0) / ((+x.qty) || 1), cost:+x.amtD || 0, op:y ? +y.amtD || 0 : 0, outQ, sig:csSig(sale) });
+  }
+  return out;
+}
+function csAdopt(sale) { const p = csAdoptPlan([sale])[0]; if (!p) return null; docSave('cl', 'cl:' + sale.id, p); return p; }
+function csRelinkAll() { return jBatch(() => { const plan = csAdoptPlan(csUnlinked()); for (const p of plan) docSave('cl', 'cl:' + p.sale, p); return plan.length; }); }
+
+/* ---------- مقارنة التطبيق بملف القيود ---------- */
+async function readEntries(file) {
+  const txt = await file.text(); let j; try { j = JSON.parse(txt); } catch (e) { j = csvEntries(txt); }
+  const arr = Array.isArray(j) ? j : j && j.entries; return Array.isArray(arr) ? arr : null;
+}
+async function cmpFile(file) {
+  if (!file) return;
+  const arr = await readEntries(file); $('#s-cmp').value = '';
+  if (!arr) { toast('الملف مش سليم'); return; }
+  const ids = new Set(arr.filter(x => x && x.id).map(x => String(x.id)));
+  const extra = live().filter(e => !ids.has(e.id)).sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : (b.no || 0) - (a.no || 0));
+  const missing = arr.filter(x => x && x.id && x.date && !S.ent.has(String(x.id))).length;
+  S.hs = { type:'cmp', ids:extra.map(e => e.id) };
+  const shown = extra.slice(0, 300);
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">مقارنة بالملف</h2>' +
+    '<div class="kv"><span>قيود الملف</span><span dir="ltr">' + esc(fmt0(arr.length)) + '</span></div>' +
+    '<div class="kv"><span>في الملف وناقصة من التطبيق</span><span dir="ltr">' + esc(fmt0(missing)) + '</span></div>' +
+    '<div class="kv"><span>في التطبيق ومش في الملف</span><span dir="ltr">' + esc(fmt0(extra.length)) + '</span></div>' +
+    '<div class="note" style="margin-top:8px">القيود اللي اتسجلت بعد ما صدّرت الملف هتظهر هنا كمان، فاختار بحذر. مفيش حاجة بتتحذف غير اللي تعلّم عليه وتدوس «حذف المحدد».</div>' +
+    (extra.length ? '<div class="actions"><button class="btn ghost" id="cmp-all">تحديد الكل / إلغاء</button></div>' +
+      shown.map(e => '<label class="hrow" style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" data-cx="' + e.id + '" style="width:22px;height:22px;min-height:0;flex:none"><span style="flex:1">' + esc(e.date) + ' · رقم ' + esc(e.no || '') + ' · ' + esc(cl(e.stmt)) + '<br><small>' + esc(e.dr) + ' ← ' + esc(e.cr) + (cl(e.prod) ? ' · ' + esc(cl(e.prod)) : '') + ' · ' + esc(fmt0(e.amtD || e.amtC)) + '</small></span></label>').join('') +
+      (extra.length > shown.length ? '<div class="note">معروض أحدث ' + shown.length + ' قيد بس.</div>' : '') +
+      '<div class="actions"><button class="btn danger" id="cmp-del">حذف المحدد</button><button class="btn ghost" id="he-x">إغلاق</button></div>'
+      : '<div class="empty">كل قيود التطبيق موجودة في الملف.</div><div class="actions"><button class="btn ghost" id="he-x">إغلاق</button></div>');
+  $('#hsheet').classList.remove('hide');
+}
+function cmpClick(e) {
+  if (e.target.closest('#cmp-all')) { const bx = [...document.querySelectorAll('#hs-pn [data-cx]')], on = bx.some(b => !b.checked); bx.forEach(b => { b.checked = on; }); return true; }
+  if (e.target.closest('#cmp-del')) {
+    const ids = [...document.querySelectorAll('#hs-pn [data-cx]:checked')].map(b => b.dataset.cx);
+    if (!ids.length) { toast('علّم على القيود اللي عايز تحذفها'); return true; }
+    if (S.profile.role === 'accountant' && ids.some(i => S.ent.get(i) && S.closed.has(S.ent.get(i).date.slice(0, 7)))) { toast('فيه قيد في شهر مقفول'); return true; }
+    if (!confirm('تحذف ' + ids.length + ' قيد؟ تقدر ترجعهم بسهم الرجوع.')) return true;
+    jBatch(async () => { for (const i of ids) { const x = S.ent.get(i); if (!x || x.deleted) continue; Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }); await entPut(x); try { await csGen(x); } catch (er) { console.error(er); } } })
+      .then(() => { closeHS(); render(); sync(); toast('اتحذف ' + ids.length + ' قيد'); });
+    return true;
+  }
+  return false;
+}
+
 /* ---------- مراجعة قيود التكاليف: قيود زيادة / حسبة قديمة / تكرار إعدادات (مفيش حاجة بتتغير غير بضغطتك) ---------- */
 const csIsCost = e => { const n = cl(e.stmt); return e.dr === CS_COGS && (e.cr === CS_RAW || e.cr === 'المصروفات') && (n === 'تكاليف' || n === 'تشغيل منتج' || cl(e.pb) === 'تشغيل منتج'); };
 function csLinkedIds() { const s = new Set(); for (const d of docsOf('cl')) { const l = d.data; for (const id of [l.e1, l.e2, ...(l.ex || [])]) if (id) s.add(id); } return s; }
@@ -2376,7 +2522,7 @@ async function csRestorePrev(saleId, e1id) {
 }
 function csAuditClick(e) {
   const rs = e.target.closest('[data-arst]'), de = e.target.closest('[data-adel]'), du = e.target.closest('[data-adup]'), done = () => { openAudit(); renderCS(); sync(); };
-  if (rs) { if (!confirm('ترجع الحسبة القديمة؟ الحسبة الحالية هتتشال من القيود (ومحفوظة لو عايز ترجعلها).')) return true; const [a, b] = rs.dataset.arst.split('|'); csRestorePrev(a, b).then(() => { done(); toast('اتسترجعت الحسبة القديمة'); }); return true; }
+  if (rs) { if (!confirm('ترجع الحسبة القديمة؟ الحسبة الحالية هتتشال من القيود (ومحفوظة لو عايز ترجعلها).')) return true; const [a, b] = rs.dataset.arst.split('|'); jBatch(() => csRestorePrev(a, b)).then(() => { done(); toast('اتسترجعت الحسبة القديمة'); }); return true; }
   if (de) { const x = S.ent.get(de.dataset.adel); if (!x) return true; if (S.profile.role === 'accountant' && S.closed.has(x.date.slice(0, 7))) { toast('الشهر ده مقفول'); return true; } if (!confirm('تحذف القيد ده؟')) return true; Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }); entPut(x).then(() => { done(); toast('اتحذف القيد'); }); return true; }
   if (du) { const d = S.docs.get(du.dataset.adup); if (!d) return true; if (!confirm('تحذف الإعداد المكرر ده؟')) return true; docSave(d.kind, d.id, d.data, true); done(); toast('اتحذف'); return true; }
   return false;
@@ -2384,6 +2530,7 @@ function csAuditClick(e) {
 function csSheetClick(e) {
   const g = id => $(id).value;
   if (S.hs && S.hs.type === 'audit' && csAuditClick(e)) return true;
+  if (S.hs && S.hs.type === 'cmp' && cmpClick(e)) return true;
   if (fgSheetClick(e)) return true;
   if (plSheetClick(e)) return true;
   if (poAlClick(e)) return true;
@@ -2431,7 +2578,8 @@ async function csBodyClick(e) {
   const t = e.target;
   if (t.closest('#cs-audit')) return openAudit();
   if (t.closest('#cs-start')) { const d = $('#cs-sd').value; if (!d) return toast('اختار التاريخ'); docSave('cpset', 'cpset', { start:d }); renderCS(); toast('اتحفظ'); return; }
-  if (t.closest('#cs-all')) { let n = 0; for (const s of csUnlinked()) { if (await csGen(s, true)) n++; } renderCS(); sync(); return toast('اتحسب ' + n + ' بيعة'); }
+  if (t.closest('#cs-link')) { const n = csRelinkAll(); renderCS(); sync(); return toast('اتربط ' + n + ' بيعة بقيودها'); }
+  if (t.closest('#cs-all')) { const lk = csRelinkAll(), rest = csUnlinked(); if (!rest.length) { renderCS(); sync(); return toast('اتربط ' + lk + ' بيعة بقيودها'); } if (!confirm((lk ? 'اتربط ' + lk + ' بيعة بقيودها الموجودة.\n' : '') + 'لسه ' + rest.length + ' بيعة ملهاش قيود تكلفة، هيتعمل لها قيود جديدة. تكمل؟')) { renderCS(); return; } let n = 0; await jBatch(async () => { for (const s of rest) { if (await csGen(s, true)) n++; } }); renderCS(); sync(); return toast('اتحسب ' + n + ' بيعة'); }
   const gb = t.closest('[data-gen]'); if (gb) { const r = await csGen(S.ent.get(gb.dataset.gen), true); renderCS(); sync(); return toast(r ? 'اتحسبت' : 'ما اتحسبتش'); }
   const cb = t.closest('[data-chg]'); if (cb) return openChg(cb.dataset.chg);
   if (t.closest('#cp-new')) return openCP(null);
@@ -2754,9 +2902,39 @@ function renderSettings() {
 }
 
 /* ---------- import (owner) ---------- */
+/* قراءة ملف CSV اللي بيطلع من «تصدير القيود» (نفس الأعمدة) */
+function csvRows(t) {
+  const out = []; let r = [], f = '', q = false;
+  t = String(t).replace(/^\ufeff/, '');
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { r.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; r.push(f); f = ''; if (r.some(x => x !== '')) out.push(r); r = []; }
+    else f += c;
+  }
+  r.push(f); if (r.some(x => x !== '')) out.push(r);
+  return out;
+}
+function csvEntries(t) {
+  const rows = csvRows(t); if (rows.length < 2) return null;
+  const h = rows[0].map(x => x.trim().toLowerCase()), ix = k => h.indexOf(k);
+  if (ix('date') < 0 || ix('debit_acct') < 0 || ix('credit_acct') < 0 || ix('amount') < 0) return null;
+  const nz = v => { const n = parseFloat(String(v == null ? '' : v).replace(/[,\s]/g, '')); return isFinite(n) ? n : 0; };
+  const dt = v => { v = String(v || '').trim(); const m = v.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/); return m ? m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0') : v.slice(0, 10); };
+  const out = [];
+  for (const r of rows.slice(1)) {
+    const g = k => (ix(k) >= 0 ? r[ix(k)] : '') || '', amt = nz(g('amount')), date = dt(g('date'));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !(amt > 0)) continue;
+    out.push({ id:g('id').trim() || crypto.randomUUID(), no:nz(g('no')), date, stmt:g('stmt'), dr:g('debit_acct'), cr:g('credit_acct'), pa:g('party_debit'), pb:g('party_credit'), prod:g('product'), qty:nz(g('qty')), disc:nz(g('disc')), price:nz(g('price')), amtD:amt, amtC:amt, opening:nz(g('opening')) === 1 });
+  }
+  return out;
+}
 async function importFile(file) {
   if (!file) return;
-  let j; try { j = JSON.parse(await file.text()); } catch (e) { toast('الملف مش سليم'); return; }
+  let j; const txt = await file.text();
+  try { j = JSON.parse(txt); } catch (e) { j = csvEntries(txt); if (!j) { toast('الملف مش سليم'); return; } }
   const arr = Array.isArray(j) ? j : j && j.entries;
   if (!Array.isArray(arr)) { toast('الملف مش سليم'); return; }
   const add = [];
@@ -2769,10 +2947,14 @@ async function importFile(file) {
   $('#s-file').value = '';
   if (!add.length) { toast('كل القيود دي موجودة بالفعل'); return; }
   if (!confirm('هيتضاف ' + add.length + ' قيد وتترفع للسيرفر. تكمل؟')) return;
-  for (const e of add) S.ent.set(e.id, e);
-  await entPutMany(add); render(); toast('بنرفع ' + add.length + ' قيد…');
+  let nl = 0;
+  await jBatch(async () => {
+    for (const e of add) { S.ent.set(e.id, e); jAdd({ k:'e', id:e.id, b:null, a:jClone(e) }); }
+    await entPutMany(add); nl = csRelinkAll();
+  });
+  render(); toast('بنرفع ' + add.length + ' قيد…');
   await sync();
-  toast(pending() ? 'لسه ' + pending() + ' قيد في الانتظار، دوس مزامنة' : 'تم رفع القيود');
+  toast(pending() ? 'لسه ' + pending() + ' قيد في الانتظار، دوس مزامنة' : 'تم رفع القيود' + (nl ? ' وربط ' + nl + ' بيعة بقيود تكلفتها' : ''));
 }
 
 /* ---------- entry form ---------- */
@@ -2972,7 +3154,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.14';
+const VER = '1.16';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -3029,6 +3211,7 @@ async function start() {
   const ls = await kvGet('lastSync'); S.lastSync = ls ? new Date(ls) : null;
   S.ent = new Map((await entAll()).map(e => [e.id, e]));
   S.docs = new Map((await docsAll()).map(d => [d.id, d]));
+  await jInit();
   S.stack = []; go('home'); render(); armBack();
   if (!S.skipLock && await bioOn()) showLock();
   await sync();
@@ -3045,7 +3228,7 @@ async function init() {
   $('#pill').onclick = () => sync(); $('#s-sync').onclick = () => sync();
   $('#n-home').onclick = () => { S.stack = []; go('home'); }; $('#n-list').onclick = () => { S.stack = []; go('list'); };
   $('#n-an').onclick = () => { S.stack = []; go('an'); }; $('#n-set').onclick = () => { S.stack = []; go('set'); };
-  $('#n-add').onclick = () => openForm(null);
+  $('#n-add').onclick = () => openForm(null); $('#j-undo').onclick = () => jStep(-1); $('#j-redo').onclick = () => jStep(1); $('#s-cmp').onchange = e => cmpFile(e.target.files[0]);
   $('#e-cancel').onclick = closeForm; $('#e-save').onclick = () => saveEntry(); $('#e-again').onclick = () => saveEntry(true); $('#e-copy').onclick = () => copyEntry(S.editing, false); $('#e-counter').onclick = () => copyEntry(S.editing, true); $('#e-del').onclick = delEntry;
   $('#p-go').onclick = changePw; $('#s-out').onclick = logout; $('#x-go').onclick = exportXl;
   $('#adm-list').onclick = e => { const b = e.target.closest('.adm-pw'); if (b) admSetPw(S.users[+b.dataset.u]); };

@@ -1,4 +1,4 @@
-const V = 'vegan-v39';
+const V = 'vegan-v41';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'logo.png', 'cover.jpg'];
 
 self.addEventListener('install', e => {
@@ -18,6 +18,17 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
+  const isPage = e.request.mode === 'navigate' || u.pathname.endsWith('/') || u.pathname.endsWith('/index.html');
+  if (isPage) { /* الصفحة الرئيسية: الأحدث من السيرفر الأول (بحد 4 ثواني)، والكاش للأوفلاين بس */
+    e.respondWith(caches.open(V).then(async c => {
+      try {
+        const r = await Promise.race([fetch(new Request(e.request.url, { cache:'no-store', credentials:'same-origin' })), new Promise((_, no) => setTimeout(() => no(new Error('t')), 4000))]);
+        if (r && r.ok) { c.put(e.request, r.clone()); return r; }
+      } catch (_) {}
+      return (await c.match(e.request, { ignoreSearch:true })) || (await c.match('index.html')) || new Response('offline', { status:503 });
+    }));
+    return;
+  }
   e.respondWith(
     caches.open(V).then(async c => {
       const hit = await c.match(e.request, { ignoreSearch: true });
