@@ -1583,12 +1583,15 @@ const csRawDef = r => csRaws().find(x => csKey(x.raw) === csKey(r));
 const CS_START_DEF = '2026-10-08';
 const CS_DEFAULTS = { cp:[['لفت مكعبات مخلل', 'لفت يابانى فريش', null, 1], ['جزر مكعبات مخلل', 'جزر فرنساوى فريش', null, 1], ['سوربات', 'لفت يابانى فريش', 0.3, 1], ['لفت مخلل سليم', 'لفت يابانى فريش', 0.1, 0]], cr:[['لفت يابانى فريش', 0.3], ['جزر فرنساوى فريش', 0.25]] };
 function csSeed() {
-  if (!canWrite() || csSeed.done) return; csSeed.done = 1;
+  if (!canWrite() || csSeed.done) return;
+  if (!S.lastSync || S.docsErr) return; /* ما نزرعش إعدادات افتراضية قبل أول مزامنة كاملة (كانت بتتكرر وتغيّر الأرقام) */
+  csSeed.done = 1;
   if (!docsOf('cp').length) for (const [prod, raw, loss, op] of CS_DEFAULTS.cp) docSave('cp', 'cp:' + uid8(), { prod, raw, loss, op, on:true });
   if (!docsOf('cr').length) for (const [raw, loss] of CS_DEFAULTS.cr) docSave('cr', 'cr:' + uid8(), { raw, loss });
 }
 const csStart = () => { const d = S.docs.get('cpset'); return d && !d.deleted && d.data.start ? d.data.start : CS_START_DEF; };
 const csLink = id => { const d = S.docs.get('cl:' + id); return d && !d.deleted ? d.data : null; };
+const csSig = e => [e.date, cl(e.prod), +e.qty || 0, +e.disc || 0].join('|');
 /* FIFO: كل شراء دفعة بسعرها، والخروج بياخد من أقدم دفعة (زي ما بتحسب بإيدك) */
 function csStock(upto) {
   const m = new Map(), es = [];
@@ -1638,7 +1641,7 @@ async function csGen(sale, force) {
   const e1 = await put(mk({ dr:CS_COGS, cr:CS_RAW, prod:raw, qty:rawQ, disc:tot, price:fc / outQ, amtD:fc, amtC:fc }));
   const op = rawQ * (+t.op || 0); let e2 = null;
   if (op > 0) e2 = await put(mk({ dr:CS_COGS, cr:'المصروفات', pb:'تشغيل منتج', prod:raw, qty:rawQ, disc:0, price:+t.op, amtD:op, amtC:op }));
-  const lk = { sale:sale.id, e1:e1.id, e2:e2 ? e2.id : '', raw, loss, man, rawQ, avg, cost:fc, op, outQ };
+  const lk = { sale:sale.id, e1:e1.id, e2:e2 ? e2.id : '', raw, loss, man, rawQ, avg, cost:fc, op, outQ, sig:csSig(sale) };
   docSave('cl', 'cl:' + sale.id, lk);
   return lk;
 }
@@ -1648,18 +1651,28 @@ function csSrcUpdate() {
   const prod = comboVal('#e-prod'), show = canWrite() && $('#e-cr').value === 'مبيعات توريد' && prod && csTpl(prod) && !fgMatch(prod);
   w.classList.toggle('hide', !show); if (!show) return;
   const t = csTpl(prod), st = csStock(), e = S.editing ? S.ent.get(S.editing) : null, lk = e ? csLink(e.id) : null, cur = $('#e-src').value;
-  const defs = csRaws().map(r => cl(r.raw)), names = defs.length ? defs : [...st.values()].filter(x => x.q > 0.01).map(x => x.name); if (t.raw && !names.some(n => csKey(n) === csKey(t.raw))) names.push(cl(t.raw));
+  const names = [...csRaws().map(r => cl(r.raw)), ...[...st.values()].filter(x => x.q > 0.01).map(x => x.name)]; if (t.raw) names.push(cl(t.raw)); if (lk && lk.raw) names.push(cl(lk.raw));
   const seen = new Set(); names.splice(0, names.length, ...names.filter(n => { const k = csKey(n); if (seen.has(k)) return false; seen.add(k); return true; }));
   names.sort((a, b) => csColl.compare(a, b));
   const pref = cur || (lk ? (lk.out ? 'out' : lk.raw) : localStorage.getItem('cs_src:' + csKey(prod)) || '');
   $('#e-src').innerHTML = '<option value="">اختار مصدر البضاعة</option><option value="out">من بره (بدون مخزون وبدون تكاليف)</option>' + names.map(n => '<option value="' + esc(n) + '">من المخزون: ' + esc(n) + '</option>').join('');
   $('#e-src').value = [...$('#e-src').options].some(o => o.value === pref) ? pref : '';
 }
+function csSame(e, old, src) {
+  if (src === 'out') return !!old.out;
+  if (old.out || old.fg || csKey(old.raw) !== csKey(src)) return false;
+  const live1 = id => { const z = id && S.ent.get(id); return !!z && !z.deleted; };
+  if (!live1(old.e1) || (old.op > 0 && !live1(old.e2))) return false;
+  if (old.sig) return old.sig === csSig(e);
+  const z = S.ent.get(old.e1);
+  return z.date === e.date && Math.abs((+old.outQ || 0) - (+e.qty || 0) * (1 - (+e.disc || 0))) < 1e-6;
+}
 async function csApplySrc(e, src) {
   if (src == null) return csGen(e);
   const t = csTpl(e.prod), old = csLink(e.id);
   if (!t) return csGen(e);
   localStorage.setItem('cs_src:' + csKey(e.prod), src);
+  if (old && csSame(e, old, src)) return old.out ? null : old; /* نفس الصنف والمصدر والكمية: القيود اللي اتسجلت تفضل زي ما هي */
   if (old && !old.out) await csGen({ ...e, deleted:true });
   if (src === 'out') { docSave('cl', 'cl:' + e.id, { sale:e.id, out:true }); return null; }
   const rd = csRawDef(src), loss = (t.loss != null && t.loss !== '') ? +t.loss || 0 : rd ? +rd.loss || 0 : 0;
@@ -2249,7 +2262,7 @@ function csSalesHTML(w) {
   let h = '<div class="hrow np"><div class="n">الحساب الأوتوماتيك</div><div class="note" style="margin:6px 0">شغال من تاريخ ' + esc(st) + '. أي بيعة صنف مجهّز بعد التاريخ ده بتتحسب تكلفتها لوحدها (من الخام أو من مخزن المنتج التام). البيع من بره بيتسجل بالإجمالي ومش بيتحسب له تكلفة.</div>' +
     (w ? '<label for="cs-sd">يشتغل من تاريخ</label><input id="cs-sd" type="date" value="' + esc(st || todayStr()) + '"><div class="actions"><button class="btn ghost" id="cs-start">تغيير التاريخ</button></div>' : '') + '</div>';
   const un = csUnlinked();
-  if (un.length) h += '<div class="note" style="padding:8px 14px 2px"><b>بيعات لسه متحسبتش (' + un.length + ')</b></div>' + csTbl([22, 44, 16, 18], ['التاريخ', 'الصنف', 'الكمية', ''], un.slice(0, 20).map(e => '<tr><td class="l">' + esc(e.date) + '</td><td class="l">' + esc(e.prod) + '</td><td class="v">' + esc(fmt0(e.qty)) + '</td><td class="v">' + (w ? '<button class="btn ghost" data-gen="' + e.id + '" style="width:auto;padding:4px 10px;min-height:36px">احسب</button>' : '') + '</td></tr>').join('')) + (w ? '<div class="mrow"><button class="btn" id="cs-all" style="width:100%">احسب الكل</button></div>' : '');
+  if (un.length) h += '<div class="note" style="padding:8px 14px 2px"><b>بيعات لسه متحسبتش (' + un.length + ')</b></div>' + csTbl([22, 44, 16, 18], ['التاريخ', 'الصنف', 'الكمية', ''], un.slice(0, 20).map(e => '<tr><td class="l">' + esc(e.date) + '</td><td class="l">' + esc(e.prod) + '</td><td class="v">' + esc(fmt0(e.qty)) + '</td><td class="v">' + (w ? '<button class="btn ghost" data-gen="' + e.id + '" style="width:auto;padding:4px 10px;min-height:36px">احسب</button>' : '') + '</td></tr>').join('')) + (w ? '<div class="mrow"><button class="btn" id="cs-all" style="width:100%">احسب الكل</button></div>' : '') + (w ? '<div class="mrow"><button class="btn ghost" id="cs-audit" style="width:100%">مراجعة قيود التكاليف (زيادة / حسبة قديمة / تكرار)</button></div>' : '');
   const ls = docsOf('cl').map(d => d.data).filter(l => S.ent.get(l.sale) && !S.ent.get(l.sale).deleted).sort((a, b) => S.ent.get(a.sale).date < S.ent.get(b.sale).date ? 1 : -1).slice(0, 60);
   h += '<div class="note" style="padding:8px 14px 2px"><b>بيعات اتحسبت تكلفتها</b> <span class="np">(اضغط على الصف للتفاصيل)</span></div>' + (ls.length ? csTbl([20, 40, 20, 20], ['التاريخ', 'الصنف', 'التكلفة', 'الربح'], ls.map(l => { const e = S.ent.get(l.sale), tc = l.cost + (l.op || 0), pr = e.amtC - tc;
     return '<tr data-sd="' + e.id + '" style="cursor:pointer"><td class="l">' + esc(e.date) + '</td><td class="l">' + esc(e.prod) + '</td><td class="v">' + esc(fmt0(tc)) + '</td><td class="v' + (pr < 0 ? ' neg' : '') + '">' + (e.amtC ? esc(fmt0(pr / e.amtC * 100)) + '%' : '') + '</td></tr>'; }).join('')) : '<div class="empty">لسه مفيش بيعات اتحسبت تكلفتها.</div>');
@@ -2317,8 +2330,60 @@ function openChg(sid) {
     '<div class="err" id="cg-err"></div><div class="actions"><button class="btn" id="cg-save">حفظ وإعادة الحساب</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
   $('#hsheet').classList.remove('hide');
 }
+/* ---------- مراجعة قيود التكاليف: قيود زيادة / حسبة قديمة / تكرار إعدادات (مفيش حاجة بتتغير غير بضغطتك) ---------- */
+const csIsCost = e => { const n = cl(e.stmt); return e.dr === CS_COGS && (e.cr === CS_RAW || e.cr === 'المصروفات') && (n === 'تكاليف' || n === 'تشغيل منتج' || cl(e.pb) === 'تشغيل منتج'); };
+function csLinkedIds() { const s = new Set(); for (const d of docsOf('cl')) { const l = d.data; for (const id of [l.e1, l.e2, ...(l.ex || [])]) if (id) s.add(id); } return s; }
+function csPrevCalcs(sale, l) {
+  const outQ = (+sale.qty || 0) * (1 - (+sale.disc || 0)), cur = new Set([l.e1, l.e2].filter(Boolean)), seen = new Set(), out = [];
+  for (const x of S.ent.values()) {
+    if (!x.deleted || x.dr !== CS_COGS || x.cr !== CS_RAW || x.date !== sale.date || cur.has(x.id)) continue;
+    if (Math.abs((+x.qty || 0) * (1 - (+x.disc || 0)) - outQ) > 0.02) continue;
+    if (csKey(x.prod) === csKey(l.raw) && Math.abs((+x.amtD || 0) - (+l.cost || 0)) < 0.5) continue;
+    const k = csKey(x.prod) + '|' + Math.round(+x.amtD || 0); if (seen.has(k)) continue; seen.add(k); out.push(x);
+  }
+  return out.sort((a, b) => (b.updated || 0) - (a.updated || 0)).slice(0, 4);
+}
+function openAudit() {
+  const st = csStart(), linked = csLinkedIds(), f0 = n => esc(fmt0(n));
+  S.hs = { type:'audit' };
+  const extra = live().filter(e => csIsCost(e) && e.date >= st && !linked.has(e.id)).sort((a, b) => a.date < b.date ? 1 : -1);
+  const sales = docsOf('cl').map(d => d.data).filter(l => !l.out && !l.fg && l.e1 && S.ent.get(l.sale) && !S.ent.get(l.sale).deleted).map(l => ({ l, e:S.ent.get(l.sale), prev:csPrevCalcs(S.ent.get(l.sale), l) })).sort((a, b) => a.e.date < b.e.date ? 1 : -1);
+  const dupT = [], dupR = [];
+  for (const [list, key, out] of [[docsOf('cp'), d => csKey(d.data.prod), dupT], [docsOf('cr'), d => csKey(d.data.raw), dupR]]) { const m = new Map(); for (const d of list) { const k = key(d); (m.get(k) || m.set(k, []).get(k)).push(d); } for (const v of m.values()) if (v.length > 1) out.push(...v); }
+  let h = '<h2 style="margin:0 0 6px;font-size:18px">مراجعة قيود التكاليف</h2><div class="note">مفيش حاجة هنا بتتغير لوحدها. كل زرار بيشتغل بضغطتك، والمحذوف بيفضل محفوظ في النظام.</div>';
+  h += '<div class="note" style="margin-top:10px"><b>1) بيعات ليها حسبة قديمة محذوفة (' + sales.filter(x => x.prev.length).length + ')</b><br>لو الخام اتغير لفريش وانت كنت حاسبها مخلل، اضغط «ارجع» عشان ترجع الحسبة القديمة بقيودها.</div>';
+  const withPrev = sales.filter(x => x.prev.length);
+  h += withPrev.length ? withPrev.map(({ l, e, prev }) => '<div class="hrow"><div class="kv"><span>' + esc(e.date) + ' · ' + esc(e.prod) + (e.pa ? ' · ' + esc(e.pa) : '') + '</span></div><div class="kv"><span>الحالي: ' + esc(l.raw) + '</span><span dir="ltr">' + f0(l.cost + (l.op || 0)) + '</span></div>' +
+    prev.map(x => '<div class="kv"><span>القديمة: ' + esc(cl(x.prod)) + (x.price ? ' (' + esc(fmt(x.amtD / x.qty)) + ' للكيلو)' : '') + '</span><span dir="ltr">' + f0(x.amtD) + '</span></div><div class="actions"><button class="btn ghost" data-arst="' + e.id + '|' + x.id + '">ارجع للحسبة دي</button></div>').join('') + '</div>').join('') : '<div class="empty">مفيش.</div>';
+  h += '<div class="note" style="margin-top:10px"><b>2) قيود تكاليف زيادة (' + extra.length + ')</b><br>قيود «تكاليف» أو «تشغيل منتج» بعد تاريخ التشغيل الأوتوماتيك (' + esc(st) + ') ومش مربوطة بأي بيعة، يعني غالباً اتحسبت مرتين.</div>';
+  h += extra.length ? csTbl([20, 34, 16, 18, 12], ['التاريخ', 'البيان / الصنف', 'الكمية', 'المبلغ', ''], extra.map(e => '<tr><td class="l">' + esc(e.date) + '</td><td class="l">' + esc(cl(e.stmt)) + ' · ' + esc(cl(e.prod)) + (cl(e.pb) ? ' · ' + esc(cl(e.pb)) : '') + '</td><td class="v">' + f0(e.qty) + '</td><td class="v">' + f0(e.amtD) + '</td><td class="v"><button class="btn danger" data-adel="' + e.id + '" style="width:auto;padding:4px 10px;min-height:36px">حذف</button></td></tr>').join('')) : '<div class="empty">مفيش.</div>';
+  h += '<div class="note" style="margin-top:10px"><b>3) إعدادات مكررة (' + (dupT.length + dupR.length) + ')</b><br>نفس الصنف أو الخام متسجل أكتر من مرة بقيم مختلفة، وده بيخلي الأرقام تتغير. احذف المكرر الغلط.</div>';
+  const dRow = (d, txt) => '<div class="kv"><span>' + txt + '</span><button class="btn danger" data-adup="' + d.id + '" style="width:auto;padding:4px 10px;min-height:36px">حذف</button></div>';
+  h += (dupT.length || dupR.length) ? dupT.map(d => dRow(d, esc(d.data.prod) + ' ← ' + esc(d.data.raw) + ' · فاقد ' + (d.data.loss == null || d.data.loss === '' ? 'حسب الخام' : esc(fmt(d.data.loss * 100)) + '%') + ' · تشغيل ' + esc(fmt(d.data.op)))).join('') + dupR.map(d => dRow(d, esc(d.data.raw) + ' · فاقد ' + esc(fmt(d.data.loss * 100)) + '%')).join('') : '<div class="empty">مفيش.</div>';
+  h += '<div class="actions" style="margin-top:12px"><button class="btn ghost" id="he-x">إغلاق</button></div>';
+  $('#hs-pn').innerHTML = h; $('#hsheet').classList.remove('hide');
+}
+async function csRestorePrev(saleId, e1id) {
+  const sale = S.ent.get(saleId), l = csLink(saleId), x = S.ent.get(e1id); if (!sale || !l || !x) return;
+  const now = Date.now(), un = id => { const z = id && S.ent.get(id); return z && !z.deleted ? z : null; };
+  const e2o = [...S.ent.values()].find(y => y.deleted && y.dr === CS_COGS && y.cr === 'المصروفات' && cl(y.pb) === 'تشغيل منتج' && y.date === x.date && csKey(y.prod) === csKey(x.prod) && Math.abs((+y.qty || 0) - (+x.qty || 0)) < 0.01);
+  for (const id of [l.e1, l.e2, ...(l.ex || [])]) { const z = un(id); if (z) { Object.assign(z, { deleted:true, dirty:true, updated:now }); await entPut(z); } }
+  let no = Math.max(0, ...live().map(z => z.no || 0));
+  Object.assign(x, { deleted:false, no:++no, dirty:true, updated:now }); await entPut(x);
+  if (e2o) { Object.assign(e2o, { deleted:false, no:++no, dirty:true, updated:now }); await entPut(e2o); }
+  const outQ = (+sale.qty || 0) * (1 - (+sale.disc || 0));
+  docSave('cl', 'cl:' + saleId, { ...l, e1:x.id, e2:e2o ? e2o.id : '', ex:[], raw:cl(x.prod), loss:Math.max(0, (+x.disc || 0) - (+sale.disc || 0)), man:true, rawQ:+x.qty, avg:x.amtD / x.qty, cost:+x.amtD, op:e2o ? +e2o.amtD : 0, outQ, sig:csSig(sale) });
+}
+function csAuditClick(e) {
+  const rs = e.target.closest('[data-arst]'), de = e.target.closest('[data-adel]'), du = e.target.closest('[data-adup]'), done = () => { openAudit(); renderCS(); sync(); };
+  if (rs) { if (!confirm('ترجع الحسبة القديمة؟ الحسبة الحالية هتتشال من القيود (ومحفوظة لو عايز ترجعلها).')) return true; const [a, b] = rs.dataset.arst.split('|'); csRestorePrev(a, b).then(() => { done(); toast('اتسترجعت الحسبة القديمة'); }); return true; }
+  if (de) { const x = S.ent.get(de.dataset.adel); if (!x) return true; if (S.profile.role === 'accountant' && S.closed.has(x.date.slice(0, 7))) { toast('الشهر ده مقفول'); return true; } if (!confirm('تحذف القيد ده؟')) return true; Object.assign(x, { deleted:true, dirty:true, updated:Date.now() }); entPut(x).then(() => { done(); toast('اتحذف القيد'); }); return true; }
+  if (du) { const d = S.docs.get(du.dataset.adup); if (!d) return true; if (!confirm('تحذف الإعداد المكرر ده؟')) return true; docSave(d.kind, d.id, d.data, true); done(); toast('اتحذف'); return true; }
+  return false;
+}
 function csSheetClick(e) {
   const g = id => $(id).value;
+  if (S.hs && S.hs.type === 'audit' && csAuditClick(e)) return true;
   if (fgSheetClick(e)) return true;
   if (plSheetClick(e)) return true;
   if (poAlClick(e)) return true;
@@ -2364,6 +2429,7 @@ async function csBodyClick(e) {
   const fp = t0.closest('[data-fgp]'); if (fp) return openFG(+fp.dataset.fgp);
   if (!canWrite()) return;
   const t = e.target;
+  if (t.closest('#cs-audit')) return openAudit();
   if (t.closest('#cs-start')) { const d = $('#cs-sd').value; if (!d) return toast('اختار التاريخ'); docSave('cpset', 'cpset', { start:d }); renderCS(); toast('اتحفظ'); return; }
   if (t.closest('#cs-all')) { let n = 0; for (const s of csUnlinked()) { if (await csGen(s, true)) n++; } renderCS(); sync(); return toast('اتحسب ' + n + ' بيعة'); }
   const gb = t.closest('[data-gen]'); if (gb) { const r = await csGen(S.ent.get(gb.dataset.gen), true); renderCS(); sync(); return toast(r ? 'اتحسبت' : 'ما اتحسبتش'); }
