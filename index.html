@@ -482,6 +482,16 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
         <button class="btn ghost" id="p-go" style="width:100%">حفظ كلمة المرور</button>
       </div></details>
 
+      <details class="sec"><summary>نسخة احتياطية كاملة</summary><div class="in">
+        <p class="note" style="margin-top:0">ملف واحد فيه كل القيود، وكمان المرتبات والموظفين والوصفات والربط والجرد وتجاهلات المدقق. ابعته لنفسك على واتساب أو إيميل أو Drive، عشان يبقى عندك نسخة بره الموبايل والسيرفر.</p>
+        <p class="note" id="bk-last"></p>
+        <button class="btn" id="bk-go" style="width:100%">حفظ نسخة كاملة دلوقتي</button>
+        <div id="bk-rs" class="hide">
+          <p class="note">استعادة (للمالك فقط): بتضيف الناقص بس. أي قيد أو إعداد موجود عندك ما بيتلمسش، وبتقدر ترجع عنها بسهم الرجوع.</p>
+          <input id="bk-file" type="file" accept=".json,application/json" style="margin-top:4px">
+        </div>
+      </div></details>
+
       <details class="sec"><summary>تصدير القيود للإكسيل</summary><div class="in">
         <p class="note" style="margin-top:0">ملف CSV بالقيود. يفتح في الإكسيل، ويستورده ماكرو برنامج المحاسبة في شيتات الشهور.</p>
         <select id="x-month" aria-label="الشهر" style="margin-top:6px"></select>
@@ -1197,6 +1207,7 @@ function auClick(e) {
   const i = t.closest('[data-aui]'); if (i && canWrite()) { const k = i.dataset.aui; docSave('ded', 'ign:' + k, { ign:1 }, auIgn(k)); renderAU(); }
 }
 function renderHome() {
+  if (!S.bkChecked && S.ent.size) { S.bkChecked = 1; bkRemind(); }
   const t = [['new','قيد جديد','plus','#F28C28'], ['list','القيود','list','#1FA38A'], ['db','لوحة المؤشرات','chart','#2E7D52'], ['tb','ميزان المراجعة','scale','#4A3FE0'],
     ['gl','دفتر الأستاذ العام','book','#7A4DD8'], ['is','قائمة الدخل','chart','#E8892B'], ['bs','المركز المالي','scale','#1E6FE8'], ['mp','صافي الربح الشهري','chart','#1FA38A'], ['dp','إهلاك الأصول','build','#8A5A2B'], ['hr','المرتبات','brief','#4A3FE0'], ['cs','التكاليف','scale','#C2410C'], ['pr','الإنتاج','box','#2F7A4F'], ['au','المدقق' + (auCount() ? ' (' + auCount() + ')' : ''),'tag','#C0453A'], ['an','التحليلات','coin','#A63CA0'], ['sync','مزامنة','sync','#2AA7C9']];
   if (!canWrite()) t.shift(); /* الشريك: مشاهدة بس، من غير قيد جديد */
@@ -1856,8 +1867,22 @@ async function fgSaleGen(sale, old, f) {
 /* شاشة المنتج التام */
 const PL_SEED = {"B":{"k":"جردل","head":"شركة Vegan Foods للصناعات الغذائية المنطقه الصناعيه الكيلو 28 طريق إسكندرية الصحراوي س . ت :- 136730 ب . ض :- 766236927","contact":"للتواصل إدارة المصنع :01119476148 إدارة المبيعات :01030688080","secs":[{"t":"انواع المشكلات","items":[{"m":1,"n":"مشكل ترويقه","e":16,"d":10,"pk":60,"note":"مفرز وعالى الجوده بخلطة فيجن + هريسة شطة","link":"مشكل ترويقة","id":"i1"},{"m":2,"n":"مشكل فيجن","e":16,"d":10,"pk":55,"note":"مفرز وعالى الجوده","link":"مشكل فيجان","id":"i2"},{"m":3,"n":"بوليف ساده","e":16,"d":10,"pk":40,"link":"بوليف سادة","id":"i3"},{"m":4,"n":"بوليف محوج","e":16,"d":10,"pk":45,"link":"بوليف محوج","id":"i4"},{"m":5,"n":"ميكس ساده","e":16,"d":10,"pk":30,"link":"مشكل ميكس سادة","id":"i5"},{"m":6,"n":"سوبر ميكس","e":16,"d":10,"pk":35,"link":"مشكل سوبر ميكس","id":"i6"},{"m":7,"n":"مشكل سوري","e":16,"d":10,"pk":20,"link":"مشكل سورى","id":"i7"},{"m":8,"n":"جزر ساده","e":16,"d":10,"pk":20,"link":"جزر سادة","id":"i8"},{"m":9,"n":"لفت ساده","e":16,"d":10,"pk":20,"link":"لفت سادة","id":"i9"}]},{"t":"مخللات مصري","items":[{"m":10,"n":"ليمون ساده","e":17,"d":12,"pk":25,"link":"ليمون سادة","id":"i10"},{"m":11,"n":"ليمون معصفر فيجن","e":17,"d":12,"pk":28,"link":"ليمون معصفر فيجان","id":"i11"},{"m":12,"n":"فلفل طنطاوي","e":15,"d":8,"pk":35,"link":"فلفل طنطاوى عادى","id":"i12"},{"m":13,"n":"فلفل طنطاوي صناره","e":15,"d":8,"pk":40,"link":"فلفل طنطاوى صنارة","id":"i13"},{"m":14,"n":"فلفل مكسيكي","e":15,"d":8,"pk":35,"link":"فلفل مكسيكى","id":"i14"},{"m":15,"n":"فلفل ايطالى","e":15,"d":8,"pk":50,"link":"فلفل ايطالى","id":"i15"},{"m":16,"n":"هالبينو احمر شرائح","e":15,"d":8,"pk":40,"link":"فلفل هلابينو احمر شرائح","id":"i16"},{"m":17,"n":"هالبينو اخضر شرائح","e":15,"d":8,"pk":35,"link":"فلفل هلابينو اخضر شرائح","id":"i17"},{"m":18,"n":"بصل ساده","e":8,"d":5,"pk":90,"link":"بصل سادة","id":"i18"},{"m":19,"n":"بصل بالقرنبيط","e":8,"d":5,"pk":90,"link":"بصل بالقرنبيط","id":"i19"},{"m":20,"n":"باذنجان مقدوس","e":5,"d":5,"pk":180,"id":"i20"},{"m":21,"n":"خيار فكوك","e":15,"d":9,"pk":50,"id":"i21"},{"m":22,"n":"خيار بلدى","e":15,"d":9,"pk":45,"id":"i22"},{"m":23,"n":"خيار اسكندرانى","e":15,"d":9,"pk":30,"id":"i23"},{"m":24,"n":"خيار شرائح","e":15,"d":9,"pk":50,"link":"خيار شرائح","id":"i24"},{"m":25,"n":"خيار بخلطه فيجن","e":15,"d":9,"pk":50,"link":"خيار فيجان","id":"i25"},{"m":26,"n":"خيار قشه زيرو","e":15,"d":5,"pk":270,"link":"خيار قشة","id":"i26"},{"m":27,"n":"خيار محشى","e":15,"d":9,"pk":70,"id":"i27"}]},{"t":"ميكسات فيجان","items":[{"m":28,"n":"ميكس فيجن","e":8,"d":4,"pk":170,"note":"مفروز وعالى الجوده بخلطة فيجن","link":"ميكس فيجن","id":"i28"},{"m":29,"n":"ميكس حمص خلطه","e":8,"d":5,"pk":95,"note":"مفروز وعالى الجوده بخلطة فيجن","link":"حمص بالخلطة","id":"i29"},{"m":30,"n":"ميكس زيتون مخلى","e":7,"d":4,"pk":160,"id":"i30"},{"m":31,"n":"ميكس زيتون شرائح","e":7,"d":4,"pk":160,"id":"i31"},{"m":32,"n":"هريسه حاره","e":5,"d":5,"pk":50,"link":"هريسة حارة","id":"i32"},{"m":33,"n":"هرسيه محوجه","e":5,"d":5,"pk":50,"link":"هريسة محوجة","id":"i33"}]},{"t":"انواع الزيتون","items":[{"m":34,"n":"زيتون اخضر جامبو","e":16,"d":10,"pk":130,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون اخضر جامبو سليم","id":"i34"},{"m":35,"n":"زيتون اخضر احجام","e":16,"d":10,"pk":120,"id":"i35"},{"m":36,"n":"زيتون اخضر شرائح جامبو","e":15,"d":9,"pk":155,"link":"زيتون اخضر شرائح جامبو","id":"i36"},{"m":37,"n":"زيتون اخضر شرائح احجام","e":15,"d":9,"pk":145,"id":"i37"},{"m":38,"n":"زيتون اخضر مخلي","e":16,"d":10,"pk":160,"link":"زيتون اخضر مخلى","id":"i38"},{"m":39,"n":"زيتون اخضر محشي جزر","e":16,"d":10,"pk":150,"link":"زيتون محشي جزر","id":"i39"},{"m":40,"n":"زيتون اخضر محشي فلفل","e":16,"d":10,"pk":150,"link":"زيتون محشى فلفل","id":"i40"},{"m":41,"n":"زيتون اسود طبيعى جامبو","e":8,"d":5,"pk":200,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون اسبانى طبيعى جامبو","id":"i41"},{"m":42,"n":"زيتون دولسى جامبو","e":8,"d":5,"pk":150,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون دولسي جامبو","id":"i42"},{"m":43,"n":"زيتون اسود طبيعي احجام","e":8,"d":5,"pk":180,"id":"i43"},{"m":44,"n":"زيتون اسود طبيعى شرائح","e":8,"d":5,"pk":190,"link":"زيتون شرائح طبيعي","id":"i44"},{"m":45,"n":"زيتون كالاماتا جامبو","e":8,"d":5,"pk":235,"link":"زيتون كالاماتا جامبو","id":"i45"},{"m":46,"n":"زيتون كالاماتا بالزيت","e":8,"d":5,"pk":290,"note":"مفروز وعالى الجوده مطعم بزيت زيتون","link":"زيتون كالاماتا زيت","id":"i46"},{"m":47,"n":"زيتون مشوي","e":5,"d":5,"pk":180,"note":"مفروز وعالى الجوده مطعم بزيت زيتون","link":"زيتون مشوى","id":"i47"}]},{"t":"زيت الزيتون","items":[{"m":49,"n":"زجاجة زيت زيتون","et":"كجم 250","pk":165,"note":"معصور على البارد عالى الجوده","id":"i48"},{"m":50,"n":"زجاجة زيت زيتون","et":"كجم 500","pk":315,"id":"i49"},{"m":51,"n":"زجاجة زيت زيتون","et":"كيلو 1","pk":600,"id":"i50"}]}]},"J":{"k":"برطمان","head":"شركة Vegan Foods للصناعات الغذائية المنطقه الصناعيه الكيلو 28 طريق إسكندرية الصحراوي س . ت :- 136730 ب . ض :- 766236927","contact":"للتواصل إدارة المصنع :01119476148 إدارة المبيعات :01030688080","secs":[{"t":"انواع المشكلات","items":[{"m":1,"n":"مشكل ترويقه","p1":47,"p2":55,"link":"مشكل ترويقة","id":"i51"},{"m":2,"n":"مشكل فيجن","p1":44,"p2":52,"link":"مشكل فيجان","id":"i52"},{"m":3,"n":"بوليف ساده","p1":38,"p2":42,"link":"بوليف سادة","id":"i53"},{"m":4,"n":"بوليف محوج","p1":40,"p2":46,"link":"بوليف محوج","id":"i54"},{"m":5,"n":"ميكس ساده","p1":36,"p2":40,"link":"مشكل ميكس سادة","id":"i55"},{"m":6,"n":"سوبر ميكس","p1":38,"p2":43,"link":"مشكل سوبر ميكس","id":"i56"},{"m":7,"n":"مشكل سوري","p1":35,"p2":39,"link":"مشكل سورى","id":"i57"},{"m":8,"n":"جزر ساده","p1":32,"p2":35,"link":"جزر سادة","id":"i58"},{"m":9,"n":"لفت ساده","p1":32,"p2":35,"link":"لفت سادة","id":"i59"}]},{"t":"مخللات مصري","items":[{"m":10,"n":"ليمون ساده","p1":33,"p2":37,"link":"ليمون سادة","id":"i60"},{"m":11,"n":"ليمون معصفر فيجن","p1":34,"p2":37,"link":"ليمون معصفر فيجان","id":"i61"},{"m":12,"n":"فلفل طنطاوي","p1":38,"p2":40,"link":"فلفل طنطاوى عادى","id":"i62"},{"m":13,"n":"فلفل طنطاوي صناره","p1":38,"p2":40,"link":"فلفل طنطاوى صنارة","id":"i63"},{"m":14,"n":"فلفل مكسيكي","p1":39,"p2":41,"link":"فلفل مكسيكى","id":"i64"},{"m":15,"n":"فلفل ايطالى","p1":46,"p2":51,"link":"فلفل ايطالى","id":"i65"},{"m":16,"n":"هالبينو احمر شرائح","p1":41,"p2":43,"link":"فلفل هلابينو احمر شرائح","id":"i66"},{"m":17,"n":"هالبينو اخضر شرائح","p1":39,"p2":41,"link":"فلفل هلابينو اخضر شرائح","id":"i67"},{"m":18,"n":"بصل ساده","p1":71,"p2":89,"link":"بصل سادة","id":"i68"},{"m":19,"n":"بصل بالقرنبيط","link":"بصل بالقرنبيط","id":"i69"},{"m":20,"n":"باذنجان مقدوس","id":"i70"},{"m":21,"n":"خيار فكوك","id":"i71"},{"m":22,"n":"خيار بلدى","id":"i72"},{"m":23,"n":"خيار اسكندرانى","id":"i73"},{"m":24,"n":"خيار شرائح","p1":46,"p2":54,"link":"خيار شرائح","id":"i74"},{"m":25,"n":"خيار بخلطه فيجن","p1":55,"p2":61,"link":"خيار فيجان","id":"i75"},{"m":26,"n":"خيار قشه زيرو","p1":175,"p2":232,"link":"خيار قشة","id":"i76"},{"m":27,"n":"خيار محشى","id":"i77"}]},{"t":"ميكسات فيجان","items":[{"m":28,"n":"ميكس فيجن","p1":87,"p2":109,"note":"مفروز وعالى الجوده بخلطة فيجن","link":"ميكس فيجن","id":"i78"},{"m":29,"n":"ميكس حمص خلطه","p1":83,"p2":104,"note":"مفروز وعالى الجوده بخلطة فيجن","link":"حمص بالخلطة","id":"i79"},{"m":32,"n":"هريسه حاره","p1":49,"p2":58,"link":"هريسة حارة","id":"i80"},{"m":33,"n":"هرسيه محوجه","p1":71,"p2":88,"link":"هريسة محوجة","id":"i81"}]},{"t":"انواع الزيتون","items":[{"m":34,"n":"زيتون اخضر جامبو","p1":95,"p2":122,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون اخضر جامبو سليم","id":"i82"},{"m":36,"n":"زيتون اخضر شرائح جامبو","p1":111,"p2":144,"link":"زيتون اخضر شرائح جامبو","id":"i83"},{"m":38,"n":"زيتون اخضر مخلي","p1":109,"p2":141,"link":"زيتون اخضر مخلى","id":"i84"},{"m":39,"n":"زيتون اخضر محشي جزر","p1":101,"p2":130,"link":"زيتون محشي جزر","id":"i85"},{"m":40,"n":"زيتون اخضر محشي فلفل","p1":102,"p2":131,"link":"زيتون محشى فلفل","id":"i86"},{"m":41,"n":"زيتون اسود طبيعى جامبو","p1":123,"p2":160,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون اسبانى طبيعى جامبو","id":"i87"},{"m":42,"n":"زيتون دولسى جامبو","p1":91,"p2":116,"note":"متحجم ومفروز وعالى الجوده","link":"زيتون دولسي جامبو","id":"i88"},{"m":44,"n":"زيتون اسود طبيعى شرائح","p1":147,"p2":193,"link":"زيتون شرائح طبيعي","id":"i89"},{"m":45,"n":"زيتون كالاماتا جامبو","p1":155,"p2":204,"link":"زيتون كالاماتا جامبو","id":"i90"},{"m":47,"n":"زيتون كالاماتا بالزيت","p1":161,"p2":212,"note":"مفروز وعالى الجوده مطعم بزيت زيتون","link":"زيتون كالاماتا زيت","id":"i91"},{"m":48,"n":"زيتون مشوي","p1":167,"p2":196,"note":"مفروز وعالى الجوده مطعم بزيت زيتون","link":"زيتون مشوى","id":"i92"}]},{"t":"زيت الزيتون","items":[{"m":49,"n":"زجاجة زيت زيتون","p1":165,"et":"كجم 250","note":"معصور على البارد عالى الجوده","id":"i93"},{"m":50,"n":"زجاجة زيت زيتون","p1":315,"et":"كجم 500","id":"i94"},{"m":51,"n":"زجاجة زيت زيتون","p1":600,"et":"كيلو 1","id":"i95"}]}]}};
 function plData() { const d = S.docs.get('pl2'); return d && !d.deleted && d.data.v === 1 ? d.data : null; }
-function plSelGet(K) { if (!S.plSel) S.plSel = {}; if (!S.plSel[K]) { try { S.plSel[K] = new Set(JSON.parse(localStorage.getItem('pl_sel_' + K)) || []); } catch (x) { S.plSel[K] = new Set(); } } return S.plSel[K]; }
-function plSelSave(K) { try { localStorage.setItem('pl_sel_' + K, JSON.stringify([...plSelGet(K)])); } catch (x) { /* ignore */ } }
+/* اختيارات القائمة المخصصة ومنتجاتها الإضافية بتتخزن في مستند واحد بيتزامن بين كل الأجهزة (والمشاهد بيحفظ على جهازه بس) */
+const plCfgDoc = () => { const d = S.docs.get('plcfg'); return d && !d.deleted ? d : null; };
+const plLoc = k => { try { return JSON.parse(localStorage.getItem(k)) || []; } catch (x) { return []; } };
+function plSelGet(K) {
+  const d = plCfgDoc(), v = d ? d.updated : 0; if (!S.plSel) S.plSel = {}; if (!S.plSelV) S.plSelV = {};
+  if (!S.plSel[K] || S.plSelV[K] !== v) { const arr = d && d.data.sel && d.data.sel[K] ? d.data.sel[K] : plLoc('pl_sel_' + K); S.plSel[K] = new Set(arr); S.plSelV[K] = v; }
+  return S.plSel[K];
+}
+function plXGet(K) { const d = plCfgDoc(); return d && d.data.x && d.data.x[K] ? d.data.x[K] : plLoc('pl_x_' + K); }
+function plCfgCommit(selP, xP) {
+  const sel = { B:[...plSelGet('B')], J:[...plSelGet('J')] }, x = { B:plXGet('B'), J:plXGet('J') };
+  if (selP) sel[selP.K] = selP.v; if (xP) x[xP.K] = xP.v;
+  docSave('pl2', 'plcfg', { sel, x });
+}
+function plSelSave(K) { if (canWrite()) plCfgCommit({ K, v:[...plSelGet(K)] }); else { try { localStorage.setItem('pl_sel_' + K, JSON.stringify([...plSelGet(K)])); } catch (x) { /* ignore */ } } }
+function plXSave(K, a) { if (canWrite()) plCfgCommit(null, { K, v:a }); else { try { localStorage.setItem('pl_x_' + K, JSON.stringify(a)); } catch (x) { /* ignore */ } } }
 function plProd(D, kind, link) { return link ? D.prods.find(p => p.k === kind && csKey(p.n) === csKey(link)) : null; }
 function plCost(D, kind, it, which) {
   const p = plProd(D, kind, it.link); if (!p) return null;
@@ -1869,23 +1894,24 @@ function fgPriceHTML(D, w) {
   const P = plData() || Object.assign({ v:1 }, PL_SEED), K = S.plK === 'برطمان' ? 'J' : 'B', L = P[K], kind = K === 'J' ? 'برطمان' : 'جردل', custom = S.plMode === 'c', X = !!S.plX, sel = plSelGet(K), f = x => esc(fmt0(x));
   const ctl = '<div class="mrow"><div class="seg" style="margin:0"><button class="' + (K === 'B' ? 'on' : '') + '" data-plk="جردل">جرادل</button><button class="' + (K === 'J' ? 'on' : '') + '" data-plk="برطمان">برطمانات</button></div></div>' +
     '<div class="mrow"><div class="seg" style="margin:0"><button class="' + (custom ? '' : 'on') + '" data-plm="f">قائمة كاملة</button><button class="' + (custom ? 'on' : '') + '" data-plm="c">قائمة مخصصة</button></div></div>' +
-    (custom ? '<div class="mrow"><input id="pl-title" placeholder="اسم العميل / عنوان القائمة (اختياري)" value="' + esc(S.plTitle || '') + '"></div><div class="mrow"><button class="btn" id="pl-sel" style="width:100%">اختيار المنتجات (' + [...sel].filter(id => L.secs.some(s => s.items.some(i => i.id === id))).length + ')</button></div>' : '') +
-    '<div class="mrow" style="display:flex;gap:8px"><button class="btn ghost" data-plx="1" style="flex:1">' + (X ? 'إخفاء التكلفة والربح' : 'إظهار التكلفة والربح') + '</button>' + (w && !custom ? '<button class="btn ghost" id="pl-add" style="flex:1">＋ صنف</button><button class="btn ghost" id="pl-adds" style="flex:1">＋ قسم</button>' : '') + '</div>';
+    (custom ? '<div class="mrow"><input id="pl-title" placeholder="اسم العميل / عنوان القائمة (اختياري)" value="' + esc(S.plTitle || '') + '"></div><div class="mrow"><button class="btn" id="pl-sel" style="width:100%">اختيار من القائمة الرئيسية (' + [...sel].filter(id => L.secs.some(s => s.items.some(i => i.id === id))).length + ')</button></div><div class="mrow"><button class="btn" id="pl-fx" style="width:100%">＋ منتجات من شيت المنتجات (' + plXGet(K).length + ')</button></div>' : '') +
+    '<div class="mrow" style="display:flex;gap:8px"><button class="btn ghost" data-plx="1" style="flex:1">' + (X ? 'إخفاء التكلفة والربح' : 'إظهار التكلفة والربح') + '</button>' + (w && !custom ? '<button class="btn ghost" id="pl-add" style="flex:1">＋ صنف</button><button class="btn ghost" id="pl-adds" style="flex:1">＋ قسم</button>' : '') + '</div>' + (w ? '<div class="mrow" style="display:flex;gap:8px"><button class="btn ghost" id="pl-hd" style="flex:1">بيانات رأس القائمة</button><button class="btn ghost" id="pl-nt" style="flex:1">ملاحظات القائمة</button></div>' : '');
   const head = '<div class="hrow" style="text-align:center"><div class="n">' + esc(L.head) + '</div><div class="note">' + esc(L.contact) + '</div>' + (custom && cl(S.plTitle) ? '<div class="n" style="margin-top:6px">' + esc(S.plTitle) + '</div>' : '') + '</div>';
   let no = 0, cols, wd, th;
   if (K === 'B') { th = X ? ['م', 'الصنف', 'سعر الجردل', 'التكلفة', 'الربح', '%'] : ['م', 'الصنف', 'وزن الصافي', 'وزن المصفي', 'سعر الكيلو', 'سعر الجردل']; wd = X ? [7, 37, 16, 14, 13, 13] : [7, 33, 14, 14, 16, 16]; }
   else { th = X ? ['م', 'الصنف', 'سعر 720', 'تكلفة 720', 'سعر 1050', 'تكلفة 1050'] : ['م', 'الصنف', 'الصافي', 'المصفي', 'سعر 720', 'الصافي', 'المصفي', 'سعر 1050']; wd = X ? [7, 33, 15, 15, 15, 15] : [6, 29, 10, 10, 12, 10, 10, 13]; }
   cols = th.length;
   const wt = (g, d, et) => et || (g ? fmt(g) : '');
-  const body = L.secs.map(sec => {
-    const items = sec.items.filter(it => !custom || sel.has(it.id)); if (!items.length) return '';
-    return '<tr class="h"><td class="l" colspan="' + cols + '">' + esc(sec.t) + '</td></tr>' + items.map(it => { no++; const m = custom ? no : it.m, pb = it.pk && it.d ? it.pk * it.d : null, tr0 = '<tr' + (w && !custom ? ' data-pli="' + it.id + '" style="cursor:pointer"' : '') + '><td class="v">' + esc(m) + '</td><td class="l">' + esc(it.n) + (it.note ? '<small style="display:block;color:var(--muted)">' + esc(it.note) + '</small>' : '') + '</td>';
+  const xi = custom ? plXItems(D, K) : [], secs = xi.length ? [...L.secs, { t:'منتجات خاصة', items:xi }] : L.secs;
+  const body = secs.map(sec => {
+    const items = sec.items.filter(it => !custom || it.x || sel.has(it.id)); if (!items.length) return '';
+    return '<tr class="h"><td class="l" colspan="' + cols + '">' + esc(sec.t) + '</td></tr>' + items.map(it => { no++; const m = custom ? no : it.m, pb = it.pk && it.d ? it.pk * it.d : null, tr0 = '<tr' + (w && !custom ? ' data-pli="' + it.id + '" style="cursor:pointer"' : '') + (it.x ? ' data-plxi="' + it.id + '" style="cursor:pointer"' : '') + '><td class="v">' + esc(m) + '</td><td class="l">' + esc(it.n) + (it.note ? '<small style="display:block;color:var(--muted)">' + esc(it.note) + '</small>' : '') + '</td>';
       if (K === 'B') { if (X) { const c = plCost(D, kind, it), pr = pb != null ? pb : it.pk; return tr0 + '<td class="v">' + f(pr) + '</td><td class="v">' + (c != null ? f(c) : '') + '</td><td class="v">' + (c != null ? f(pr - c) : '') + '</td><td class="v' + (c != null && pr < c ? ' neg' : '') + '">' + (c ? f((pr - c) / c * 100) + '%' : '') + '</td></tr>'; }
         return tr0 + '<td class="v">' + esc(it.et || wt(it.e)) + '</td><td class="v">' + esc(it.d ? fmt(it.d) : '') + '</td><td class="v">' + (it.pk != null ? f(it.pk) : '-') + '</td><td class="v">' + (pb != null ? f(pb) : '') + '</td></tr>'; }
       if (X) { const c1 = plCost(D, kind, it, '720'), c2 = plCost(D, kind, it, '1050'); return tr0 + '<td class="v">' + (it.p1 != null ? f(it.p1) : '-') + '</td><td class="v">' + (c1 != null ? f(c1) : '') + '</td><td class="v">' + (it.p2 != null ? f(it.p2) : '-') + '</td><td class="v">' + (c2 != null ? f(c2) : '') + '</td></tr>'; }
       const bt = !!it.et; return tr0 + '<td class="v">' + (bt ? esc(it.et) : '720 g') + '</td><td class="v">' + (bt ? '' : '400 g') + '</td><td class="v">' + (it.p1 != null ? f(it.p1) : '-') + '</td><td class="v">' + (bt ? '' : '1050 g') + '</td><td class="v">' + (bt ? '' : '550 g') + '</td><td class="v">' + (it.p2 != null ? f(it.p2) : (bt ? '' : '-')) + '</td></tr>'; }).join('');
   }).join('');
-  return ctl + head + (body ? csTbl(wd, th, body) : '<div class="empty">' + (custom ? 'اختار المنتجات من زرار «اختيار المنتجات».' : 'القائمة فاضية.') + '</div>') + '<div class="note np" style="padding:8px 14px">السعر المكتوب هو السعر المعتمد (قطاعي). اضغط على أي صنف تعدل سعره أو وزنه أو ملاحظته. لو عايز قائمة لمنتجات معينة اختار «قائمة مخصصة» وبعدها PDF.</div>';
+  return ctl + head + (body ? csTbl(wd, th, body) : '<div class="empty">' + (custom ? 'اختار منتجات من القائمة الرئيسية أو من شيت المنتجات.' : 'القائمة فاضية.') + '</div>') + (cl(L.notes) ? '<div class="hrow" style="margin-top:10px"><div class="n">ملاحظات</div><div style="white-space:pre-wrap">' + esc(L.notes) + '</div></div>' : '') + '<div class="note np" style="padding:8px 14px">السعر المكتوب هو السعر المعتمد (قطاعي). اضغط على أي صنف تعدل سعره أو وزنه أو ملاحظته. لو عايز قائمة لمنتجات معينة اختار «قائمة مخصصة» وبعدها PDF.</div>';
 }
 function openPLI(id, secIdx) {
   const P = plData(); if (!P) return; const K = S.plK === 'برطمان' ? 'J' : 'B', L = P[K]; let si = -1, ii = -1;
@@ -1903,6 +1929,50 @@ function openPLI(id, secIdx) {
   if (K === 'B') { const upd = () => { const a = num($('#pli-pk').value), d = num($('#pli-d').value); $('#pli-hint').textContent = a && d ? 'سعر الجردل = ' + fmt0(a * d) : ''; }; $('#pli-pk').oninput = upd; $('#pli-d').oninput = upd; upd(); }
   hrRO(); $('#hsheet').classList.remove('hide');
 }
+const plTa = (id, v, r) => '<textarea id="' + id + '" rows="' + r + '" style="width:100%;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;background:#fff;color:var(--ink)">' + esc(v || '') + '</textarea>';
+function openPLH() {
+  const P = plData(); if (!P) return; const L = P[S.plK === 'برطمان' ? 'J' : 'B']; S.hs = { type:'plh' };
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">بيانات رأس القائمة</h2><label for="plh-head">اسم وبيانات الشركة</label>' + plTa('plh-head', L.head, 4) + '<label for="plh-contact">أرقام التواصل</label>' + plTa('plh-contact', L.contact, 3) +
+    '<label style="display:flex;gap:10px;align-items:center;margin-top:10px"><input type="checkbox" id="plh-both" checked style="width:22px;height:22px;min-height:0"> تطبيق على قائمة الجرادل والبرطمانات الاتنين</label><div class="actions"><button class="btn" id="plh-save">حفظ</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
+  hrRO(); $('#hsheet').classList.remove('hide');
+}
+function openPLN() {
+  const P = plData(); if (!P) return; const L = P[S.plK === 'برطمان' ? 'J' : 'B']; S.hs = { type:'pln' };
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">ملاحظات القائمة (' + (S.plK === 'برطمان' ? 'برطمانات' : 'جرادل') + ')</h2><div class="note">بتظهر تحت القائمة وفي الـPDF. سيبها فاضية لو مش عايز ملاحظات.</div>' + plTa('pln-t', L.notes, 7) +
+    '<div class="actions"><button class="btn" id="pln-save">حفظ</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
+  hrRO(); $('#hsheet').classList.remove('hide');
+}
+/* منتجات القائمة المخصصة من شيت المنتجات مباشرة (للقائمة المخصصة بس، ومش بتلمس القائمة الرئيسية) */
+function plXSize(D, p, n) { return p.s.find(z => fgCont(D, z.c).n.includes(n)); }
+function plXItems(D, K) {
+  const kind = K === 'J' ? 'برطمان' : 'جردل', out = [];
+  for (const x of plXGet(K)) {
+    const p = D.prods.find(q => q.k === kind && csKey(q.n) === csKey(x.p)); if (!p) continue;
+    if (K === 'B') {
+      const z = p.s.find(q => q.c === x.c); if (!z) continue; const c = fgCont(D, z.c), pr = x.po != null ? x.po : z.price;
+      out.push({ id:x.id, x:1, n:cl(x.t) || (p.s.length > 1 ? p.n + ' - ' + c.n : p.n), e:c.gw || '', d:c.kg, pk:c.kg ? pr / c.kg : 0, note:x.note, link:p.n });
+    } else {
+      const a = plXSize(D, p, '720'), b = plXSize(D, p, '1050'); if (!a && !b) continue;
+      out.push({ id:x.id, x:1, n:cl(x.t) || p.n, p1:x.p1 != null ? x.p1 : (a ? a.price : null), p2:x.p2 != null ? x.p2 : (b ? b.price : null), note:x.note, link:p.n });
+    }
+  }
+  return out;
+}
+function openPLX() {
+  const D = fgData(); if (!D) { toast('افتح شيت المنتجات الأول'); return; } const K = S.plK === 'برطمان' ? 'J' : 'B', kind = K === 'J' ? 'برطمان' : 'جردل', cur = plXGet(K), prods = D.prods.filter(p => p.k === kind); S.hs = { type:'plx', K };
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">منتجات من شيت المنتجات</h2><div class="note">بتتضاف للقائمة المخصصة دي بس، ومش بتتحط في القائمة الرئيسية.</div>' +
+    (prods.map((p, i) => '<div class="note" style="margin-top:10px"><b>' + esc(p.n) + '</b></div>' + (K === 'B' ? p.s.map((z, j) => '<label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><input type="checkbox" data-plxa="' + i + ',' + j + '" style="width:22px;height:22px;min-height:0"' + (cur.some(x => csKey(x.p) === csKey(p.n) && x.c === z.c) ? ' checked' : '') + '> ' + esc(fgCont(D, z.c).n) + ' — ' + esc(fmt0(z.price)) + '</label>').join('')
+      : '<label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><input type="checkbox" data-plxa="' + i + ',0" style="width:22px;height:22px;min-height:0"' + (cur.some(x => csKey(x.p) === csKey(p.n)) ? ' checked' : '') + '> 720: ' + esc(plXSize(D, p, '720') ? fmt0(plXSize(D, p, '720').price) : '-') + ' · 1050: ' + esc(plXSize(D, p, '1050') ? fmt0(plXSize(D, p, '1050').price) : '-') + '</label>')).join('') || '<div class="empty">مفيش منتجات من النوع ده في الشيت.</div>') +
+    '<div class="actions"><button class="btn" id="plx-ok">تم</button></div>';
+  $('#hsheet').classList.remove('hide');
+}
+function openPLXE(id) {
+  const K = S.plK === 'برطمان' ? 'J' : 'B', x = plXGet(K).find(q => q.id === id); if (!x) return; S.hs = { type:'plxe', K, id };
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">تعديل منتج في القائمة المخصصة</h2><label for="pxe-t">الاسم في القائمة (اختياري)</label>' + fgIn('pxe-t', x.t, '', 0) + '<label for="pxe-note">ملاحظات</label>' + fgIn('pxe-note', x.note, '', 0) +
+    (K === 'B' ? '<label for="pxe-po">سعر الجردل (فاضي = سعر المنتج في الشيت)</label>' + fgIn('pxe-po', x.po) : '<div class="grid"><div><label for="pxe-p1">سعر 720</label>' + fgIn('pxe-p1', x.p1, 'من الشيت') + '</div><div><label for="pxe-p2">سعر 1050</label>' + fgIn('pxe-p2', x.p2, 'من الشيت') + '</div></div>') +
+    '<div class="actions"><button class="btn" id="pxe-save">حفظ</button><button class="btn danger" id="pxe-del">شيله من القائمة</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
+  $('#hsheet').classList.remove('hide');
+}
 function openPLS() {
   const P = plData(); if (!P) return; const K = S.plK === 'برطمان' ? 'J' : 'B', L = P[K], sel = plSelGet(K); S.hs = { type:'pls', K };
   $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">اختيار المنتجات للقائمة</h2><div class="actions"><button class="btn ghost" id="pls-all">تحديد الكل</button><button class="btn ghost" id="pls-none">مسح الكل</button></div>' +
@@ -1918,6 +1988,33 @@ function plSheetClick(e) {
     if (t.closest('#pls-all')) { P[K].secs.forEach(s2 => s2.items.forEach(i => sel.add(i.id))); plSelSave(K); openPLS(); return true; }
     if (t.closest('#pls-none')) { sel.clear(); plSelSave(K); openPLS(); return true; }
     if (t.closest('#pls-ok')) { closeHS(); renderCS(); return true; }
+  }
+  if (S.hs && S.hs.type === 'plh' && t.closest('#plh-save')) {
+    const P = fgClone(plData()), h = cl(g('#plh-head')), c = cl(g('#plh-contact')); for (const K of $('#plh-both').checked ? ['B', 'J'] : [S.plK === 'برطمان' ? 'J' : 'B']) { P[K].head = h; P[K].contact = c; }
+    docSave('pl2', 'pl2', P); closeHS(); renderCS(); toast('تم الحفظ'); return true;
+  }
+  if (S.hs && S.hs.type === 'pln' && t.closest('#pln-save')) {
+    const P = fgClone(plData()), K = S.plK === 'برطمان' ? 'J' : 'B', v = g('#pln-t').trim(); if (v) P[K].notes = v; else delete P[K].notes;
+    docSave('pl2', 'pl2', P); closeHS(); renderCS(); toast('تم الحفظ'); return true;
+  }
+  if (S.hs && S.hs.type === 'plx') {
+    const K = S.hs.K, D = fgData();
+    if (t.matches && t.matches('[data-plxa]')) {
+      const [i, j] = t.dataset.plxa.split(',').map(Number), kind = K === 'J' ? 'برطمان' : 'جردل', p = D.prods.filter(q => q.k === kind)[i]; if (!p) return false; let a = plXGet(K);
+      if (t.checked) { if (K === 'J' && !plXSize(D, p, '720') && !plXSize(D, p, '1050')) { t.checked = false; toast('المنتج ده مفيهوش حجم 720 أو 1050'); return false; } a.push(K === 'B' ? { id:'x' + uid8(), p:p.n, c:p.s[j].c } : { id:'x' + uid8(), p:p.n }); }
+      else a = a.filter(x => !(csKey(x.p) === csKey(p.n) && (K === 'J' || x.c === p.s[j].c)));
+      plXSave(K, a); return false;
+    }
+    if (t.closest('#plx-ok')) { closeHS(); renderCS(); return true; }
+  }
+  if (S.hs && S.hs.type === 'plxe') {
+    const K = S.hs.K; let a = plXGet(K);
+    if (t.closest('#pxe-del')) { a = a.filter(x => x.id !== S.hs.id); plXSave(K, a); closeHS(); renderCS(); return true; }
+    if (t.closest('#pxe-save')) {
+      const x = a.find(q => q.id === S.hs.id); if (!x) return true; const nt = cl(g('#pxe-t')), nn = cl(g('#pxe-note')); if (nt) x.t = nt; else delete x.t; if (nn) x.note = nn; else delete x.note;
+      for (const [k, id] of K === 'B' ? [['po', '#pxe-po']] : [['p1', '#pxe-p1'], ['p2', '#pxe-p2']]) { if (cl(g(id)) !== '') x[k] = num(g(id)); else delete x[k]; }
+      plXSave(K, a); closeHS(); renderCS(); toast('تم الحفظ'); return true;
+    }
   }
   if (S.hs && S.hs.type === 'pli') {
     const K = S.hs.K, P = fgClone(plData()), L = P[K];
@@ -1988,6 +2085,21 @@ function fgSyncP() {
   W.p.s = W.p.s.map((z, k) => { const o = { ...z, c:$('#fg-sc' + k).value, price:Math.max(0, num($('#fg-sp' + k).value)) }; const a = $('#fg-sk' + k).value, b = $('#fg-so' + k).value; if (cl(a) === '') delete o.pk; else o.pk = num(a); if (cl(b) === '') delete o.op; else o.op = num(b); const wsv = $('#fg-sw' + k).value; if (cl(wsv) === '') delete o.wp; else o.wp = Math.max(0, num(wsv)); return o; });
 }
 function fgDx(W) { const D = W.D, k = W.p.k; return { ...D, ing:{ ...D.ing, [k]:{ ...(D.ing[k] || {}), ...W.prices } } }; }
+/* تكلفة الحجم ده + النسبة فوقها: اكتب النسبة يطلع السعر، أو اكتب السعر تظهر النسبة */
+function fgCostZ(W, z) {
+  const Dx = fgDx(W), p = W.p, pr = Dx.ing[p.k] || {}, c = fgCont(Dx, z.c), kg = c.kg;
+  const ing = p.r.filter(r => r[0]).reduce((a, r) => a + r[1] * (+pr[r[0]] || 0) * kg, 0);
+  return ing + (z.pk != null ? +z.pk : fgSum(c.pk)) + (z.op != null ? +z.op : fgSum(c.op));
+}
+function fgMar(W, z) { const c = fgCostZ(W, z); return c > 0 && z.price > 0 ? +((z.price - c) / c * 100).toFixed(2) : ''; }
+function fgInp(e) {
+  const m = /^fg-s([pm])(\d+)$/.exec((e && e.target && e.target.id) || '');
+  if (m && S.fgW && $('#fg-n')) {
+    fgSyncP(); const k = +m[2], z = S.fgW.p.s[k];
+    if (z && m[1] === 'm') { const c = fgCostZ(S.fgW, z), pc = cl($('#fg-sm' + k).value); if (c > 0 && pc !== '') $('#fg-sp' + k).value = +(c * (1 + num(pc) / 100)).toFixed(2); }
+  }
+  fgLive();
+}
 function fgDetHTML() {
   const W = S.fgW, p = W.p, Dx = fgDx(W), pr = Dx.ing[p.k] || {}, rows = p.r.filter(r => r[0]);
   const tot = rows.reduce((a, r) => a + (+r[1] || 0), 0), c2 = x => esc(fmt(x));
@@ -2001,7 +2113,7 @@ function fgDetHTML() {
       '<div class="kv"><b>التكلفة الإجمالية</b><b dir="ltr">' + c2(all) + '</b></div><div class="kv"><span>سعر البيع</span><span dir="ltr">' + c2(z.price) + '</span></div>' +
       '<div class="kv"><b>الربح</b><b dir="ltr" class="' + (pf < 0 ? 'neg' : '') + '">' + c2(pf) + (all ? ' (' + c2(pf / all * 100) + '%)' : '') + '</b></div></div>'; }).join('');
 }
-function fgLive() { if (!S.hs || S.hs.type !== 'fgp' || !S.fgW || !$('#fg-det')) return; fgSyncP(); const tot = S.fgW.p.r.reduce((a, r) => a + (+r[1] || 0), 0); $('#fg-tot').textContent = fmt(tot * 100) + '%'; $('#fg-det').innerHTML = fgDetHTML(); }
+function fgLive() { if (!S.hs || S.hs.type !== 'fgp' || !S.fgW || !$('#fg-det')) return; fgSyncP(); const tot = S.fgW.p.r.reduce((a, r) => a + (+r[1] || 0), 0); $('#fg-tot').textContent = fmt(tot * 100) + '%'; $('#fg-det').innerHTML = fgDetHTML(); S.fgW.p.s.forEach((z, k) => { const el = $('#fg-sm' + k); if (el && document.activeElement !== el) el.value = fgMar(S.fgW, z); }); }
 function fgRenderP() {
   const W = S.fgW, D = W.D, p = W.p, pr = { ...(D.ing[p.k] || {}), ...W.prices }, tot = p.r.reduce((a, r) => a + (+r[1] || 0), 0);
   $('#hs-pn').innerHTML = fgDL(D) + '<h2 style="margin:0 0 6px;font-size:18px">' + (W.idx == null ? 'منتج جديد' : 'تعديل منتج') + '</h2>' +
@@ -2013,13 +2125,13 @@ function fgRenderP() {
     '<div class="note" style="margin-top:12px"><b>العبوات والأسعار</b></div>' +
     p.s.map((z, k) => { const c = fgCont(D, z.c);
       return '<div class="hrow"><label for="fg-sc' + k + '">العبوة</label><select id="fg-sc' + k + '">' + D.cont.map(x => '<option value="' + x.id + '"' + (x.id === z.c ? ' selected' : '') + '>' + esc(x.n) + '</option>').join('') + '</select>' +
-        '<div class="grid"><div><label for="fg-sp' + k + '">سعر البيع (قطاعي)</label>' + fgIn('fg-sp' + k, z.price) + '</div><div><label for="fg-sw' + k + '">سعر الجملة (أرض المصنع)</label>' + fgIn('fg-sw' + k, z.wp, fmt(z.price * 0.8)) + '</div></div>' +
+        '<div class="grid"><div><label for="fg-sp' + k + '">سعر البيع (قطاعي)</label>' + fgIn('fg-sp' + k, z.price) + '</div><div><label for="fg-sm' + k + '">النسبة % فوق التكلفة</label>' + fgIn('fg-sm' + k, fgMar(W, z), '%') + '</div></div><div class="grid"><div><label for="fg-sw' + k + '">سعر الجملة (أرض المصنع)</label>' + fgIn('fg-sw' + k, z.wp, fmt(z.price * 0.8)) + '</div><div></div></div>' +
         '<div class="grid"><div><label for="fg-sk' + k + '">عبوة وكيس (للمنتج ده بس)</label>' + fgIn('fg-sk' + k, z.pk, fmt(fgSum(c.pk))) + '</div><div><label for="fg-so' + k + '">تشغيل (للمنتج ده بس)</label>' + fgIn('fg-so' + k, z.op, fmt(fgSum(c.op))) + '</div></div>' +
         '<div class="actions"><button class="btn danger" data-fgrs="' + k + '">مسح الحجم</button></div></div>'; }).join('') +
     '<div class="actions"><button class="btn ghost" id="fg-adds">＋ عبوة / حجم</button></div>' +
     '<div class="note" style="margin-top:12px"><b>تفاصيل التكلفة لكل حجم</b> (بتتحدث وإنت بتعدل)</div><div id="fg-det">' + fgDetHTML() + '</div>' +
     '<div class="err" id="fg-err"></div><div class="actions"><button class="btn" id="fg-save">حفظ</button>' + (W.idx != null ? '<button class="btn ghost" id="fg-copy">نسخ المنتج</button><button class="btn danger" id="fg-del">حذف</button>' : '') + '<button class="btn ghost" id="he-x">إغلاق</button></div>';
-  $('#hs-pn').oninput = fgLive; $('#hs-pn').onchange = fgLive;
+  $('#hs-pn').oninput = fgInp; $('#hs-pn').onchange = fgInp;
   hrRO(); $('#hsheet').classList.remove('hide');
 }
 function openFG(i) { const D = fgData(); if (!D) return; S.hs = { type:'fgp' }; S.fgW = { D, prices:{}, idx:i, p:i == null ? { n:'', k:S.fgKind || 'جردل', r:[], s:[{ c:D.cont[0].id, price:0 }] } : fgClone(D.prods[i]) }; fgRenderP(); }
@@ -2616,6 +2728,10 @@ async function csBodyClick(e) {
   const pm = t0.closest('[data-plm]'); if (pm) { S.plMode = pm.dataset.plm; return renderCS(); }
   if (t0.closest('[data-plx]')) { S.plX = !S.plX; return renderCS(); }
   if (t0.closest('#pl-sel')) return openPLS();
+  if (t0.closest('#pl-fx')) return openPLX();
+  if (t0.closest('#pl-hd') && canWrite()) return openPLH();
+  if (t0.closest('#pl-nt') && canWrite()) return openPLN();
+  const plx = t0.closest('[data-plxi]'); if (plx) return openPLXE(plx.dataset.plxi);
   const pli = t0.closest('[data-pli]'); if (pli && canWrite()) return openPLI(pli.dataset.pli);
   if (t0.closest('#pl-add') && canWrite()) return openPLI(null, 0);
   if (t0.closest('#pl-adds') && canWrite()) { const nm = cl(prompt('اسم القسم الجديد')); if (nm) { const P = fgClone(plData()), K = S.plK === 'برطمان' ? 'J' : 'B'; P[K].secs.push({ t:nm, items:[] }); docSave('pl2', 'pl2', P); renderCS(); } return; }
@@ -2940,7 +3056,7 @@ function renderSettings() {
   $('#s-last').textContent = S.lastSync ? S.lastSync.toLocaleString('ar-EG-u-nu-latn') : 'لسه';
   $('#s-pend').textContent = pending();
   $('#s-err').textContent = S.err === 'net' ? 'مفيش اتصال بالسيرفر.' : S.err;
-  $('#s-imp').classList.toggle('hide', !(S.profile && S.profile.role === 'owner'));
+  $('#s-imp').classList.toggle('hide', !(S.profile && S.profile.role === 'owner')); $('#bk-rs').classList.toggle('hide', !(S.profile && S.profile.role === 'owner')); bkShow();
   $('#s-ver').textContent = 'الإصدار ' + VER;
   const xm = $('#x-month'), keep = xm.value || '*';
   const months = [...new Set(live().map(e => e.date.slice(0, 7)))].sort().reverse();
@@ -3208,7 +3324,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.17';
+const VER = '1.20';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -3218,10 +3334,55 @@ function csvOf(list) {
 async function shareFile(name, text, mime) {
   const file = new File([text], name, { type: mime });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.share({ files: [file], title: name }); return true; } catch (e) { if (e && e.name === 'AbortError') return false; }
   }
   const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name;
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); return true;
+}
+/* ---------- نسخة احتياطية كاملة (قيود + كل إعدادات المرتبات والتكاليف والجرد) وبتتستعاد بإضافة الناقص بس ---------- */
+const bkClean = o => { const c = { ...o }; delete c.dirty; return c; };
+function bkBuild() {
+  const ents = [...S.ent.values()].map(bkClean), docs = [...S.docs.values()].map(bkClean);
+  return { app:'vegan-acc', fmt:1, at:new Date().toISOString(), ver:VER, entries:ents, docs, counts:{ entries:ents.filter(e => !e.deleted).length, docs:docs.filter(d => !d.deleted).length } };
+}
+async function bkExport() {
+  if (!S.ent.size && !S.docs.size) { toast('مفيش بيانات للنسخ'); return; }
+  const b = bkBuild(), ok = await shareFile('vegan-backup-' + todayStr() + '.json', JSON.stringify(b), 'application/json');
+  if (ok === false) return;
+  await kvSet('lastBackup', { at:Date.now(), e:b.counts.entries, d:b.counts.docs }); bkShow(); toast('اتجهزت نسخة فيها ' + b.counts.entries + ' قيد و' + b.counts.docs + ' إعداد');
+}
+async function bkShow() {
+  const el = $('#bk-last'); if (!el) return; const b = await kvGet('lastBackup');
+  el.textContent = b ? 'آخر نسخة: ' + new Date(b.at).toLocaleDateString('ar-EG') + ' (' + b.e + ' قيد)' : 'لسه ما خدتش نسخة على الموبايل ده.';
+}
+function bkRemind() {
+  if (!(S.profile && S.profile.role === 'owner')) return;
+  kvGet('lastBackup').then(b => { if (!b || Date.now() - b.at > 7 * 864e5) toast('عدّى أسبوع من آخر نسخة احتياطية. خدها من الإعدادات'); });
+}
+function bkPlan(j) {
+  if (!j || j.app !== 'vegan-acc' || !Array.isArray(j.entries) || !Array.isArray(j.docs)) return null;
+  const ae = j.entries.filter(x => x && x.id && x.date && !x.deleted && !S.ent.has(String(x.id)));
+  const ad = j.docs.filter(x => x && x.id && x.kind && !x.deleted && !S.docs.has(String(x.id)));
+  return { ae, ad };
+}
+async function bkRestore(file) {
+  if (!file) return; $('#bk-file').value = '';
+  if (!(S.profile && S.profile.role === 'owner')) { toast('الاستعادة للمالك فقط'); return; }
+  let j; try { j = JSON.parse(await file.text()); } catch (e) { toast('الملف مش سليم'); return; }
+  const pl = bkPlan(j); if (!pl) { toast('ده مش ملف نسخة احتياطية كاملة'); return; }
+  if (!pl.ae.length && !pl.ad.length) { toast('كل اللي في النسخة موجود عندك بالفعل'); return; }
+  if (!confirm('هيتضاف ' + pl.ae.length + ' قيد و' + pl.ad.length + ' إعداد مش موجودين عندك. اللي موجود ما بيتغيرش. تكمل؟')) return;
+  const now = Date.now(), E = pl.ae.map(x => ({ id:String(x.id), no:+x.no || 0, date:String(x.date).slice(0, 10), stmt:x.stmt || '', dr:x.dr || '', cr:x.cr || '', pa:x.pa || '', pb:x.pb || '',
+    prod:x.prod || '', qty:+x.qty || 0, disc:+x.disc || 0, price:+x.price || 0, amtD:+x.amtD || 0, amtC:+x.amtC || 0, star:!!x.star, opening:!!x.opening, deleted:false, updated:now, dirty:true }));
+  const D = pl.ad.map(x => ({ id:String(x.id), kind:String(x.kind), data:x.data || {}, deleted:false, updated:now, dirty:true }));
+  await jBatch(async () => {
+    for (const e of E) { S.ent.set(e.id, e); jAdd({ k:'e', id:e.id, b:null, a:jClone(e) }); }
+    for (const d of D) { S.docs.set(d.id, d); jRecDoc(null, d); }
+    await entPutMany(E); await docPutMany(D);
+  });
+  render(); toast('بنرفع ' + E.length + ' قيد و' + D.length + ' إعداد…');
+  await sync();
+  toast(pending() ? 'لسه ' + pending() + ' في الانتظار، دوس مزامنة' : 'تمت الاستعادة');
 }
 function exportXl() {
   const m = $('#x-month').value;
@@ -3287,7 +3448,7 @@ async function init() {
   $('#p-go').onclick = changePw; $('#s-out').onclick = logout; $('#x-go').onclick = exportXl;
   $('#adm-list').onclick = e => { const b = e.target.closest('.adm-pw'); if (b) admSetPw(S.users[+b.dataset.u]); };
   $('#adm-list').onchange = e => { const x = e.target.closest('.adm-role'); if (x) admSetRole(S.users[+x.dataset.u], x.value); };
-  $('#s-file').onchange = e => importFile(e.target.files[0]);
+  $('#s-file').onchange = e => importFile(e.target.files[0]); $('#bk-go').onclick = bkExport; $('#bk-file').onchange = e => bkRestore(e.target.files[0]);
   $('#f-month').onchange = e => { S.month = e.target.value; S.limit = 100; renderList(); };
   $('#f-q').oninput = e => { S.q = e.target.value; S.limit = 100; renderList(); };
   $('#more').onclick = () => { S.limit += 100; renderList(); };
