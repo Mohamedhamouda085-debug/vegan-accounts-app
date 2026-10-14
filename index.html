@@ -375,7 +375,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
     </section>
 
     <section id="v-au" class="hide">
-      <div class="sub"><button id="au-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>الرقيب</b></div>
+      <div class="sub"><button id="au-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>المدقق</b></div>
       <div id="au-top"></div>
       <div class="count" id="au-sum"></div>
       <div class="auc" id="au-cats"></div>
@@ -996,16 +996,16 @@ function rowHTML(e) {
     (e.pb ? '<span>' + esc(e.pb) + '</span>' : '') + (e.prod ? '<span>' + esc(e.prod) + '</span>' : '') + '</div></button>';
 }
 
-/* ---------- الرقيب: رقابة محاسبية على القيود والخزينة والأرصدة ---------- */
+/* ---------- المدقق: رقابة محاسبية على القيود والخزينة والأرصدة ---------- */
 const AU_AUTO = /^(تكاليف|إنتاج منتج تام|تسوية جرد)$/;
 const AU_CATS = [['cash', 'الخزينة'], ['data', 'بيانات ناقصة'], ['calc', 'حسابات'], ['dup', 'تكرار'], ['price', 'أسعار ومبالغ'], ['bal', 'أرصدة وأسماء'], ['seq', 'ترقيم']];
 const auCatN = k => (AU_CATS.find(c => c[0] === k) || [k, k])[1];
 const auIgn = k => { const d = S.docs.get('ign:' + k); return !!(d && !d.deleted); };
 const auMed = a => { const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : 0; };
 /* رصيد الخزينة يوم بيوم (بنفس منطق الدفاتر: مدين زيادة، دائن نقص) */
-function auCash() {
-  const m = new Map();
-  for (const e of live()) { const s = side(e, 'الخزينة'); if (!s) continue; let o = m.get(e.date); if (!o) m.set(e.date, o = { d:0, c:0, es:[] }); o.d += s.d; o.c += s.c; o.es.push({ e, in:s.d, out:s.c }); }
+function auCash(acc) {
+  acc = acc || 'الخزينة'; const m = new Map();
+  for (const e of live()) { const s = side(e, acc); if (!s) continue; let o = m.get(e.date); if (!o) m.set(e.date, o = { d:0, c:0, es:[] }); o.d += s.d; o.c += s.c; o.es.push({ e, in:s.d, out:s.c }); }
   const rows = []; let bal = 0, negDays = 0;
   for (const k of [...m.keys()].sort()) { const o = m.get(k), prev = bal; bal += o.d - o.c; if (bal < -0.5) negDays++; rows.push({ date:k, prev, bal, d:o.d, c:o.c, es:o.es }); }
   return { rows, bal, negDays };
@@ -1087,11 +1087,33 @@ function auChecks() {
   const nums = new Set(); let mx = 0; for (const e of S.ent.values()) if (e.no > 0) { nums.add(e.no); if (e.no > mx) mx = e.no; }
   for (let i = 1, n = 0; i <= mx && n < 40; i++) if (!nums.has(i)) { let j = i; while (j < mx && !nums.has(j + 1)) j++; n++; add('seq', 'gp:' + i + '-' + j, 'w', i === j ? 'رقم قيد ناقص: ' + i : 'أرقام قيود ناقصة من ' + i + ' إلى ' + j + ' (' + (j - i + 1) + ' قيد)', null, '', 'لو القيود دي اتمسحت بالغلط رجّعها من الإكسل. لو متأكد إنها مش موجودة دوس تجاهل'); i = j; }
   /* الخزينة */
-  for (const r of auCash().rows) if (r.bal < -0.5 && r.prev >= -0.5) {
+  for (const r of auCash('الخزينة').rows) if (r.bal < -0.5 && r.prev >= -0.5) {
     const sus = r.es.slice().sort((a, b) => b.out - a.out)[0];
     add('cash', 'cn:' + r.date, 'e', 'الخزينة نزلت تحت الصفر يوم ' + r.date, sus ? sus.e : null, 'الرصيد قبل اليوم ' + fmt(r.prev) + ' · داخل ' + fmt(r.d) + ' · خارج ' + fmt(r.c) + ' · بعده ' + fmt(r.bal), 'القيد المعروض أكبر صرف في اليوم ده. راجع قيود الخزينة قبله');
   }
   return out;
+}
+
+/* ---------- تنبيه فوري بعد أي حفظ أو حذف: لو العملية عملت مشكلة جديدة بيقولك فوراً وتقدر تتراجع ---------- */
+function auSnap() { try { return new Set(auAll().filter(a => !auIgn(a.key)).map(a => a.key)); } catch (x) { return null; } }
+function auPost(before, verb, id) {
+  if (!before || !canWrite()) return;
+  let neu; try { neu = auAll().filter(a => !auIgn(a.key) && !before.has(a.key)); } catch (x) { return; }
+  if (!neu.length) return;
+  neu.sort((a, b) => (a.sev === 'e' ? 0 : 1) - (b.sev === 'e' ? 0 : 1));
+  const er = neu.filter(a => a.sev === 'e').length;
+  S.hs = { type:'aupost', id:id || '' };
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px;color:' + (er ? 'var(--red)' : 'var(--amber)') + '">' + esc(verb) + ' — ظهر ' + neu.length + (er ? ' (منها ' + er + ' خطأ)' : '') + ' بسببه</h2>' +
+    neu.slice(0, 5).map(a => '<div class="hrow" style="border-inline-start:5px solid ' + (a.sev === 'e' ? 'var(--red)' : 'var(--amber)') + '"><div class="n">' + esc(a.title) + '</div>' + (a.extra ? '<div class="aux" style="color:var(--muted);font-size:13px">' + esc(a.extra) + '</div>' : '') + (a.fix ? '<div style="color:var(--green-d);font-size:13.5px;margin-top:4px">الحل: ' + esc(a.fix) + '</div>' : '') + '</div>').join('') +
+    (neu.length > 5 ? '<div class="note">وفيه ' + (neu.length - 5) + ' كمان في شاشة المدقق.</div>' : '') +
+    '<div class="actions" style="margin-top:10px">' + (id && S.ent.get(id) && !S.ent.get(id).deleted ? '<button class="btn" id="aup-open">افتح القيد وعدّله</button>' : '') + '<button class="btn danger" id="aup-undo">↶ تراجع عن العملية</button><button class="btn ghost" id="aup-ok">تمام، سيبه</button></div>';
+  $('#hsheet').classList.remove('hide');
+}
+function auPostClick(e) {
+  if (e.target.closest('#aup-ok')) { closeHS(); return true; }
+  if (e.target.closest('#aup-undo')) { jStep(-1); return true; }
+  if (e.target.closest('#aup-open')) { const id = S.hs.id; closeHS(); openForm(id); return true; }
+  return false;
 }
 let _au = null, _auSig = '';
 function auAll() {
@@ -1101,29 +1123,50 @@ function auAll() {
   return _au;
 }
 const auCount = () => { try { return auAll().filter(a => !auIgn(a.key)).length; } catch (x) { return 0; } };
-function auCashHTML(C) {
-  const raw = S.auCash || '', has = raw !== '' && /\d/.test(raw);
-  let res = '';
-  if (has) {
-    const diff = num(raw) - C.bal, ad = Math.abs(diff);
-    if (ad < 0.5) res = '<div class="aur"><span class="ok">✓ الخزينة متطابقة مع الدفاتر</span></div>';
-    else {
-      res = '<div class="aur"><span class="bad">' + (diff < 0 ? 'عجز ' : 'زيادة ') + fmt(ad) + '</span> <span style="color:var(--muted)">(الفعلي ' + fmt(num(raw)) + ' − الدفاتر ' + fmt(C.bal) + ')</span></div>';
-      const cand = [], near = (x, y) => Math.abs(x - y) <= 0.51, rec = diff < 0 ? 'in' : 'out', kind = diff < 0 ? 'قبض' : 'صرف';
-      for (const r of C.rows) for (const x of r.es) { const v = x[rec]; if (!(v > 0)) continue; if (near(v, ad)) cand.push({ x, why:kind + ' بنفس مبلغ الفرق — ممكن يكون اتسجل مرتين' }); else if (near(v * 2, ad)) cand.push({ x, why:kind + ' مبلغه نص الفرق — ممكن كان المفروض يتسجل بالاتجاه التاني' }); }
-      cand.sort((a, b) => b.x.e.date.localeCompare(a.x.e.date));
-      res += cand.length ? '<div class="aux" style="margin-top:8px">قيود تستاهل المراجعة:</div>' + cand.slice(0, 8).map(c => '<div class="kv" style="padding:8px 0"><span>' + esc(c.x.e.no) + ' · ' + esc(c.x.e.date) + ' · ' + esc(c.x.e.stmt || '—') + (c.x.e.pa || c.x.e.pb ? ' · ' + esc(c.x.e.pa || c.x.e.pb) : '') + '<br><small style="color:var(--muted)">' + esc(c.why) + '</small></span><span><span dir="ltr">' + fmt(c.x[rec]) + '</span> <button class="btn ghost" style="min-height:36px;padding:4px 10px" data-auo="' + c.x.e.id + '">افتح</button></span></div>').join('') :
-        '<div class="aux" style="margin-top:8px">مفيش قيد خزينة بالمبلغ ده. غالبًا فيه صرف أو قبض اتعمل ومتسجلش، شوف تبويب «ترقيم» لو فيه قيود ناقصة.</div>';
-    }
-  }
-  return '<div class="aup"><div class="aug"><div class="aum"><small>رصيد الخزينة بالدفاتر</small><b dir="ltr" class="' + (C.bal < -0.5 ? 'neg' : '') + '">' + fmt(C.bal) + '</b></div><div class="aum"><small>أيام الرصيد فيها سالب</small><b class="' + (C.negDays ? 'neg' : '') + '">' + C.negDays + '</b></div></div>' +
-    '<div class="auf"><input id="au-cc" inputmode="decimal" dir="ltr" placeholder="الفلوس الفعلية في الخزنة" value="' + esc(raw) + '"><button class="btn" id="au-cc-go">احسب العجز</button></div>' + res + '</div>';
+const AU_ACCS = ['الخزينة', 'خزينة.خاصة', 'البنك'];
+function auAcc() { if (!S.auAcc) { try { S.auAcc = localStorage.getItem('au_acc') || ''; } catch (x) { S.auAcc = ''; } if (!AU_ACCS.includes(S.auAcc)) S.auAcc = 'الخزينة'; } return S.auAcc; }
+const auCps = acc => docsOf('cc').map(d => ({ id:d.id, ...d.data })).filter(c => c.acc === acc && c.date).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+function auBalAt(C, d) { let b = 0; for (const r of C.rows) { if (r.date > d) break; b = r.bal; } return b; }
+/* قيود تستاهل المراجعة جوه فترة بين جردين: نفس مبلغ الفرق (اتسجل مرتين) أو نصه (اتسجل بالاتجاه الغلط) */
+function auCands(C, from, to, diff) {
+  const ad = Math.abs(diff), near = (x, y) => Math.abs(x - y) <= 0.51, rec = diff < 0 ? 'in' : 'out', kind = diff < 0 ? 'قبض' : 'صرف', out = [];
+  for (const r of C.rows) { if ((from && r.date <= from) || r.date > to) continue; for (const x of r.es) { const v = x[rec]; if (!(v > 0)) continue; if (near(v, ad)) out.push({ x, why:kind + ' بنفس مبلغ الفرق — ممكن يكون اتسجل مرتين' }); else if (near(v * 2, ad)) out.push({ x, why:kind + ' مبلغه نص الفرق — ممكن كان المفروض يتسجل بالاتجاه التاني' }); } }
+  return out.sort((a, b) => b.x.e.date.localeCompare(a.x.e.date)).slice(0, 6);
+}
+function auCandHTML(list) {
+  return list.map(c => '<div class="kv" style="padding:8px 0"><span>' + esc(c.x.e.no) + ' · ' + esc(c.x.e.date) + ' · ' + esc(c.x.e.stmt || '—') + (c.x.e.pa || c.x.e.pb ? ' · ' + esc(c.x.e.pa || c.x.e.pb) : '') + '<br><small style="color:var(--muted)">' + esc(c.why) + '</small></span><span><span dir="ltr">' + fmt(c.x.in || c.x.out) + '</span> <button class="btn ghost" style="min-height:36px;padding:4px 10px" data-auo="' + c.x.e.id + '">افتح</button></span></div>').join('');
+}
+function auMonthsHTML(C) {
+  const m = new Map();
+  for (const r of C.rows) { const k = r.date.slice(0, 7); let o = m.get(k); if (!o) m.set(k, o = { d:0, c:0, close:0 }); o.d += r.d; o.c += r.c; o.close = r.bal; }
+  let prev = 0; const rows = [];
+  for (const k of [...m.keys()].sort()) { const o = m.get(k); rows.push({ k, open:prev, d:o.d, c:o.c, close:o.close }); prev = o.close; }
+  if (!rows.length) return '';
+  return '<details style="margin-top:10px"><summary style="font-weight:700">حركة الشهور (أول المدة / وارد / منصرف / آخر المدة)</summary>' + csTbl([22, 20, 19, 19, 20], ['الشهر', 'أول المدة', 'وارد', 'منصرف', 'آخر المدة'], rows.reverse().slice(0, 18).map(r => '<tr><td class="l">' + esc(r.k) + '</td><td class="v">' + esc(fmt0(r.open)) + '</td><td class="v">' + esc(fmt0(r.d)) + '</td><td class="v">' + esc(fmt0(r.c)) + '</td><td class="v"' + (r.close < -0.5 ? ' style="color:var(--red);font-weight:800"' : '') + '>' + esc(fmt0(r.close)) + '</td></tr>').join('')) + '</details>';
+}
+function auCashHTML(C, acc) {
+  const w = canWrite(), cps = auCps(acc), today = todayStr();
+  let h = '<div class="aup"><div class="auf" style="margin-top:0"><select id="au-acc" aria-label="الحساب" style="flex:1;min-height:44px;border:1.5px solid var(--line);border-radius:12px;padding:8px 12px;font:inherit;background:#fff;color:var(--ink)">' + AU_ACCS.map(a => '<option' + (a === acc ? ' selected' : '') + '>' + esc(a) + '</option>').join('') + '</select></div>' +
+    '<div class="aug" style="margin-top:10px"><div class="aum"><small>رصيد ' + esc(acc) + ' بالدفاتر</small><b dir="ltr" class="' + (C.bal < -0.5 ? 'neg' : '') + '">' + fmt(C.bal) + '</b></div><div class="aum"><small>أيام الرصيد فيها سالب</small><b class="' + (C.negDays ? 'neg' : '') + '">' + C.negDays + '</b></div></div>';
+  if (w) h += '<div class="aux" style="margin-top:10px">سجّل الفلوس الفعلية بعد العدّ في أي تاريخ. كل جرد بيتقارن بالدفاتر، ولو سجلت جردين التطبيق يقولك العجز ظهر في أنهي فترة بينهم.</div>' +
+    '<div class="auf"><input id="au-cc" inputmode="decimal" dir="ltr" placeholder="الفلوس الفعلية"><input id="au-cd" type="date" value="' + today + '" max="' + today + '"></div><div class="auf" style="margin-top:8px"><button class="btn" id="au-cc-go" style="flex:1">سجّل الجرد</button></div>';
+  if (!cps.length) h += '<div class="aux" style="margin-top:10px">لسه ما سجلتش جرد للحساب ده. ابدأ بجرد في تاريخ كنت متأكد إن الخزنة فيه مظبوطة، وبعده جرد النهارده.</div>';
+  let pg = 0, pd = '';
+  const cards = cps.map(c => {
+    const bk = auBalAt(C, c.date), gap = (+c.amt || 0) - bk, dl = gap - pg, first = !pd, ok = Math.abs(gap) < 0.5, dok = Math.abs(dl) < 0.5;
+    let t = '<div class="hrow"><div class="kv"><span>' + esc(c.date) + '<br><small style="color:var(--muted)">الفعلي ' + esc(fmt(c.amt)) + ' · الدفاتر ' + esc(fmt(bk)) + '</small></span><span class="' + (ok ? '' : 'neg') + '" dir="ltr" style="font-weight:800;' + (ok ? 'color:var(--green-d)' : 'color:var(--red)') + '">' + (ok ? '✓ متطابق' : (gap < 0 ? 'عجز ' : 'زيادة ') + esc(fmt(Math.abs(gap)))) + '</span></div>';
+    if (!first) t += '<div class="aux">' + (dok ? '✓ الفترة من ' + esc(pd) + ' لحد ' + esc(c.date) + ' مظبوطة' : (dl < 0 ? 'العجز زاد ' : 'العجز قلّ ') + esc(fmt(Math.abs(dl))) + ' في الفترة من ' + esc(pd) + ' لحد ' + esc(c.date)) + '</div>';
+    if (!dok) { const cd = auCands(C, pd, c.date, dl); t += cd.length ? '<div class="aux" style="margin-top:6px">قيود تستاهل المراجعة في الفترة دي:</div>' + auCandHTML(cd) : '<div class="aux" style="margin-top:6px">مفيش قيد خزينة بالمبلغ ده في الفترة. غالباً فيه صرف أو قبض اتعمل ومتسجلش، أو مبلغ اتكتب غلط. راجع قيود الفترة واحد واحد.</div>'; }
+    if (w) t += '<div class="actions"><button class="btn ghost" data-aucd="' + esc(c.id) + '" style="min-height:36px;padding:4px 12px">مسح الجرد ده</button></div>';
+    pg = gap; pd = c.date; return t + '</div>';
+  });
+  h += cards.reverse().join('') + auMonthsHTML(C) + '</div>';
+  return h;
 }
 function renderAU() {
-  if (S.auCash == null) { try { S.auCash = localStorage.getItem('au_cash') || ''; } catch (x) { S.auCash = ''; } }
   const A = auAll(), w = canWrite(), act = A.filter(a => !auIgn(a.key)), ign = A.length - act.length;
   const er = act.filter(a => a.sev === 'e').length, cat = S.auCat || '*', lim = S.auLim || 40;
-  $('#au-top').innerHTML = auCashHTML(auCash());
+  $('#au-top').innerHTML = auCashHTML(auCash(auAcc()), auAcc());
   $('#au-sum').innerHTML = (act.length ? '<b style="color:var(--red)">' + er + ' خطأ</b> · <span style="color:var(--amber);font-weight:700">' + (act.length - er) + ' تنبيه</span>' : '✓ مفيش أخطاء ولا تنبيهات') + (ign ? ' · <a href="#" id="au-tg">' + (S.auIgn ? 'إخفاء' : 'عرض') + ' المتجاهَل (' + ign + ')</a>' : '');
   const pool = S.auIgn ? A : act, cnt = {}; for (const a of pool) cnt[a.cat] = (cnt[a.cat] || 0) + 1;
   $('#au-cats').innerHTML = '<button data-auc="*" class="' + (cat === '*' ? 'on' : '') + '">الكل<b>' + pool.length + '</b></button>' + AU_CATS.filter(c => cnt[c[0]]).map(c => '<button data-auc="' + c[0] + '" class="' + (cat === c[0] ? 'on' : '') + '">' + c[1] + '<b>' + cnt[c[0]] + '</b></button>').join('');
@@ -1138,18 +1181,24 @@ function renderAU() {
     (show.length > lim ? '<div style="padding:4px 12px 16px"><button class="btn ghost" id="au-more" style="width:100%">عرض المزيد (باقي ' + (show.length - lim) + ')</button></div>' : '') +
     (!show.length && act.length === 0 ? '' : !show.length ? '<div class="empty">مفيش حاجة في القسم ده.</div>' : '');
 }
+function auChange(e) { if (e.target.id === 'au-acc') { S.auAcc = e.target.value; try { localStorage.setItem('au_acc', S.auAcc); } catch (x) { /* ignore */ } renderAU(); } }
 function auClick(e) {
   const t = e.target;
   if (t.id === 'au-tg') { e.preventDefault(); S.auIgn = !S.auIgn; return renderAU(); }
   const c = t.closest('[data-auc]'); if (c) { S.auCat = c.dataset.auc; S.auLim = 40; return renderAU(); }
   if (t.closest('#au-more')) { S.auLim = (S.auLim || 40) + 40; return renderAU(); }
-  if (t.closest('#au-cc-go')) { S.auCash = $('#au-cc').value.trim(); try { localStorage.setItem('au_cash', S.auCash); } catch (x) { /* ignore */ } return renderAU(); }
+  if (t.closest('#au-cc-go')) {
+    if (!canWrite()) return; const raw = $('#au-cc').value.trim(), d = $('#au-cd').value;
+    if (!/\d/.test(raw) || !d) return toast('اكتب المبلغ الفعلي والتاريخ');
+    const acc = auAcc(); docSave('cc', 'cc:' + acc + ':' + d, { acc, date:d, amt:num(raw) }); toast('اتسجل الجرد'); return renderAU();
+  }
+  const cd = t.closest('[data-aucd]'); if (cd && canWrite()) { if (!confirm('تمسح الجرد ده؟ تقدر ترجعه بسهم الرجوع.')) return; const d = S.docs.get(cd.dataset.aucd); if (d) docSave('cc', d.id, d.data, true); return renderAU(); }
   const o = t.closest('[data-auo]'); if (o) return openForm(o.dataset.auo);
   const i = t.closest('[data-aui]'); if (i && canWrite()) { const k = i.dataset.aui; docSave('ded', 'ign:' + k, { ign:1 }, auIgn(k)); renderAU(); }
 }
 function renderHome() {
   const t = [['new','قيد جديد','plus','#F28C28'], ['list','القيود','list','#1FA38A'], ['db','لوحة المؤشرات','chart','#2E7D52'], ['tb','ميزان المراجعة','scale','#4A3FE0'],
-    ['gl','دفتر الأستاذ العام','book','#7A4DD8'], ['is','قائمة الدخل','chart','#E8892B'], ['bs','المركز المالي','scale','#1E6FE8'], ['mp','صافي الربح الشهري','chart','#1FA38A'], ['dp','إهلاك الأصول','build','#8A5A2B'], ['hr','المرتبات','brief','#4A3FE0'], ['cs','التكاليف','scale','#C2410C'], ['pr','الإنتاج','box','#2F7A4F'], ['au','الرقيب' + (auCount() ? ' (' + auCount() + ')' : ''),'tag','#C0453A'], ['an','التحليلات','coin','#A63CA0'], ['sync','مزامنة','sync','#2AA7C9']];
+    ['gl','دفتر الأستاذ العام','book','#7A4DD8'], ['is','قائمة الدخل','chart','#E8892B'], ['bs','المركز المالي','scale','#1E6FE8'], ['mp','صافي الربح الشهري','chart','#1FA38A'], ['dp','إهلاك الأصول','build','#8A5A2B'], ['hr','المرتبات','brief','#4A3FE0'], ['cs','التكاليف','scale','#C2410C'], ['pr','الإنتاج','box','#2F7A4F'], ['au','المدقق' + (auCount() ? ' (' + auCount() + ')' : ''),'tag','#C0453A'], ['an','التحليلات','coin','#A63CA0'], ['sync','مزامنة','sync','#2AA7C9']];
   if (!canWrite()) t.shift(); /* الشريك: مشاهدة بس، من غير قيد جديد */
   $('#tiles').innerHTML = t.map(x => '<button class="tile" data-k="' + x[0] + '"><span class="i" style="background:' + x[3] + '">' + ico(x[2]) + '</span>' + x[1] + '</button>').join('');
   const cash = agg('الخزينة'), cus = agg('العملاء'), sup = agg('الموردين');
@@ -2530,6 +2579,7 @@ function csAuditClick(e) {
 function csSheetClick(e) {
   const g = id => $(id).value;
   if (S.hs && S.hs.type === 'audit' && csAuditClick(e)) return true;
+  if (S.hs && S.hs.type === 'aupost' && auPostClick(e)) return true;
   if (S.hs && S.hs.type === 'cmp' && cmpClick(e)) return true;
   if (fgSheetClick(e)) return true;
   if (plSheetClick(e)) return true;
@@ -3105,9 +3155,11 @@ async function saveEntry(again) {
   const e = Object.assign(old ? { ...old } : { id:crypto.randomUUID(), star:false, opening:false, deleted:false },
     { no, date:v.date, stmt:v.stmt, dr:v.dr, cr:v.cr, pa:v.pa, pb:v.pb, prod:v.prod, qty:v.qty, disc:v.disc, price:v.price,
       amtD:v.amt, amtC:v.amt, updated:Date.now(), dirty:true });
+  const au0 = auSnap();
   S.ent.set(e.id, e); await entPut(e);
   let cg = null; try { cg = await csApplySrc(e, srcV); } catch (x) { console.error(x); }
   S.month = e.date.slice(0, 7); toast('تم حفظ القيد' + (cg ? ' + تكلفة ' + fmt0(cg.cost + cg.op) : ''));
+  setTimeout(() => auPost(au0, old ? 'القيد اتعدّل' : 'القيد اتحفظ', e.id), 80);
   if (again === true) { const from = S.from; openForm(null); S.from = from; fillFrom({ stmt:e.stmt, dr:e.dr, cr:e.cr, pa:'', pb:'', prod:'', qty:0, disc:0, price:0, amt:0 }); $('#e-date').value = e.date; S.amtManual = false; sync(); return; }
   go(S.from && S.from !== 'form' ? S.from : 'home'); render(); sync();
 }
@@ -3115,8 +3167,10 @@ async function delEntry() {
   const e = S.ent.get(S.editing); if (!e) return;
   if (S.profile.role === 'accountant' && S.closed.has(e.date.slice(0, 7))) return void ($('#e-err').textContent = 'الشهر ده مقفول.');
   if (!confirm('تحذف القيد رقم ' + e.no + '؟')) return;
+  const au0 = auSnap();
   Object.assign(e, { deleted:true, dirty:true, updated:Date.now() });
   await entPut(e); try { await csGen(e); } catch (x) { console.error(x); } toast('تم حذف القيد'); go(S.from && S.from !== 'form' ? S.from : 'home'); render(); sync();
+  setTimeout(() => auPost(au0, 'القيد اتحذف'), 80);
 }
 
 
@@ -3154,7 +3208,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.16';
+const VER = '1.17';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -3244,7 +3298,7 @@ async function init() {
   $('#acc-tb').onclick = e => { const r = e.target.closest('tr[data-k]'); if (!r) return; const row = gst(S.accGid).fr[+r.dataset.k]; if (!row) return;
     if (S.accMode === 'g') { S.expGroup = row.name; renderAcc(); } else openStm(row.name); };
   $('#acc-allx').onclick = () => { S.expGroup = '*'; renderAcc(); };
-  $('#au-back').onclick = back; $('#v-au').onclick = auClick; $('#hr-back').onclick = back; $('#hr-slips').onclick = () => printSlips(hrRows(S.hrMonth).map(r => r.emp.id)); $('#hsheet').onchange = e => { const o = e.target.closest('[data-hro]'); if (!o || !canWrite()) return; docSave('ded', 'dedo:' + o.dataset.hro, { m:o.value }); const eid = S.hs && S.hs.eid; if (eid) openSlip(eid); renderHR(); }; $('#cs-back').onclick = back; $('#pr-back').onclick = back; $('#pr-t1').onclick = () => { S.prTab = 'o'; renderPR(); }; $('#pr-t2').onclick = () => { S.prTab = 'g'; renderPR(); }; $('#pr-t3').onclick = () => { S.prTab = 's'; renderPR(); }; $('#pr-t4').onclick = () => { S.prTab = 'i'; renderPR(); }; $('#pr-body').oninput = prBodyInput; $('#pr-body').onclick = prBodyClick; $('#pr-pdf').onclick = () => doPrint(prTitle()); $('#e-cr').addEventListener('change', csSrcUpdate);
+  $('#au-back').onclick = back; $('#v-au').onclick = auClick; $('#v-au').onchange = auChange; $('#hr-back').onclick = back; $('#hr-slips').onclick = () => printSlips(hrRows(S.hrMonth).map(r => r.emp.id)); $('#hsheet').onchange = e => { const o = e.target.closest('[data-hro]'); if (!o || !canWrite()) return; docSave('ded', 'dedo:' + o.dataset.hro, { m:o.value }); const eid = S.hs && S.hs.eid; if (eid) openSlip(eid); renderHR(); }; $('#cs-back').onclick = back; $('#pr-back').onclick = back; $('#pr-t1').onclick = () => { S.prTab = 'o'; renderPR(); }; $('#pr-t2').onclick = () => { S.prTab = 'g'; renderPR(); }; $('#pr-t3').onclick = () => { S.prTab = 's'; renderPR(); }; $('#pr-t4').onclick = () => { S.prTab = 'i'; renderPR(); }; $('#pr-body').oninput = prBodyInput; $('#pr-body').onclick = prBodyClick; $('#pr-pdf').onclick = () => doPrint(prTitle()); $('#e-cr').addEventListener('change', csSrcUpdate);
   $('#cs-t1').onclick = () => { S.csTab = 's'; renderCS(); }; $('#cs-t2').onclick = () => { S.csTab = 'k'; renderCS(); }; $('#cs-t4').onclick = () => { S.csTab = 'g'; renderCS(); }; $('#cs-body').onclick = csBodyClick; $('#cs-body').oninput = e => { if (e.target.id === 'pl-title') S.plTitle = e.target.value; }; $('#cs-pdf').onclick = () => doPrint(csTitle()); $('#hr-pdf').onclick = () => { if (S.hrTab === 'p') doPrint($('#ph-t').textContent); else toast('الطباعة من تبويب كشف الرواتب'); };
   $('#hr-t1').onclick = () => { S.hrTab = 'p'; renderHR(); }; $('#hr-t2').onclick = () => { S.hrTab = 'a'; renderHR(); }; $('#hr-t3').onclick = () => { S.hrTab = 'e'; renderHR(); };
   $('#hr-month').onchange = e => { S.hrMonth = e.target.value; hrPayroll(); };
