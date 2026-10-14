@@ -1,4 +1,4 @@
-const V = 'vegan-v45';
+const V = 'vegan-v48';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'logo.png', 'cover.jpg'];
 
 self.addEventListener('install', e => {
