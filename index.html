@@ -110,6 +110,9 @@ nav button.add{color:var(--green-d)}
 #lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
 #lock img.cv{width:min(80vw,320px);aspect-ratio:1;object-fit:cover;border-radius:50%}
 #lock img.vg{height:44px}
+.bigfp{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;margin:18px auto 4px;width:112px;height:112px;border-radius:50%;border:2.5px solid #bfe0c6;background:#fff;color:#1E7B3B;font:inherit;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 4px 14px rgba(30,123,59,.15)}
+.bigfp svg{width:48px!important;height:48px!important}.bigfp.lg svg{width:72px!important;height:72px!important}
+.bigfp:active{background:#e8f4ea}.bigfp.lg{width:150px;height:150px;font-size:15px;margin-top:auto;margin-bottom:26px}
 .tbw{overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--paper);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 table.tb{border-collapse:separate;border-spacing:0;width:auto;font-size:13px;font-variant-numeric:tabular-nums}
 .tb th{position:sticky;top:0;z-index:2;background:var(--green-d);color:#fff;font-weight:700;padding:9px 10px;white-space:nowrap;text-align:right}
@@ -269,9 +272,10 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
     <h1>تسجيل الدخول</h1>
     <p class="s">نظام المحاسبة · فيجان فود</p>
     <input id="l-email" type="text" inputmode="email" autocomplete="username" dir="ltr" placeholder="البريد الإلكتروني أو اسم المستخدم" aria-label="البريد الإلكتروني أو اسم المستخدم" autocapitalize="none" style="margin-bottom:10px">
-    <div style="display:flex;gap:8px;align-items:stretch"><input id="l-pass" type="password" autocomplete="current-password" dir="ltr" placeholder="كلمة المرور" aria-label="كلمة المرور" style="flex:1"><button id="l-bio" type="button" aria-label="الدخول بالبصمة" style="display:none;width:54px;border-radius:14px;border:1.5px solid var(--line);background:#fff;cursor:pointer"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#1E7B3B" stroke-width="1.7" stroke-linecap="round"><path d="M12 11v3.5c0 2-.5 3.8-1.6 5.5M8.2 17.5c.5-1.1.8-2.3.8-3.8V11a3 3 0 016 0v3.7c0 1.6.2 3 .9 4.3M5.5 15c.4-1 .5-2 .5-3.3V11a6 6 0 0112 0v1.2M3.5 9.5A9 9 0 0120.5 9"/></svg></button></div>
+    <input id="l-pass" type="password" autocomplete="current-password" dir="ltr" placeholder="كلمة المرور" aria-label="كلمة المرور">
     <div class="err" id="l-err"></div>
     <button class="btn" id="l-go" style="width:100%;margin-top:4px">دخول</button>
+    <button id="l-bio" type="button" class="bigfp" style="display:none" aria-label="الدخول بالبصمة"><svg viewBox="0 0 24 24" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 11v3.5c0 2-.5 3.8-1.6 5.5M8.2 17.5c.5-1.1.8-2.3.8-3.8V11a3 3 0 016 0v3.7c0 1.6.2 3 .9 4.3M5.5 15c.4-1 .5-2 .5-3.3V11a6 6 0 0112 0v1.2M3.5 9.5A9 9 0 0120.5 9"/></svg><span>الدخول بالبصمة</span></button>
     <div class="forgot">نسيت كلمة المرور؟ اطلب إعادة تعيينها من مسؤول النظام</div>
     <img class="vg" src="logo.png" alt="Vegan">
   </div>
@@ -280,7 +284,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
 <div id="lock" class="hide">
   <img class="cv" src="cover.jpg" alt="">
   <img class="vg" src="logo.png" alt="Vegan">
-  <button class="btn" id="lock-go" style="min-width:230px">فتح بالبصمة</button>
+  <button id="lock-go" type="button" class="bigfp lg" aria-label="فتح بالبصمة"><svg viewBox="0 0 24 24" width="72" height="72" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 11v3.5c0 2-.5 3.8-1.6 5.5M8.2 17.5c.5-1.1.8-2.3.8-3.8V11a3 3 0 016 0v3.7c0 1.6.2 3 .9 4.3M5.5 15c.4-1 .5-2 .5-3.3V11a6 6 0 0112 0v1.2M3.5 9.5A9 9 0 0120.5 9"/></svg><span>فتح بالبصمة</span></button>
   <div id="lock-pinbox" style="display:none;margin-top:14px;text-align:center"><input id="lock-pin" type="password" inputmode="numeric" maxlength="8" dir="ltr" placeholder="الرمز السريع" style="width:200px;text-align:center;letter-spacing:6px"><div><button class="btn" id="lock-pin-go" style="min-width:230px;margin-top:8px">فتح بالرمز</button></div></div>
   <div class="err" id="lock-err"></div>
   <button class="lnk" id="lock-pw">الدخول بكلمة المرور</button>
@@ -545,6 +549,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
       </div></details>
 
       <button class="btn danger" id="s-out" style="width:100%;margin-top:18px">تسجيل الخروج</button>
+      <button class="lnk hide" id="s-out2" style="display:block;margin:10px auto 0">تسجيل خروج كامل (يمسح بيانات التطبيق من الموبايل)</button>
       <p class="note" id="s-ver" style="text-align:center;margin-top:14px"></p>
     </section>
   </main>
@@ -3383,7 +3388,7 @@ function renderSettings() {
   const owner = !!(S.profile && S.profile.role === 'owner');
   $('#s-adm').classList.toggle('hide', !owner);
   if (owner && navigator.onLine && Date.now() - (S.admAt || 0) > 30000) loadUsers();
-  pinOn().then(on => { $('#s-pin-btn').textContent = on ? 'إيقاف الرمز السريع' : 'تفعيل الرمز السريع (PIN)'; });
+  pinOn().then(on => { $('#s-pin-btn').textContent = on ? 'إيقاف الرمز السريع' : 'تفعيل الرمز السريع (PIN)'; bioOn().then(b => { $('#s-out').textContent = (on || b) ? 'قفل التطبيق' : 'تسجيل الخروج'; $('#s-out2').classList.toggle('hide', !(on || b)); }); });
   $('#s-urlbox').classList.toggle('hide', !owner); $('#s-url').value = url();
   bioAvail().then(av => { bioOn().then(on => { $('#s-bio-btn').disabled = !av; $('#s-bio-btn').textContent = on ? 'إيقاف الدخول بالبصمة' : 'تفعيل الدخول بالبصمة'; $('#s-bio-st').textContent = !av ? 'الموبايل ده مش بيدعم الدخول بالبصمة، أو مفيش بصمة متسجلة في إعدادات الموبايل.' : on ? 'مفعّلة على الموبايل ده لحسابك.' : 'مش مفعّلة. فعّلها وبعدها التطبيق هيفتح ببصمتك أنت.'; }); });
 }
@@ -3730,7 +3735,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.28';
+const VER = '1.29';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -3861,7 +3866,7 @@ async function init() {
   $('#n-an').onclick = () => { S.stack = []; go('an'); }; $('#n-set').onclick = () => { S.stack = []; go('set'); };
   $('#n-add').onclick = () => openForm(null); $('#j-undo').onclick = () => jStep(-1); $('#j-redo').onclick = () => jStep(1); $('#s-cmp').onchange = e => cmpFile(e.target.files[0]);
   $('#e-cancel').onclick = closeForm; $('#e-save').onclick = () => saveEntry(); $('#e-again').onclick = () => saveEntry(true); $('#e-pair').onclick = pairStart; $('#e-pairbar').onclick = e => { if (e.target.closest('#e-pairedit')) pairSwap(); }; $('#e-copy').onclick = () => copyEntry(S.editing, false); $('#e-counter').onclick = () => copyEntry(S.editing, true); $('#e-del').onclick = delEntry;
-  $('#p-go').onclick = changePw; $('#s-out').onclick = logout; $('#x-go').onclick = exportXl;
+  $('#p-go').onclick = changePw; $('#s-out').onclick = async () => { if ((await bioOn()) || (await pinOn())) { showLock(); } else logout(); }; $('#s-out2').onclick = logout; $('#x-go').onclick = exportXl;
   $('#adm-list').onclick = e => { const b = e.target.closest('.adm-pw'); if (b) admSetPw(S.users[+b.dataset.u]); const g = e.target.closest('.adm-perm'); if (g) openPerm(S.users[+g.dataset.u]); };
   $('#adm-list').onchange = e => { const x = e.target.closest('.adm-role'); if (x) admSetRole(S.users[+x.dataset.u], x.value); };
   $('#s-file').onchange = e => importFile(e.target.files[0]); $('#bk-go').onclick = bkExport; $('#bk-file').onchange = e => bkRestore(e.target.files[0]);
