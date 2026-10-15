@@ -188,7 +188,7 @@ input[readonly]{background:#EEF3EC}
 #slipprint{display:none}
 .rp-page{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;overflow-x:auto}
 .rp-h{display:flex;align-items:center;gap:12px;margin-bottom:10px}.rp-h img{height:44px}.rp-h b{font-size:16px}
-.rp-page h4{margin:14px 0 4px;font-size:14px}.rn{margin-top:8px;font-size:12px;color:var(--muted)}
+.rp-page h4{margin:14px 0 4px;font-size:14px}.rn{margin-top:8px;font-size:12px;color:var(--muted)}ul.rl{margin:6px 0;padding-inline-start:18px;font-size:13px;line-height:1.9}
 table.rt{width:100%;border-collapse:collapse;font-size:13px}.rt td,.rt th{border:1px solid #cfcfcf;padding:5px 7px}.rt th{background:#eef4ee;font-weight:700}
 .rt td.v{text-align:left;direction:ltr;white-space:nowrap}.rt tr.h td{background:#f1f1f1;font-weight:700}.rt tr.t td{font-weight:700;background:#f6faf6}.rt tr.m td{color:#666;font-size:12px}.rt.rs{font-size:11.5px}
 @media print{.rp-page{border:0;padding:6px 4px;margin:0;overflow:visible}.rt th,.rt tr.h td,.rt tr.t td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
@@ -378,6 +378,22 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
       <div class="sub"><button id="mp-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>صافي الربح الشهري</b><button id="mp-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
       <div class="count" id="mp-note"></div>
       <div class="tbw"><table class="tb" id="mp-tb"></table></div>
+    </section>
+
+    <section id="v-arc" class="hide">
+      <div class="sub"><button id="arc-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>الأرشيف</b></div>
+      <div id="arc-body"></div>
+    </section>
+
+    <section id="v-arcy" class="hide">
+      <div class="sub"><button id="arcy-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>أرشيف سنة</b></div>
+      <div id="arcy-body"></div>
+    </section>
+
+    <section id="v-arcc" class="hide">
+      <div class="sub"><button id="arcc-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>إقفال سنة مالية</b></div>
+      <div class="mrow"><select id="arcc-y" style="width:100%"></select></div>
+      <div id="arcc-body"></div>
     </section>
 
     <section id="v-yr" class="hide">
@@ -648,7 +664,7 @@ async function jInit() {
   const j = await kvGet('journal'); J.u = (j && j.u) || []; J.r = (j && j.r) || []; J.cur = null; J.ready = true; jUI();
 }
 function jReset() { J.u = []; J.r = []; J.cur = null; J.ready = false; J.shadow.clear(); jUI(); }
-const J_KIND = { emp:'موظف', att:'حضور', hm:'شهر مرتب', ded:'خصم', dedo:'خصم', cl:'ربط تكلفة بيعة', cp:'صنف تكاليف', cr:'نسبة فاقد', cpset:'تاريخ التكاليف', fg2:'المنتج التام', fb:'إنتاج', fa:'تسوية', po:'أمر إنتاج', pl2:'قائمة الأسعار' };
+const J_KIND = { emp:'موظف', att:'حضور', hm:'شهر مرتب', ded:'خصم', dedo:'خصم', cl:'ربط تكلفة بيعة', cp:'صنف تكاليف', cr:'نسبة فاقد', cpset:'تاريخ التكاليف', fg2:'المنتج التام', fb:'إنتاج', fa:'تسوية', po:'أمر إنتاج', pl2:'قائمة الأسعار', arc:'أرشيف سنة' };
 function jLabel(g) {
   const es = g.recs.filter(r => r.k === 'e');
   if (es.length) { const r = es[0], x = r.a || r.b, k = new Set(es.map(z => z.id)).size, n = k > 1 ? ' وغيره (' + k + ' قيد)' : ''; return 'قيد رقم ' + (x.no || '') + (x.stmt ? ' ' + x.stmt : '') + n; }
@@ -788,7 +804,7 @@ async function pullLists() {
     api('/rest/v1/party_lists?select=account,name&limit=5000'), api('/rest/v1/closed_months?select=month')]);
   const ar = (x, y) => x.localeCompare(y, 'ar');
   S.accounts = a.map(x => x.name).sort(ar); S.statements = s.map(x => x.name).sort(ar);
-  S.party = p; S.closed = new Set(c.map(x => x.month.slice(0, 7)));
+  S.party = p; S.closed = new Set(); /* قفل الشهور متعطل: التطبيق ما بيمنعش أي تعديل */
   await kvSet('lists', { accounts:S.accounts, statements:S.statements, party:S.party, closed:[...S.closed] });
 }
 async function sync() {
@@ -883,18 +899,18 @@ const byDate = (a, b) => b.date.localeCompare(a.date) || (b.no || 0) - (a.no || 
 const balTxt = n => (n >= 0 ? 'مدين' : 'دائن');
 
 /* ---------- views ---------- */
-const VIEWS = ['home', 'list', 'an', 'acc', 'stm', 'form', 'set', 'tb', 'lg', 'gl', 'is', 'bs', 'mp', 'dp', 'db', 'hr', 'cs', 'pr', 'au', 'yr'];
+const VIEWS = ['home', 'list', 'an', 'acc', 'stm', 'form', 'set', 'tb', 'lg', 'gl', 'is', 'bs', 'mp', 'dp', 'db', 'hr', 'cs', 'pr', 'au', 'yr', 'arc', 'arcy', 'arcc'];
 function go(v) {
   S.view = v;
   for (const x of VIEWS) $('#v-' + x).classList.toggle('hide', x !== v);
-  const tab = { home:'home', tb:'home', lg:'home', gl:'home', is:'home', bs:'home', mp:'home', dp:'home', db:'home', hr:'home', cs:'home', pr:'home', au:'home', yr:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
+  const tab = { home:'home', tb:'home', lg:'home', gl:'home', is:'home', bs:'home', mp:'home', dp:'home', db:'home', hr:'home', cs:'home', pr:'home', au:'home', yr:'home', arc:'home', arcy:'home', arcc:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
   for (const t of ['home', 'list', 'an', 'set']) $('#n-' + t).classList.toggle('on', t === tab);
   draw(v); window.scrollTo(0, 0);
 }
 function draw(v) {
   if (v === 'home') renderHome(); else if (v === 'list') renderList(); else if (v === 'an') renderAn();
   else if (v === 'acc') renderAcc(); else if (v === 'stm') renderStm(); else if (v === 'set') renderSettings();
-  else if (v === 'tb') renderTB(); else if (v === 'lg') renderLG(); else if (v === 'gl') renderGL(); else if (v === 'is') renderIS(); else if (v === 'bs') renderBS(); else if (v === 'mp') renderMP(); else if (v === 'dp') renderDP(); else if (v === 'db') renderDB(); else if (v === 'hr') renderHR(); else if (v === 'cs') renderCS(); else if (v === 'pr') renderPR(); else if (v === 'au') renderAU(); else if (v === 'yr') renderYR();
+  else if (v === 'tb') renderTB(); else if (v === 'lg') renderLG(); else if (v === 'gl') renderGL(); else if (v === 'is') renderIS(); else if (v === 'bs') renderBS(); else if (v === 'mp') renderMP(); else if (v === 'dp') renderDP(); else if (v === 'db') renderDB(); else if (v === 'hr') renderHR(); else if (v === 'cs') renderCS(); else if (v === 'pr') renderPR(); else if (v === 'au') renderAU(); else if (v === 'yr') renderYR(); else if (v === 'arc') renderARC(); else if (v === 'arcy') renderARCY(); else if (v === 'arcc') renderARCC();
   requestAnimationFrame(fitGrids);
 }
 function fitGrids() {
@@ -1223,7 +1239,7 @@ function auClick(e) {
 function renderHome() {
   if (!S.bkChecked && S.ent.size) { S.bkChecked = 1; bkRemind(); }
   const t = [['new','قيد جديد','plus','#F28C28'], ['list','القيود','list','#1FA38A'], ['db','لوحة المؤشرات','chart','#2E7D52'], ['tb','ميزان المراجعة','scale','#4A3FE0'],
-    ['gl','دفتر الأستاذ العام','book','#7A4DD8'], ['is','قائمة الدخل','chart','#E8892B'], ['bs','المركز المالي','scale','#1E6FE8'], ['mp','صافي الربح الشهري','chart','#1FA38A'], ['dp','إهلاك الأصول','build','#8A5A2B'], ['hr','المرتبات','brief','#4A3FE0'], ['cs','التكاليف','scale','#C2410C'], ['pr','الإنتاج','box','#2F7A4F'], ['au','المدقق' + (auCount() ? ' (' + auCount() + ')' : ''),'tag','#C0453A'], ['yr','التقرير السنوي','book','#7A4DD8'], ['an','التحليلات','coin','#A63CA0'], ['sync','مزامنة','sync','#2AA7C9']];
+    ['gl','دفتر الأستاذ العام','book','#7A4DD8'], ['is','قائمة الدخل','chart','#E8892B'], ['bs','المركز المالي','scale','#1E6FE8'], ['mp','صافي الربح الشهري','chart','#1FA38A'], ['dp','إهلاك الأصول','build','#8A5A2B'], ['hr','المرتبات','brief','#4A3FE0'], ['cs','التكاليف','scale','#C2410C'], ['pr','الإنتاج','box','#2F7A4F'], ['au','المدقق' + (auCount() ? ' (' + auCount() + ')' : ''),'tag','#C0453A'], ['yr','التقرير السنوي','book','#7A4DD8'], ['arc','الأرشيف','box','#8A5A2B'], ['an','التحليلات','coin','#A63CA0'], ['sync','مزامنة','sync','#2AA7C9']];
   if (!canWrite()) t.shift(); /* الشريك: مشاهدة بس، من غير قيد جديد */
   $('#tiles').innerHTML = t.map(x => '<button class="tile" data-k="' + x[0] + '"><span class="i" style="background:' + x[3] + '">' + ico(x[2]) + '</span>' + x[1] + '</button>').join('');
   const cash = agg('الخزينة'), cus = agg('العملاء'), sup = agg('الموردين');
@@ -3035,8 +3051,127 @@ function yrHTML(Y) {
     '<tr class="t"><td>الإجمالي</td><td class="v">' + f(pt('op')) + '</td><td class="v">' + f(pt('dep')) + '</td><td class="v">' + f(pt('wd')) + '</td><td class="v">' + f(pt('cl')) + '</td></tr></table><div class="rn">الرصيد الموجب = للشريك عند الشركة. توزيعات الأرباح للمستثمرين للسنة: ' + f(P.dist) + '.</div>' : '<div class="rn">مفيش حركة على جاري الشركاء.</div>');
   /* 7) الأرصدة */
   const bt = (t, rows) => '<h4>' + esc(t) + '</h4>' + (rows.length ? '<table class="rt">' + th(['الاسم', 'الرصيد']) + rows.map(r => '<tr><td>' + esc(r.name) + '</td><td class="v">' + f(r.b) + '</td></tr>').join('') + '<tr class="t"><td>الإجمالي</td><td class="v">' + f(rows.reduce((a, r) => a + r.b, 0)) + '</td></tr></table>' : '<div class="rn">لا يوجد.</div>');
-  const p7 = page('أرصدة العملاء والموردين والعهد', bt('العملاء (مدينون لنا)', yrBal('العملاء', to, 1)) + bt('الموردين (دائنون)', yrBal('الموردين', to, -1)) + bt('العهد المالية', yrBal('العهد.الماليه', to, 1)));
-  return p1 + p2 + p3 + p4 + p5 + p6 + p7;
+  const p7 = page('أرصدة العملاء والموردين والعهد والجرد', bt('العملاء (مدينون لنا)', yrBal('العملاء', to, 1)) + bt('الموردين (دائنون)', yrBal('الموردين', to, -1)) + bt('العهد المالية', yrBal('العهد.الماليه', to, 1)) + yrInvHTML(to));
+  return p1 + yrAnalysisPages(Y, page) + p2 + p3 + p4 + p5 + p6 + p7;
+}
+/* ---------- تحليل البيانات: مؤشرات ونسب وملاحظات تلقائية بقواعد ثابتة من أرقام البرنامج (مش رأي مراجع) ---------- */
+const rth = c => '<tr>' + c.map(x => '<th>' + esc(x) + '</th>').join('') + '</tr>';
+function yrK(Y) {
+  const to = yrEnd(Y), P = yrP(Y), B = plCalc(e => e.opening || e.date <= to, ytdRange(to)), n = B.n;
+  const days = Math.max(1, Math.round((new Date(to) - new Date(Y + '-01-01')) / 864e5) + 1), r = (a, b) => b && Math.abs(b) > 0.5 ? a / b : null;
+  const cash = n('الخزينة') + n('خزينة.خاصة') + n('البنك'), inv = n('المخزون.الخام') + n('مخزن منتج تام') + n('مخزن فلفل'), rec = n('العملاء');
+  const cur = cash + inv + rec + n('ارصدة مدينة اخري') + n('العهد.الماليه'), sup = -n('الموردين'), liab = sup - n('ارصده.دائنه.اخري');
+  const eq = -n('رأس.مال') - n('جاري.الشركاء') + B.np - B.dep, wd = P.d('جاري.الشركاء');
+  return { to, days, P, B, cash, inv, rec, sup, liab, cur, eq, wd, gm:r(P.gross * 100, P.net), nm:r(P.pre * 100, P.net), ex:r((P.oper + P.admin + P.sell + P.sal) * 100, P.net), cr:r(cur, liab),
+    dso:r(rec * days, P.net), dpo:r(sup * days, P.pur), dio:r(inv * days, P.cogs), roe:r(P.np * 100, eq), wdp:r(wd * 100, P.np) };
+}
+function yrSalesBy(Y) {
+  const cust = new Map(), prod = new Map(); let tot = 0;
+  for (const e of live()) {
+    if (e.opening || e.date.slice(0, 4) !== Y || !/^مبيعات/.test(e.cr || '')) continue;
+    const c = (e.dr === 'العملاء' && cl(e.pa)) || 'مبيعات نقدية / أخرى', pr = cl(e.prod) || 'غير محدد';
+    cust.set(c, (cust.get(c) || 0) + e.amtC); const x = prod.get(pr) || { a:0, q:0 }; x.a += e.amtC; x.q += e.qty || 0; prod.set(pr, x); tot += e.amtC;
+  }
+  return { cust, prod, tot };
+}
+function yrBuyBy(Y) {
+  const sup = new Map(); let tot = 0;
+  for (const e of live()) { if (e.opening || e.date.slice(0, 4) !== Y || e.dr !== 'المشتريات') continue; const k = (e.cr === 'الموردين' && cl(e.pb)) || 'مشتريات نقدية / أخرى'; sup.set(k, (sup.get(k) || 0) + e.amtD); tot += e.amtD; }
+  return { sup, tot };
+}
+function yrNotes(Y) {
+  const py = String(+Y - 1), hasP = yrYears().includes(py), K = yrK(Y), Q = hasP ? yrK(py) : null, out = [], f = x => fmt0(x), a1 = x => Math.abs(x).toFixed(1);
+  const pc = (a, b) => b && Math.abs(b) > 0.5 ? (a - b) / Math.abs(b) * 100 : null, nt = (ok, t) => out.push((ok === null ? '• ' : ok ? '✓ ' : '⚠ ') + t);
+  const g = Q ? pc(K.P.net, Q.P.net) : null;
+  nt(g == null ? null : g >= 0, 'صافي المبيعات ' + f(K.P.net) + ' جنيه' + (g != null ? (g >= 0 ? ' بزيادة ' : ' بانخفاض ') + a1(g) + '% عن ' + py + ' (' + f(Q.P.net) + ')' : ''));
+  nt(K.P.pre >= 0, (K.P.pre >= 0 ? 'صافي الربح قبل التوزيع ' : 'خسارة قبل التوزيع ') + f(Math.abs(K.P.pre)) + ' جنيه' + (K.nm != null ? ' (' + a1(K.nm) + '% من المبيعات)' : '') + (Q ? ' مقابل ' + f(Q.P.pre) + ' في ' + py : ''));
+  if (Q && K.gm != null && Q.gm != null && Math.abs(K.gm - Q.gm) >= 1.5) nt(K.gm > Q.gm, 'هامش مجمل الربح ' + (K.gm > Q.gm ? 'ارتفع ' : 'انخفض ') + a1(K.gm - Q.gm) + ' نقطة (من ' + a1(Q.gm) + '% إلى ' + a1(K.gm) + '%)');
+  const E = yrExp(Y), E2 = hasP ? yrExp(py) : new Map(), flat = m => { const o = new Map(); for (const im of m.values()) for (const [k, v] of im) o.set(k, (o.get(k) || 0) + v); return o; }, A = flat(E), B2 = flat(E2), tE = [...A.values()].reduce((a, b) => a + b, 0);
+  const top = [...A].sort((x, y) => y[1] - x[1])[0]; if (top && tE > 0) nt(null, 'أكبر بند مصروفات: ' + top[0] + ' بقيمة ' + f(top[1]) + ' (' + a1(top[1] / tE * 100) + '% من إجمالي المصروفات)');
+  if (hasP) { const up = [...A].map(([k, v]) => [k, v - (B2.get(k) || 0), B2.get(k) || 0]).sort((x, y) => y[1] - x[1])[0]; if (up && up[1] > 0.5) nt(false, 'أكبر زيادة في المصروفات: ' + up[0] + ' (+' + f(up[1]) + ' جنيه' + (up[2] > 0.5 ? '، +' + a1(up[1] / up[2] * 100) + '%' : '، بند جديد') + ')'); }
+  const ms = []; for (let m = 1; m <= 12; m++) { const M = Y + '-' + String(m).padStart(2, '0'); if (M > K.to.slice(0, 7)) break; ms.push(mpCalc(M)); }
+  const act = ms.filter(x => Math.abs(x.P.net) > 0.5 || Math.abs(x.profit) > 0.5), nm = x => MN[+x.M.slice(5, 7) - 1];
+  if (act.length > 1) {
+    const bs = act.reduce((a, x) => x.P.net > a.P.net ? x : a), ws = act.reduce((a, x) => x.P.net < a.P.net ? x : a), bp = act.reduce((a, x) => x.profit > a.profit ? x : a);
+    nt(null, 'أعلى شهر مبيعات: ' + nm(bs) + ' (' + f(bs.P.net) + ') وأقل شهر: ' + nm(ws) + ' (' + f(ws.P.net) + ')، وأفضل شهر ربحًا: ' + nm(bp) + ' (' + f(bp.profit) + ')');
+    const loss = act.filter(x => x.profit < -0.5); if (loss.length) nt(false, 'شهور فيها خسارة: ' + loss.map(x => nm(x) + ' (' + f(x.profit) + ')').join('، '));
+  }
+  const sb = yrSalesBy(Y), named = [...sb.cust].filter(([k]) => k !== 'مبيعات نقدية / أخرى').sort((x, y) => y[1] - x[1]);
+  if (named.length >= 3 && sb.tot > 0) { const t3 = named.slice(0, 3).reduce((a, x) => a + x[1], 0) / sb.tot * 100; nt(t3 < 60, 'أكبر 3 عملاء (' + named.slice(0, 3).map(x => x[0]).join('، ') + ') = ' + a1(t3) + '% من المبيعات' + (t3 >= 60 ? ' — اعتماد عالي على عدد قليل من العملاء' : '')); }
+  if (K.dso != null) nt(K.dso <= 45, 'متوسط مدة تحصيل العملاء ≈ ' + Math.round(K.dso) + ' يوم' + (Q && Q.dso != null ? ' (مقابل ' + Math.round(Q.dso) + ' في ' + py + ')' : '') + (K.dso > 45 ? ' — أرصدة العملاء كبيرة مقارنة بالمبيعات' : ''));
+  if (K.cr != null) nt(K.cr >= 1, 'نسبة التداول ' + K.cr.toFixed(2) + (K.cr < 1 ? ' — الأصول المتداولة أقل من الخصوم المتداولة' : ''));
+  if (K.dio != null && K.dio > 120) nt(false, 'المخزون يكفي ≈ ' + Math.round(K.dio) + ' يوم من التكلفة — راجع بطيء الحركة');
+  if (K.wd > 0.5) nt(K.P.np > 0 && K.wd <= K.P.np, 'مسحوبات الشركاء ' + f(K.wd) + ' جنيه' + (K.P.np > 0 ? ' = ' + Math.round(K.wd / K.P.np * 100) + '% من صافي الربح بعد التوزيع' : ' بدون وجود ربح بعد التوزيع'));
+  if (Q) nt(K.cash >= Q.cash, 'النقدية آخر الفترة ' + f(K.cash) + ' مقابل ' + f(Q.cash) + ' في آخر ' + py);
+  return out;
+}
+function yrAnalysisPages(Y, page) {
+  const py = String(+Y - 1), hasP = yrYears().includes(py), K = yrK(Y), Q = hasP ? yrK(py) : null, v = x => x == null ? '—' : esc(x.toFixed(1)), d = (a, b) => a != null && b != null ? esc((a - b > 0 ? '+' : '') + (a - b).toFixed(1)) : '';
+  const R = [['هامش مجمل الربح %', 'gm'], ['هامش صافي الربح قبل التوزيع %', 'nm'], ['المصروفات التشغيلية والمرتبات ÷ المبيعات %', 'ex'], ['نسبة التداول (مرة)', 'cr'], ['مدة تحصيل العملاء (يوم)', 'dso'], ['مدة سداد الموردين (يوم)', 'dpo'], ['أيام تخزين المخزون', 'dio'], ['العائد على حقوق الملكية %', 'roe'], ['مسحوبات الشركاء ÷ صافي الربح %', 'wdp']];
+  const pa = page('المؤشرات والتحليل', '<table class="rt">' + rth(['المؤشر', Y, hasP ? py : '—', hasP ? 'الفرق' : '']) + R.map(([l, k]) => '<tr><td>' + esc(l) + '</td><td class="v">' + v(K[k]) + '</td><td class="v">' + (hasP ? v(Q[k]) : '') + '</td><td class="v">' + (hasP ? d(K[k], Q[k]) : '') + '</td></tr>').join('') + '</table>' +
+    '<h4>ملاحظات تلقائية</h4><ul class="rl">' + yrNotes(Y).map(t => '<li>' + esc(t) + '</li>').join('') + '</ul><div class="rn">الملاحظات بتتولد تلقائيًا من أرقام البرنامج بقواعد ثابتة (✓ جيد، ⚠ يستاهل مراجعة) وحدودها تقريبية، ومش بديل عن رأي المراجع. مدد التحصيل والسداد والتخزين محسوبة على الرصيد آخر الفترة.</div>');
+  const sb = yrSalesBy(Y), sq = hasP ? yrSalesBy(py) : null, bb = yrBuyBy(Y), bq = hasP ? yrBuyBy(py) : null, f = x => esc(fmt0(x)), sh = (a, t) => t > 0.5 ? esc((a / t * 100).toFixed(1)) + '%' : '';
+  const tbl = (t, m, mq, tot, n) => '<h4>' + esc(t) + '</h4><table class="rt">' + rth(['الاسم', Y, '% من الإجمالي', hasP ? py : '—']) + [...m].sort((x, y) => y[1] - x[1]).slice(0, n).map(([k, a]) => '<tr><td>' + esc(k) + '</td><td class="v">' + f(a) + '</td><td class="v">' + sh(a, tot) + '</td><td class="v">' + (hasP ? f(mq.get(k) || 0) : '') + '</td></tr>').join('') + '<tr class="t"><td>الإجمالي</td><td class="v">' + f(tot) + '</td><td></td><td class="v">' + (hasP ? f([...mq.values()].reduce((a, b) => a + b, 0)) : '') + '</td></tr></table>';
+  const pm = new Map([...sb.prod].map(([k, x]) => [k, x.a])), pmq = hasP ? new Map([...sq.prod].map(([k, x]) => [k, x.a])) : null;
+  const qty = '<h4>الكميات المباعة (أعلى 10 أصناف)</h4><table class="rt">' + rth(['الصنف', 'الكمية', 'القيمة']) + [...sb.prod].sort((x, y) => y[1].a - x[1].a).slice(0, 10).map(([k, x]) => '<tr><td>' + esc(k) + '</td><td class="v">' + esc(fmt(x.q)) + '</td><td class="v">' + f(x.a) + '</td></tr>').join('') + '</table>';
+  const pb = page('العملاء والموردين والمنتجات', tbl('أعلى 10 عملاء بالمبيعات', sb.cust, sq && sq.cust, sb.tot, 10) + tbl('أعلى 10 موردين بالمشتريات', bb.sup, bq && bq.sup, bb.tot, 10) + tbl('المبيعات حسب الصنف (أعلى 10)', pm, pmq, sb.tot, 10) + qty + '<div class="rn">المبيعات قبل المسموحات والمرتجعات، وبتشمل كل قيود المبيعات بأسماء العملاء. المشتريات بحسب قيود حساب المشتريات.</div>');
+  return pa + pb;
+}
+function yrInv(to) {
+  const out = [];
+  for (const A of ['المخزون.الخام', 'مخزن منتج تام', 'مخزن فلفل']) {
+    const m = new Map(), fq = A === 'مخزن منتج تام' ? fgQtyMaps() : null;
+    for (const e of live()) {
+      if (!(e.opening || e.date <= to)) continue; const sd = side(e, A); if (!sd) continue; const k = keyOf(A, e, sd), r = m.get(k) || { name:k, b:0, q:0 };
+      r.b += sd.d - sd.c; r.q += fq ? (e.dr === A ? (fq.inE.get(e.id) || 0) : -(fq.outE.get(e.id) || 0)) : (e.dr === A ? e.qty * (1 - (e.disc || 0)) : -e.qty); m.set(k, r);
+    }
+    for (const r of m.values()) if (Math.abs(r.b) > 0.5 || Math.abs(r.q) > 0.001) out.push({ g:A, ...r });
+  }
+  return out;
+}
+function yrInvHTML(to) {
+  const L = yrInv(to); if (!L.length) return '';
+  return [...new Set(L.map(r => r.g))].map(g => { const rs = L.filter(r => r.g === g).sort((a, b) => b.b - a.b);
+    return '<h4>جرد: ' + esc(accT(g)) + '</h4><table class="rt">' + rth(['الصنف', 'الكمية', 'القيمة']) + rs.map(r => '<tr><td>' + esc(r.name) + '</td><td class="v">' + esc(fmt(r.q)) + '</td><td class="v">' + esc(fmt0(r.b)) + '</td></tr>').join('') + '<tr class="t"><td>الإجمالي</td><td></td><td class="v">' + esc(fmt0(rs.reduce((a, r) => a + r.b, 0))) + '</td></tr></table>'; }).join('');
+}
+/* ---------- الأرشيف: نسخة مجمّدة من تقارير كل سنة + بصمة بتكشف لو الأرقام اتغيرت بعد الإقفال (مفيش قيد بيتحذف أو بيتنقل) ---------- */
+function hashStr(t) { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return h >>> 0; }
+function yrFP(Y) {
+  const to = Y + '-12-31'; let n = 0, sum = 0, h = 0;
+  for (const e of live()) { if (!(e.opening || e.date <= to)) continue; n++; sum += e.amtD; h = (h + hashStr([e.id, e.date, e.dr, e.cr, e.pa, e.pb, e.prod, e.amtD, e.qty].join('|'))) >>> 0; }
+  return { n, s:Math.round(sum * 100) / 100, h };
+}
+const arcDocs = () => docsOf('arc').filter(d => d.data && d.data.y).sort((a, b) => b.data.y.localeCompare(a.data.y));
+const arcSame = d => { const f = yrFP(d.y); return f.n === d.fp.n && f.h === d.fp.h && Math.abs(f.s - d.fp.s) < 0.01; };
+function closeYear(Y) {
+  const P = yrP(Y), d = { y:Y, at:new Date().toISOString(), ver:VER, pages:yrHTML(Y), fp:yrFP(Y), sales:P.net, np:P.np, pre:P.pre };
+  docSave('arc', 'arc:' + Y, d); S.arcY = Y; toast('اتجمّدت تقارير سنة ' + Y + ' في الأرشيف');
+}
+function renderARC() {
+  const L = arcDocs(), own = S.profile && S.profile.role === 'owner';
+  $('#arc-body').innerHTML = '<div class="note" style="margin:0 0 8px">الأرشيف بيحفظ نسخة مجمّدة من تقارير كل سنة بعد إقفالها، تفضل زي ما هي لو الأرقام اتغيرت بعد كده. القيود نفسها بتفضل في مكانها والأرصدة بتتكمل لوحدها للسنة الجديدة.</div>' + (own ? '<div class="mrow"><button class="btn" id="arc-new" style="width:100%">＋ إقفال سنة مالية</button></div>' : '') +
+    (L.length ? L.map(x => { const d = x.data; return '<div class="hrow" data-arcy="' + esc(d.y) + '" style="cursor:pointer"><div class="n">سنة ' + esc(d.y) + (arcSame(d) ? '' : ' <span style="color:var(--red)">⚠ اتغيّرت بعد الإقفال</span>') + '</div><div class="kv"><span>صافي المبيعات</span><span dir="ltr">' + esc(fmt0(d.sales)) + '</span></div><div class="kv"><span>صافي الربح قبل التوزيع</span><span dir="ltr">' + esc(fmt0(d.pre)) + '</span></div><div style="color:var(--muted);font-size:13px">اتقفلت ' + esc(new Date(d.at).toLocaleDateString('ar-EG')) + '</div></div>'; }).join('') : '<div class="empty">لسه ما اتقفلتش أي سنة.</div>');
+}
+function renderARCY() {
+  const x = S.docs.get('arc:' + S.arcY), box = $('#arcy-body'); if (!x || x.deleted) { box.innerHTML = '<div class="empty">السنة دي مش موجودة في الأرشيف.</div>'; return; }
+  const d = x.data, same = arcSame(d), own = S.profile && S.profile.role === 'owner', f = yrFP(d.y);
+  box.innerHTML = '<div class="hrow"><div class="n">سنة ' + esc(d.y) + ' — مجمّدة بتاريخ ' + esc(new Date(d.at).toLocaleDateString('ar-EG')) + '</div>' + (same ? '<div style="color:var(--muted);font-size:13px">✓ الأرقام الحالية مطابقة للنسخة المجمّدة.</div>' : '<div style="color:var(--red)">⚠ فيه تغييرات في قيود السنة بعد الإقفال (' + esc(String(f.n - d.fp.n)) + ' فرق في عدد القيود، وفرق الإجمالي ' + esc(fmt0(f.s - d.fp.s)) + '). النسخة اللي تحت هي المجمّدة وقت الإقفال.</div>') +
+    '<div class="actions"><button class="btn" id="arcy-pdf">PDF للشركاء والمراجعين</button><button class="btn ghost" id="arcy-csv">قيود السنة (CSV)</button>' + (own ? '<button class="btn ghost" id="arcy-redo">تجديد التجميد بالأرقام الحالية</button>' : '') + '</div></div><div class="rp">' + d.pages + '</div>';
+}
+function renderARCC() {
+  const ys = yrYears(), own = S.profile && S.profile.role === 'owner', box = $('#arcc-body'), sel = $('#arcc-y'); if (!ys.length) { box.innerHTML = '<div class="empty">مفيش قيود.</div>'; sel.innerHTML = ''; return; }
+  const cur = todayStr().slice(0, 4); if (!S.arccY || !ys.includes(S.arccY)) S.arccY = [...ys].reverse().find(y => y < cur) || ys[ys.length - 1];
+  const Y = S.arccY, to = Y + '-12-31'; sel.innerHTML = ys.map(y => '<option value="' + y + '"' + (y === Y ? ' selected' : '') + '>سنة ' + y + '</option>').join('');
+  const au = auChecks().filter(a => a.e && a.e.date.slice(0, 4) === Y && !auIgn(a.key)), er = au.filter(a => a.sev === 'e').length, bsw = bsRows(Y + '-12').some(r => r.c === 'w'), ck = [];
+  ck.push(Y >= cur ? '⚠ السنة لسه ما خلصتش (النهارده ' + todayStr() + ')، التقرير هيتجمّد بأرقام لحد اليوم.' : '✓ السنة خلصت.');
+  ck.push(au.length ? '⚠ فيه ' + er + ' أخطاء و' + (au.length - er) + ' تنبيهات في قيود السنة — راجعها في المدقق قبل الإقفال.' : '✓ المدقق: مفيش أخطاء ولا تنبيهات في قيود السنة.');
+  ck.push(bsw ? '⚠ المركز المالي مش متوازن، راجع صفحة المركز المالي.' : '✓ المركز المالي متوازن.');
+  if (pending()) ck.push('⚠ فيه ' + pending() + ' تغيير لسه ما اترفعش للسيرفر، زامن الأول.');
+  const cu = yrBal('العملاء', to, 1), su = yrBal('الموردين', to, -1), ho = yrBal('العهد.الماليه', to, 1), pt = yrPartners(Y).filter(r => Math.abs(r.cl) > 0.5), iv = yrInv(to), P = yrP(Y), ex = arcDocs().find(d => d.data.y === Y);
+  box.innerHTML = (ex ? '<div class="note">السنة دي اتقفلت قبل كده (' + esc(new Date(ex.data.at).toLocaleDateString('ar-EG')) + '). الإقفال تاني بيستبدل النسخة المجمّدة بالأرقام الحالية.</div>' : '') +
+    '<div class="hrow"><div class="n">فحص قبل الإقفال</div>' + ck.map(t => '<div style="margin:4px 0">' + esc(t) + '</div>').join('') + (au.length ? '<div class="actions"><button class="btn ghost" id="arcc-au">افتح المدقق</button></div>' : '') + '</div>' +
+    '<div class="hrow"><div class="n">اللي هيتكمل للسنة الجديدة (أرصدة أول المدة)</div><div class="kv"><span>عملاء عليهم أرصدة</span><span dir="ltr">' + cu.length + '</span></div><div class="kv"><span>موردين لهم أرصدة</span><span dir="ltr">' + su.length + '</span></div><div class="kv"><span>عهد مفتوحة</span><span dir="ltr">' + ho.length + '</span></div><div class="kv"><span>شركاء لهم أرصدة</span><span dir="ltr">' + pt.length + '</span></div><div class="kv"><span>أصناف مخزون</span><span dir="ltr">' + iv.length + '</span></div><div class="kv"><span>صافي ربح السنة بعد التوزيع (بيتضاف للأرباح المحتجزة)</span><span dir="ltr">' + esc(fmt0(P.np)) + '</span></div><div class="note" style="margin-top:8px">القيود مش بتتنقل ولا بتتحذف: الأرصدة بتكمل لوحدها لأن الدفتر واحد، والسنة الجديدة بتبدأ من أول قيد بتاريخها. التفاصيل كاملة (بالأسماء والكميات) هتلاقيها في التقرير المجمّد.</div></div>' +
+    (own ? '<div class="mrow"><button class="btn" id="arcc-go" style="width:100%">اقفل السنة وانقلها للأرشيف</button></div>' : '<div class="note">الإقفال للمالك فقط.</div>');
 }
 function renderYR() {
   const ys = yrYears(), sel = $('#yr-y'); if (!ys.length) { $('#yr-body').innerHTML = '<div class="empty">مفيش قيود.</div>'; sel.innerHTML = ''; return; }
@@ -3504,7 +3639,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.23';
+const VER = '1.24';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -3602,7 +3737,7 @@ async function admSetRole(u, role) {
 async function start() {
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
   S.profile = await kvGet('profile');
-  const L = await kvGet('lists'); if (L) { S.accounts = L.accounts; S.statements = L.statements || []; S.party = L.party; S.closed = new Set(L.closed); }
+  const L = await kvGet('lists'); if (L) { S.accounts = L.accounts; S.statements = L.statements || []; S.party = L.party; S.closed = new Set(); }
   const ls = await kvGet('lastSync'); S.lastSync = ls ? new Date(ls) : null;
   S.ent = new Map((await entAll()).map(e => [e.id, e]));
   S.docs = new Map((await docsAll()).map(d => [d.id, d]));
@@ -3639,7 +3774,11 @@ async function init() {
   $('#acc-tb').onclick = e => { const r = e.target.closest('tr[data-k]'); if (!r) return; const row = gst(S.accGid).fr[+r.dataset.k]; if (!row) return;
     if (S.accMode === 'g') { S.expGroup = row.name; renderAcc(); } else openStm(row.name); };
   $('#acc-allx').onclick = () => { S.expGroup = '*'; renderAcc(); };
-  $('#au-back').onclick = back; $('#yr-back').onclick = back; $('#yr-y').onchange = e => { S.yrY = e.target.value; renderYR(); }; $('#yr-pdf').onclick = () => { if (S.yrY) printHTML(yrHTML(S.yrY)); }; $('#v-au').onclick = auClick; $('#v-au').onchange = auChange; $('#hr-back').onclick = back; $('#hr-slips').onclick = () => printSlips(hrRows(S.hrMonth).map(r => r.emp.id)); $('#hsheet').onchange = e => { const o = e.target.closest('[data-hro]'); if (!o || !canWrite()) return; docSave('ded', 'dedo:' + o.dataset.hro, { m:o.value }); const eid = S.hs && S.hs.eid; if (eid) openSlip(eid); renderHR(); }; $('#cs-back').onclick = back; $('#pr-back').onclick = back; $('#pr-t1').onclick = () => { S.prTab = 'o'; renderPR(); }; $('#pr-t2').onclick = () => { S.prTab = 'g'; renderPR(); }; $('#pr-t3').onclick = () => { S.prTab = 's'; renderPR(); }; $('#pr-t4').onclick = () => { S.prTab = 'i'; renderPR(); }; $('#pr-body').oninput = prBodyInput; $('#pr-body').onclick = prBodyClick; $('#pr-pdf').onclick = () => doPrint(prTitle()); $('#e-cr').addEventListener('change', csSrcUpdate);
+  $('#au-back').onclick = back; $('#yr-back').onclick = back; $('#arc-back').onclick = back; $('#arcy-back').onclick = back; $('#arcc-back').onclick = back;
+  $('#arc-body').onclick = e => { const o = e.target.closest('[data-arcy]'); if (o) { S.arcY = o.dataset.arcy; push_('arcy'); } else if (e.target.closest('#arc-new')) push_('arcc'); };
+  $('#arcy-body').onclick = e => { const x = S.docs.get('arc:' + S.arcY); if (!x) return; if (e.target.closest('#arcy-pdf')) printHTML(x.data.pages); else if (e.target.closest('#arcy-csv')) { const L = live().filter(q => q.date.slice(0, 4) === S.arcY).sort((a, b) => a.date.localeCompare(b.date) || (a.no || 0) - (b.no || 0)); if (!L.length) toast('مفيش قيود'); else shareFile('vegan-entries-' + S.arcY + '.csv', csvOf(L), 'text/csv'); } else if (e.target.closest('#arcy-redo') && confirm('هتستبدل النسخة المجمّدة بالأرقام الحالية. تكمل؟')) { closeYear(S.arcY); renderARCY(); } };
+  $('#arcc-y').onchange = e => { S.arccY = e.target.value; renderARCC(); };
+  $('#arcc-body').onclick = e => { if (e.target.closest('#arcc-au')) push_('au'); else if (e.target.closest('#arcc-go') && confirm('هتجمّد تقارير سنة ' + S.arccY + ' في الأرشيف. مفيش قيد هيتحذف أو يتعدل. تكمل؟')) { closeYear(S.arccY); go('arcy'); } }; $('#yr-y').onchange = e => { S.yrY = e.target.value; renderYR(); }; $('#yr-pdf').onclick = () => { if (S.yrY) printHTML(yrHTML(S.yrY)); }; $('#v-au').onclick = auClick; $('#v-au').onchange = auChange; $('#hr-back').onclick = back; $('#hr-slips').onclick = () => printSlips(hrRows(S.hrMonth).map(r => r.emp.id)); $('#hsheet').onchange = e => { const o = e.target.closest('[data-hro]'); if (!o || !canWrite()) return; docSave('ded', 'dedo:' + o.dataset.hro, { m:o.value }); const eid = S.hs && S.hs.eid; if (eid) openSlip(eid); renderHR(); }; $('#cs-back').onclick = back; $('#pr-back').onclick = back; $('#pr-t1').onclick = () => { S.prTab = 'o'; renderPR(); }; $('#pr-t2').onclick = () => { S.prTab = 'g'; renderPR(); }; $('#pr-t3').onclick = () => { S.prTab = 's'; renderPR(); }; $('#pr-t4').onclick = () => { S.prTab = 'i'; renderPR(); }; $('#pr-body').oninput = prBodyInput; $('#pr-body').onclick = prBodyClick; $('#pr-pdf').onclick = () => doPrint(prTitle()); $('#e-cr').addEventListener('change', csSrcUpdate);
   $('#cs-t1').onclick = () => { S.csTab = 's'; renderCS(); }; $('#cs-t2').onclick = () => { S.csTab = 'k'; renderCS(); }; $('#cs-t4').onclick = () => { S.csTab = 'g'; renderCS(); }; $('#cs-body').onclick = csBodyClick; $('#cs-body').oninput = e => { if (e.target.id === 'pl-title') S.plTitle = e.target.value; }; $('#cs-pdf').onclick = () => doPrint(csTitle()); $('#hr-pdf').onclick = () => { if (S.hrTab === 'p') doPrint($('#ph-t').textContent); else toast('الطباعة من تبويب كشف الرواتب'); };
   $('#hr-t1').onclick = () => { S.hrTab = 'p'; renderHR(); }; $('#hr-t2').onclick = () => { S.hrTab = 'a'; renderHR(); }; $('#hr-t3').onclick = () => { S.hrTab = 'e'; renderHR(); };
   $('#hr-month').onchange = e => { S.hrMonth = e.target.value; hrPayroll(); };
@@ -3690,7 +3829,7 @@ async function init() {
   $('#tiles').onclick = e => {
     const b = e.target.closest('.tile'); if (!b) return; const k = b.dataset.k;
     if (k === 'new') openForm(null); else if (k === 'list') push_('list'); else if (k === 'tb') { S.tbMonth = '*'; push_('tb'); } else if (k === 'gl') push_('gl'); else if (k === 'is') { S.isMonth = '*'; push_('is'); } else if (k === 'bs') { S.bsMonth = '*'; push_('bs'); } else if (k === 'db') { S.dbMonth = '*'; push_('db'); } else if (k === 'hr') { S.hrTab = 'p'; S.hrMonth = ''; push_('hr'); } else if (k === 'cs') { S.csTab = 's'; push_('cs'); } else if (k === 'pr') { S.prTab = 'o'; push_('pr'); } else if (k === 'mp') push_('mp'); else if (k === 'dp') { S.dpMonth = '*'; push_('dp'); } else if (k === 'an') push_('an');
-    else if (k === 'au') push_('au'); else if (k === 'yr') push_('yr'); else if (k === 'sync') { toast('بنزامن…'); sync(); } else openAcc(k);
+    else if (k === 'au') push_('au'); else if (k === 'yr') push_('yr'); else if (k === 'arc') push_('arc'); else if (k === 'sync') { toast('بنزامن…'); sync(); } else openAcc(k);
   };
   $('#an-list').onclick = e => { const b = e.target.closest('.an'); if (b) openAcc(b.dataset.k); };
     $('#acc-q').oninput = e => { S.accQ = e.target.value; renderAcc(); };
