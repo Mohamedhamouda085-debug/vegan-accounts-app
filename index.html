@@ -16,6 +16,9 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,"Noto Sans Arabic","Segoe UI",Tahoma,sans-serif}
 .hide{display:none!important}
+html,body{overscroll-behavior-y:none}
+#ptr{position:fixed;top:0;left:50%;transform:translate(-50%,-60px);z-index:60;background:#fff;color:var(--green-d);border:1px solid var(--line);box-shadow:var(--sh);border-radius:99px;padding:7px 18px;font-size:13px;font-weight:700;pointer-events:none;transition:transform .18s;white-space:nowrap}
+#ptr.on{transform:translate(-50%,calc(env(safe-area-inset-top) + 12px))}
 button,input,select{font:inherit;color:inherit}
 svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
 header{position:sticky;top:0;z-index:5;background:var(--paper);padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
@@ -275,10 +278,13 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
     <input id="l-pass" type="password" autocomplete="current-password" dir="ltr" placeholder="كلمة المرور" aria-label="كلمة المرور">
     <div class="err" id="l-err"></div>
     <button class="btn" id="l-go" style="width:100%;margin-top:4px">دخول</button>
+    <button class="lnk" id="l-bio" type="button" aria-label="الدخول بالبصمة" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 11v3.5c0 2-.5 3.8-1.6 5.5M8.2 17.5c.5-1.1.8-2.3.8-3.8V11a3 3 0 016 0v3.7c0 1.6.2 3 .9 4.3M5.5 15c.4-1 .5-2 .5-3.3V11a6 6 0 0112 0v1.2M3.5 9.5A9 9 0 0120.5 9"/></svg><span>الدخول بالبصمة</span></button>
     <div class="forgot">نسيت كلمة المرور؟ اطلب إعادة تعيينها من مسؤول النظام</div>
     <img class="vg" src="logo.png" alt="Vegan">
   </div>
 </div>
+
+<div id="ptr" aria-hidden="true"></div>
 
 <div id="lock" class="hide">
   <img class="cv" src="cover.jpg" alt="">
@@ -286,7 +292,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
   <button id="lock-go" type="button" class="bigfp lg" aria-label="فتح بالبصمة"><svg viewBox="0 0 24 24" width="72" height="72" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 11v3.5c0 2-.5 3.8-1.6 5.5M8.2 17.5c.5-1.1.8-2.3.8-3.8V11a3 3 0 016 0v3.7c0 1.6.2 3 .9 4.3M5.5 15c.4-1 .5-2 .5-3.3V11a6 6 0 0112 0v1.2M3.5 9.5A9 9 0 0120.5 9"/></svg><span>فتح بالبصمة</span></button>
   <div id="lock-pinbox" style="display:none;margin-top:14px;text-align:center"><input id="lock-pin" type="password" inputmode="numeric" maxlength="8" dir="ltr" placeholder="الرمز السريع" style="width:200px;text-align:center;letter-spacing:6px"><div><button class="btn" id="lock-pin-go" style="min-width:230px;margin-top:8px">فتح بالرمز</button></div></div>
   <div class="err" id="lock-err"></div>
-  <button class="lnk" id="lock-pw">الدخول بكلمة المرور</button>
+  <button class="lnk" id="lock-pw">أو الدخول بكلمة المرور</button>
 </div>
 
 <div id="app" class="hide">
@@ -941,7 +947,7 @@ function go(v) {
   for (const x of VIEWS) $('#v-' + x).classList.toggle('hide', x !== v);
   const tab = { home:'home', tb:'home', lg:'home', gl:'home', is:'home', bs:'home', mp:'home', dp:'home', db:'home', hr:'home', cs:'home', pr:'home', au:'home', yr:'home', arc:'home', arcy:'home', arcc:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
   for (const t of ['home', 'list', 'an', 'set']) $('#n-' + t).classList.toggle('on', t === tab);
-  draw(v); window.scrollTo(0, 0);
+  draw(v); window.scrollTo(0, 0); resSave(); ulStamp();
 }
 function draw(v) {
   if (v === 'home') renderHome(); else if (v === 'list') renderList(); else if (v === 'an') renderAn();
@@ -1391,7 +1397,8 @@ function sumCols(A) {
   const a = K[4] > 0 ? r => r.d : r => r.c, b = K[4] > 0 ? r => r.c : r => r.d;
   return [T(K[0]), N(K[1], a, { sum:1 }), N(K[2], b, { sum:1 }), N(K[3], r => a(r) - b(r), { sum:1, neg:1 })];
 }
-const EXP_G = [["مصروفات تشغيلية", ["نقل منتج خام", "كلوريد كالسيوم", "تشغيل منتج", "مشروبات المصنع", "مواصلات للعاملين", "ماكولات المصنع", "بكر استريتش للبراميل", "خل تركيز 99.9%", "ملح", "صنايعي تقطيع", "زيت طعام", "اكراميات", "ميتا باى سلفات", "سكاكين مشط تقطيع", "جهز رفراكتوميتر للملح", "ملئ انابيب غاز", "مصافي بلاستيك", "نولون نقل زيتون", "كارته ميزان منتج", "شكائر للجزر", "تحميل فلفل", "عمالة للفلفل", "حساب مفرش تقطيع", "حساب ملح كفر الدوار", "حساب كلاك نقل"]], ["مصروفات الادارية", ["ايجار المصنع", "دفاتر", "غفره المصنع", "ماكولات اداريين", "مشروبات اداريين", "مواصلات اداريين", "شحن باقة", "بنزين سيارة اداره", "ختم الكترونى", "مصروفات اخري", "كارته مرور", "صيانه لاب توب", "مصروفات سيارة", "ختم الشركة", "كهرباء المصنع", "كاوتش سيارة الادارة", "غيار زيت لسيارة محمد الفقي", "مصروفات كفر الدوار"]], ["مصروفات مالية", ["اتعاب محامى", "ضريبة 1% للشيك", "توكيلات", "مصروفات مالية اخري", "رسوم تحويل انستا", "المحاسب القانوني", "عيدية", "مكافئة عمل"]], ["مصروفات البيع والتوزيع", ["مصروفات تسويقة", "نقل منتج تام", "سولار سيارة", "تصفية سيارة طنطا", "عمولة مبيعات"]], ["مصروفات عامة اخري", ["برطمانات للعينات", "تصفية مصروفات", "مراتب للعاملين", "عينات", "عجلة كاوتش للازق", "جوانتى سيلكون للعاملين", "منظفات", "مستلزمات كهرباء", "علب حديد للنت", "صيانه طلمبة مياه", "رولمان بلي", "سير ماكينة الصنفرة", "لحاف غطاء"]], ["مصروفات ماكينة التشريح", ["نولون نقل الماكينة", "سن سكاكين الماكينة", "خراطة اكسات السيور", "سلك كهرباء لخط التشريح", "نولون نقل سير الماكينة", "مسامير", "كراسي بلي", "مستلزمات سباكة لخط التشريح", "خامات استلس", "رولمان بلى", "اويل سيل", "سير v للماكينة", "صنايعي لحام", "موتور لدرج الحلة", "سير لدرج الحلة", "طنابير للماكينة", "عمالة لماكينة التشريح", "لحام هزاز", "سن سكاكين الماكينة خالد", "سوست الهزاز", "تصنيع سكاكين سن اول مره", "سيور نقل حركة للماكينة"]], ["خسائر", ["خسائر", "خسائر مالية"]], ["توزيع الارباح الاستثمارية", ["توزيع ارباح", "حسن الشيخ", "خالد رسلان"]]];
+const SPOIL = 'خسائر تالف مخزون';
+const EXP_G = [["مصروفات تشغيلية", ["نقل منتج خام", "كلوريد كالسيوم", "تشغيل منتج", "مشروبات المصنع", "مواصلات للعاملين", "ماكولات المصنع", "بكر استريتش للبراميل", "خل تركيز 99.9%", "ملح", "صنايعي تقطيع", "زيت طعام", "اكراميات", "ميتا باى سلفات", "سكاكين مشط تقطيع", "جهز رفراكتوميتر للملح", "ملئ انابيب غاز", "مصافي بلاستيك", "نولون نقل زيتون", "كارته ميزان منتج", "شكائر للجزر", "تحميل فلفل", "عمالة للفلفل", "حساب مفرش تقطيع", "حساب ملح كفر الدوار", "حساب كلاك نقل"]], ["مصروفات الادارية", ["ايجار المصنع", "دفاتر", "غفره المصنع", "ماكولات اداريين", "مشروبات اداريين", "مواصلات اداريين", "شحن باقة", "بنزين سيارة اداره", "ختم الكترونى", "مصروفات اخري", "كارته مرور", "صيانه لاب توب", "مصروفات سيارة", "ختم الشركة", "كهرباء المصنع", "كاوتش سيارة الادارة", "غيار زيت لسيارة محمد الفقي", "مصروفات كفر الدوار"]], ["مصروفات مالية", ["اتعاب محامى", "ضريبة 1% للشيك", "توكيلات", "مصروفات مالية اخري", "رسوم تحويل انستا", "المحاسب القانوني", "عيدية", "مكافئة عمل"]], ["مصروفات البيع والتوزيع", ["مصروفات تسويقة", "نقل منتج تام", "سولار سيارة", "تصفية سيارة طنطا", "عمولة مبيعات"]], ["مصروفات عامة اخري", ["برطمانات للعينات", "تصفية مصروفات", "مراتب للعاملين", "عينات", "عجلة كاوتش للازق", "جوانتى سيلكون للعاملين", "منظفات", "مستلزمات كهرباء", "علب حديد للنت", "صيانه طلمبة مياه", "رولمان بلي", "سير ماكينة الصنفرة", "لحاف غطاء"]], ["مصروفات ماكينة التشريح", ["نولون نقل الماكينة", "سن سكاكين الماكينة", "خراطة اكسات السيور", "سلك كهرباء لخط التشريح", "نولون نقل سير الماكينة", "مسامير", "كراسي بلي", "مستلزمات سباكة لخط التشريح", "خامات استلس", "رولمان بلى", "اويل سيل", "سير v للماكينة", "صنايعي لحام", "موتور لدرج الحلة", "سير لدرج الحلة", "طنابير للماكينة", "عمالة لماكينة التشريح", "لحام هزاز", "سن سكاكين الماكينة خالد", "سوست الهزاز", "تصنيع سكاكين سن اول مره", "سيور نقل حركة للماكينة"]], ["خسائر", ["خسائر", "خسائر مالية", "خسائر تالف مخزون"]], ["توزيع الارباح الاستثمارية", ["توزيع ارباح", "حسن الشيخ", "خالد رسلان"]]];
 let EXP_MAP = null;
 const EXP_PA = { 'نولون':'نقل منتج خام', 'نولون وادى فود':'نقل منتج خام', 'اكراميه تنزيل':'اكراميات', 'اكرامية تنزيل':'اكراميات', 'خصم ضريبة 1%':'ضريبة 1% للشيك' };
 const expGroupRaw = n => { if (!EXP_MAP) { EXP_MAP = new Map(); for (const [g, it] of EXP_G) for (const x of it) { const k = cl(x); if (!EXP_MAP.has(k)) EXP_MAP.set(k, g); } EXP_MAP.set('مصروفات عامة اخري', 'مصروفات عامة اخري'); } return EXP_MAP.get(cl(n)) || null; };
@@ -1597,7 +1604,7 @@ function plCalc(pred, rng) {
   P.fine = gg('مصروفات مالية') + gg('مصروفات عامة اخري');
   P.dep = rng ? depBetween(rng[0], rng[1]) : 0;
   P.opex = P.oper + P.sal + P.admin + P.sell + P.fine;
-  P.op = P.gross - P.opex; P.other = -n('الايرادات'); P.machine = gg('مصروفات ماكينة التشريح'); P.loss = gg('خسائر');
+  P.op = P.gross - P.opex; P.other = -n('الايرادات'); P.machine = gg('مصروفات ماكينة التشريح'); P.loss = gg('خسائر'); P.spoil = ex.get(cl(SPOIL)) || 0; /* التالف جزء من الخسائر (الإجمالي ثابت) وبيتعرض سطر لوحده */
   P.pre = P.op + P.other - P.machine - P.loss; P.dist = gg('توزيع الارباح الاستثمارية'); P.np = P.pre - P.dist;
   return P;
 }
@@ -1623,7 +1630,7 @@ function isRows(P, force) {
     { l:'مصروفات البيع والتوزيع', a:P.sell, k:'المصروفات' }, { l:'مصروفات مالية ومصروفات أخرى', a:P.fine, k:'المصروفات' }];
   R.push({ l:'مجموع المصروفات', b:P.opex, c:'t' },
     { l:'صافي الربح التشغيلي', b:P.op, p:pc(P.op), c:'t' },
-    { l:'الإيرادات والمكاسب الأخرى', a:P.other, k:'الايرادات' }, { l:'مصروفات أخرى (ماكينة التشريح)', a:P.machine, k:'المصروفات' }, ...(force || Math.abs(P.loss) > 0.5 ? [{ l:'الخسائر', a:P.loss, k:'المصروفات' }] : []),
+    { l:'الإيرادات والمكاسب الأخرى', a:P.other, k:'الايرادات' }, { l:'مصروفات أخرى (ماكينة التشريح)', a:P.machine, k:'المصروفات' }, ...(force || Math.abs(P.loss - P.spoil) > 0.5 ? [{ l:'الخسائر', a:P.loss - P.spoil, k:'المصروفات' }] : []), ...(force || Math.abs(P.spoil) > 0.5 ? [{ l:'خسائر تالف مخزون', a:P.spoil, k:'المصروفات' }] : []),
     { l:'صافي الإيرادات والمصروفات الأخرى', b:P.other - P.machine - P.loss, c:'t' },
     { l:'صافي الربح قبل التوزيع', b:P.pre, p:pc(P.pre), c:'t' },
     { l:'يطرح: توزيعات الأرباح للمستثمرين', b:P.dist },
@@ -1840,7 +1847,7 @@ function csStock(upto) {
   for (const e of es) {
     const k = csKey(e.prod), x = m.get(k) || { L:[], last:0, name:cl(e.prod) }; m.set(k, x); if (e.dr === CS_RAW && !x.named) { x.name = cl(e.prod); x.named = 1; }
     if (e.dr === CS_RAW) { const q = (+e.qty || 0) * (1 - (+e.disc || 0)); if (q > 0 && e.amtD > 0) { x.L.push([q, e.amtD / q]); x.last = e.amtD / q; } }
-    else { let need = +e.qty || 0; while (need > 1e-9 && x.L.length) { const t = Math.min(need, x.L[0][0]); x.L[0][0] -= t; need -= t; if (x.L[0][0] <= 1e-9) x.L.shift(); } }
+    else { let need = +e.qty || 0; while (need > 1e-9 && x.L.length) { const t = Math.min(need, x.L[0][0]); x.L[0][0] -= t; need -= t; if (x.L[0][0] <= 1e-9) x.L.shift(); } if (need > 1e-9) x.def = (x.def || 0) + need; }
   }
   for (const x of m.values()) { x.q = x.L.reduce((a, l) => a + l[0], 0); x.a = x.L.reduce((a, l) => a + l[0] * l[1], 0); x.avg = x.L.length ? x.L[0][1] : x.last; }
   return m;
@@ -2544,32 +2551,33 @@ function poAlClick(e) {
 /* ---------- جرد وتسوية (خام ومنتج تام): الفرق بيتحمّل على تكلفة المبيعات ---------- */
 const IV_ST = 'تسوية جرد';
 function ivHTML(w) {
-  const stock = csStock(), rawL = [...stock.values()].filter(x => Math.abs(x.q) > 1e-6).sort((a, b) => csColl.compare(a.name, b.name)), fm = fgStockMap(), fgL = [...fm.values()].filter(x => Math.abs(x.q) > 1e-6).sort((a, b) => csColl.compare(a.name, b.name));
-  const row = (at, k, name, q) => '<tr><td class="l">' + esc(name) + '</td><td class="v">' + esc(fmt(q)) + '</td><td class="v">' + (w ? '<input ' + at + '="' + esc(k) + '" data-sys="' + q + '" dir="ltr" inputmode="decimal" style="width:100%;padding:6px 2px;text-align:center">' : '') + '</td><td class="v ivd"></td></tr>';
+  const stock = csStock(), rawL = [...stock.values()].sort((a, b) => csColl.compare(a.name, b.name)), fm = fgStockMap(), fgL = [...fm.values()].filter(x => Math.abs(x.q) > 1e-6).sort((a, b) => csColl.compare(a.name, b.name));
+  const sel = '<select data-ivt aria-label="تحميل النقص على" style="display:none;width:100%;margin-top:3px;padding:2px;font-size:11px"><option value="c">تكلفة</option><option value="l">خسائر</option></select>';
+  const row = (at, k, name, q, df) => '<tr><td class="l">' + esc(name) + '</td><td class="v">' + esc(fmt(q)) + (df > 0.0005 ? '<div class="neg" style="font-size:11px">الدفاتر ' + esc(fmt(q - df)) + '</div>' : '') + '</td><td class="v">' + (w ? '<input ' + at + '="' + esc(k) + '" data-sys="' + q + '" dir="ltr" inputmode="decimal" style="width:100%;padding:6px 2px;text-align:center">' : '') + '</td><td class="v ivd"><span class="ivs"></span>' + (w ? sel : '') + '</td></tr>';
   const hist = docsOf('ij').sort((a, b) => a.data.date < b.data.date ? 1 : -1);
   return '<div class="mrow"><label for="iv-d">تاريخ الجرد</label><input id="iv-d" type="date" value="' + esc(todayStr()) + '"></div>' +
-    '<div class="note np" style="padding:8px 14px">اكتب الكمية الفعلية للأصناف اللي عدّيتها بس (اللي تسيبه فاضي ما يتعدلش). الفرق بيتسجل قيد تسوية بيتحمّل على «تكلفة المبيعات»: النقص بتكلفة الدفعات الأقدم، والزيادة بآخر سعر شراء (للخام) وبتكلفة الوصفة (للمنتج التام).</div>' +
-    '<div class="note" style="padding:8px 14px 2px"><b>الخامات والعبوات</b></div>' + csTbl([40, 20, 22, 18], ['الصنف', 'النظام', 'الفعلي', 'الفرق'], rawL.length ? rawL.map(x => row('data-ivr', csKey(x.name), x.name, x.q)).join('') : '<tr><td class="l" colspan="4">مفيش خامات في المخزون.</td></tr>') +
-    '<div class="note" style="padding:12px 14px 2px"><b>المنتج التام</b></div>' + csTbl([40, 20, 22, 18], ['المنتج', 'النظام', 'الفعلي', 'الفرق'], fgL.length ? fgL.map(x => row('data-ivf', csKey(x.name), x.name, x.q)).join('') : '<tr><td class="l" colspan="4">مخزن المنتج التام فاضي.</td></tr>') +
+    '<div class="note np" style="padding:8px 14px">اكتب الكمية الفعلية للأصناف اللي عدّيتها بس (اللي تسيبه فاضي ما يتعدلش). الفرق بيتسجل قيد تسوية: النقص بتكلفة الدفعات الأقدم، والزيادة بآخر سعر شراء (للخام) وبتكلفة الوصفة (للمنتج التام). النقص بيظهر جنبه اختيار: «تكلفة» (بيتحمّل على تكلفة المبيعات) أو «خسائر» (تالف أو مرمي، بيظهر في بند «خسائر تالف مخزون» في قائمة الدخل ومش على التكلفة ولا مجمل الربح). الأصناف اللي رصيدها صفر ظاهرة كمان، والصنف اللي اتسحب منه أكتر من رصيده بيظهر تحته «الدفاتر» بالسالب.</div>' +
+    '<div class="note" style="padding:8px 14px 2px"><b>الخامات والعبوات</b></div>' + csTbl([34, 21, 22, 23], ['الصنف', 'النظام', 'الفعلي', 'الفرق'], rawL.length ? rawL.map(x => row('data-ivr', csKey(x.name), x.name, x.q, x.def || 0)).join('') : '<tr><td class="l" colspan="4">مفيش خامات في المخزون.</td></tr>') +
+    '<div class="note" style="padding:12px 14px 2px"><b>المنتج التام</b></div>' + csTbl([34, 21, 22, 23], ['المنتج', 'النظام', 'الفعلي', 'الفرق'], fgL.length ? fgL.map(x => row('data-ivf', csKey(x.name), x.name, x.q)).join('') : '<tr><td class="l" colspan="4">مخزن المنتج التام فاضي.</td></tr>') +
     (w ? '<div class="mrow"><button class="btn" id="iv-save" style="width:100%">تسجيل الجرد وعمل التسوية</button></div>' : '') +
-    (hist.length ? '<div class="note" style="padding:12px 14px 2px"><b>الجرد السابق</b></div>' + hist.map(d => { const net = (d.data.rows || []).reduce((a, r) => a + (+r.amt || 0), 0); return '<div class="hrow np"><div class="kv"><span>' + esc(d.data.date) + '</span><span dir="ltr">' + esc(String((d.data.rows || []).length)) + ' فرق · الأثر ' + esc(fmt0(net)) + '</span></div>' + (w ? '<div class="actions"><button class="btn danger" data-ivd="' + d.id + '">مسح الجرد وقيوده</button></div>' : '') + '</div>'; }).join('') : '');
+    (hist.length ? '<div class="note" style="padding:12px 14px 2px"><b>الجرد السابق</b></div>' + hist.map(d => { const net = (d.data.rows || []).reduce((a, r) => a + (+r.amt || 0), 0); return '<div class="hrow np"><div class="kv"><span>' + esc(d.data.date) + '</span><span dir="ltr">' + esc(String((d.data.rows || []).length)) + ' فرق · الأثر ' + esc(fmt0(net)) + ((d.data.rows || []).some(r => r.to === 'l') ? ' · خسائر ' + esc(fmt0((d.data.rows || []).filter(r => r.to === 'l').reduce((a, r) => a + (+r.amt || 0), 0))) : '') + '</span></div>' + (w ? '<div class="actions"><button class="btn danger" data-ivd="' + d.id + '">مسح الجرد وقيوده</button></div>' : '') + '</div>'; }).join('') : '');
 }
 function prBodyInput(e) {
-  const i = e.target.closest('[data-ivr],[data-ivf]'); if (!i) return; const c = i.closest('tr').querySelector('.ivd'), v = i.value.trim(), d = num(v) - (+i.dataset.sys || 0);
-  c.textContent = v === '' ? '' : (d > 0 ? '+' : '') + fmt(d); c.classList.toggle('neg', v !== '' && d < -0.0005);
+  const i = e.target.closest('[data-ivr],[data-ivf]'); if (!i) return; const c = i.closest('tr').querySelector('.ivd'), v = i.value.trim(), d = num(v) - (+i.dataset.sys || 0), s = c.querySelector('.ivs'), sl = c.querySelector('select');
+  s.textContent = v === '' ? '' : (d > 0 ? '+' : '') + fmt(d); c.classList.toggle('neg', v !== '' && d < -0.0005); if (sl) sl.style.display = v !== '' && d < -0.0005 ? '' : 'none';
 }
 async function ivSave() {
   const D = fgData(), date = $('#iv-d').value; if (!date) { toast('اكتب تاريخ الجرد'); return; }
-  const ins = sel => [...document.querySelectorAll(sel)].filter(i => i.value.trim() !== '').map(i => ({ k:i.dataset.ivr || i.dataset.ivf, a:num(i.value) }));
+  const ins = sel => [...document.querySelectorAll(sel)].filter(i => i.value.trim() !== '').map(i => { const s = i.closest('tr').querySelector('select[data-ivt]'); return { k:i.dataset.ivr || i.dataset.ivf, a:num(i.value), loss:!!(s && s.value === 'l') }; });
   const rawIn = ins('[data-ivr]'), fgI = ins('[data-ivf]'); if (!rawIn.length && !fgI.length) { toast('اكتب الكمية الفعلية لصنف واحد على الأقل'); return; }
   const stock = csStock(), fm = fgStockMap(), now = Date.now(), ens = [], fas = [], rows = [], skipped = []; let no = Math.max(0, ...live().map(z => z.no || 0));
-  const mkE = (dr, cr, prod, qty, amt) => ({ id:crypto.randomUUID(), no:++no, date, stmt:IV_ST, dr, cr, pa:'', pb:'جرد', prod, qty, disc:0, price:qty ? amt / qty : 0, amtD:amt, amtC:amt, star:false, opening:false, deleted:false, updated:now, dirty:true });
-  for (const { k, a } of rawIn) { const x = stock.get(k); if (!x) continue; const diff = a - x.q; if (Math.abs(diff) < 0.0005) continue;
-    if (diff < 0) { const amt = csTake(x, -diff); ens.push(mkE(CS_COGS, CS_RAW, x.name, -diff, amt)); rows.push({ g:'raw', name:x.name, sys:x.q, act:a, diff, amt:-amt }); }
+  const mkE = (dr, cr, prod, qty, amt, loss) => ({ id:crypto.randomUUID(), no:++no, date, stmt:IV_ST, dr:loss ? 'المصروفات' : dr, cr, pa:loss ? SPOIL : '', pb:loss ? '' : 'جرد', prod, qty, disc:0, price:qty ? amt / qty : 0, amtD:amt, amtC:amt, star:false, opening:false, deleted:false, updated:now, dirty:true });
+  for (const { k, a, loss } of rawIn) { const x = stock.get(k); if (!x) continue; const diff = a - x.q; if (Math.abs(diff) < 0.0005) continue;
+    if (diff < 0) { const amt = csTake(x, -diff); ens.push(mkE(CS_COGS, CS_RAW, x.name, -diff, amt, loss)); rows.push({ g:'raw', name:x.name, sys:x.q, act:a, diff, amt:-amt, to:loss ? 'l' : 'c' }); }
     else { const pr = x.last > 0 ? x.last : x.L.length ? x.L[x.L.length - 1][1] : 0; if (!(pr > 0)) { skipped.push(x.name); continue; } ens.push(mkE(CS_RAW, CS_COGS, x.name, diff, diff * pr)); rows.push({ g:'raw', name:x.name, sys:x.q, act:a, diff, amt:diff * pr }); } }
-  for (const { k, a } of fgI) { const x = fm.get(k); if (!x) continue; const diff = a - x.q; if (Math.abs(diff) < 0.0005) continue; const f = fgMatch(x.name);
+  for (const { k, a, loss } of fgI) { const x = fm.get(k); if (!x) continue; const diff = a - x.q; if (Math.abs(diff) < 0.0005) continue; const f = fgMatch(x.name);
     if (diff < 0) { let need = -diff, amt = 0; for (const l of x.L) { if (need <= 1e-9) break; const t = Math.min(need, l[0]); amt += t * l[1]; need -= t; } if (need > 1e-9 && f) amt += need * fgCost(D, f.p, f.z);
-      const e = mkE(CS_COGS, FG_STOCK, x.name, -diff, amt); ens.push(e); fas.push({ key:x.name, units:diff, cost:amt / -diff, date, e:[e.id] }); rows.push({ g:'fg', name:x.name, sys:x.q, act:a, diff, amt:-amt }); }
+      const e = mkE(CS_COGS, FG_STOCK, x.name, -diff, amt, loss); ens.push(e); fas.push({ key:x.name, units:diff, cost:amt / -diff, date, e:[e.id] }); rows.push({ g:'fg', name:x.name, sys:x.q, act:a, diff, amt:-amt, to:loss ? 'l' : 'c' }); }
     else { const cu = f ? fgCost(D, f.p, f.z) : 0; if (!(cu > 0)) { skipped.push(x.name); continue; } const e = mkE(FG_STOCK, CS_COGS, x.name, diff, diff * cu); ens.push(e); fas.push({ key:x.name, units:diff, cost:cu, date, e:[e.id] }); rows.push({ g:'fg', name:x.name, sys:x.q, act:a, diff, amt:diff * cu }); } }
   if (!ens.length) { toast(skipped.length ? 'مفيش سعر نحسب بيه الزيادة: ' + skipped.join('، ') : 'مفيش فروق'); return; }
   for (const en of ens) { S.ent.set(en.id, en); await entPut(en); }
@@ -3684,8 +3692,14 @@ async function bioVerify() {
   await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), rpId: location.hostname, userVerification: 'required', timeout: 60000,
     allowCredentials: [{ type: 'public-key', id: unb64(b.id), transports: ['internal'] }] } });
 }
+async function loginBio() { /* زرار البصمة في شاشة كلمة المرور */
+  const er = $('#l-err'); er.textContent = '';
+  if (!S.session || !(await bioOn())) { er.textContent = (await kvGet('bio')) ? 'ادخل بكلمة المرور مرة واحدة وبعدها البصمة هتشتغل.' : (await bioAvail()) ? 'البصمة مش مفعّلة. ادخل بكلمة المرور وبعدها فعّلها من «حسابي».' : 'الموبايل ده مش بيدعم الدخول بالبصمة.'; return; }
+  try { await bioVerify(); } catch (e) { er.textContent = 'البصمة ما اتأكدتش. جرّب تاني.'; return; }
+  ulStamp(); $('#login').classList.add('hide'); $('#app').classList.remove('hide'); armBack(); render();
+}
 async function tryUnlock() {
-  try { await bioVerify(); $('#lock').classList.add('hide'); }
+  try { await bioVerify(); ulStamp(); $('#lock').classList.add('hide'); }
   catch (e) { $('#lock-err').textContent = 'البصمة ما اتأكدتش. دوس الزرار وجرّب تاني.'; }
 }
 const pinHash = async (pin, salt) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)))].map(x => x.toString(16).padStart(2, '0')).join('');
@@ -3699,13 +3713,13 @@ async function pinToggle() {
 }
 async function tryPin() {
   const v = $('#lock-pin').value, p = await kvGet('pin'); if (!p || !v) return; $('#lock-pin').value = '';
-  if ((await pinHash(v, p.salt)) === p.hash) { p.fails = 0; await kvSet('pin', p); $('#lock').classList.add('hide'); return; }
+  if ((await pinHash(v, p.salt)) === p.hash) { p.fails = 0; await kvSet('pin', p); ulStamp(); $('#lock').classList.add('hide'); return; }
   p.fails = (p.fails || 0) + 1; await kvSet('pin', p);
   if (p.fails >= 5) { await kvDel('pin'); $('#lock').classList.add('hide'); await softLogout('الرمز اتكتب غلط 5 مرات. ادخل بكلمة المرور.'); return; }
   $('#lock-err').textContent = 'الرمز غلط (' + p.fails + ' من 5).';
 }
 async function showLock() {
-  const b = await bioOn(), p = await pinOn();
+  const b = await bioOn(), p = await pinOn(); try { sessionStorage.removeItem('ul'); } catch (e) {}
   $('#lock').classList.remove('hide'); $('#lock-err').textContent = ''; $('#lock-go').style.display = b ? '' : 'none'; $('#lock-pinbox').style.display = p ? '' : 'none';
   if (b) tryUnlock(); else if (p) setTimeout(() => $('#lock-pin').focus(), 200);
 }
@@ -3722,7 +3736,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.32';
+const VER = '1.34';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -3837,8 +3851,11 @@ async function start() {
   S.ent = new Map((await entAll()).map(e => [e.id, e]));
   S.docs = new Map((await docsAll()).map(d => [d.id, d]));
   await jInit();
-  S.stack = []; go('home'); render(); armBack();
-  if (!S.skipLock && ((await bioOn()) || (await pinOn()))) showLock();
+  const rs = resTake(); /* لو الصفحة اتعمل لها ريلود (تحديث) بنرجّعك لنفس المكان من غير شاشة البصمة */
+  S.stack = [];
+  if (rs && rs.view && rs.view !== 'form') { for (const k of RES_KEYS) if (rs[k] !== undefined && k !== 'view' && k !== 'stack') S[k] = rs[k]; S.stack = Array.isArray(rs.stack) ? rs.stack : []; go(rs.view); } else go('home');
+  render(); armBack();
+  if (!rs && !S.skipLock && ((await bioOn()) || (await pinOn()))) showLock();
   await sync();
 }
 function setNav() {
@@ -3846,8 +3863,50 @@ function setNav() {
   N('#n-home', 'home', 'الرئيسية'); N('#n-list', 'list', 'القيود'); N('#n-an', 'chart', 'التحليلات'); N('#n-set', 'user', 'حسابي');
   $('#n-add').innerHTML = '<span class="c">' + ico('plus') + '</span>جديد';
 }
+
+/* ---------- تحديث بالسحب لتحت: بيزامن ويعيد رسم نفس الصفحة (من غير ما يخرجك للرئيسية أو لشاشة البصمة). ولو فيه نسخة كود جديدة بيعيد التحميل ويرجّعك لنفس الصفحة ---------- */
+const RES_KEYS = ['view', 'stack', 'from', 'month', 'stmMonth', 'tbMonth', 'isMonth', 'bsMonth', 'dbMonth', 'hrTab', 'hrMonth', 'hrDate', 'dpMonth', 'dpMode', 'lgMonth', 'lgAcc', 'accMonth', 'acc', 'party_', 'accQ', 'csTab', 'prTab', 'expGroup', 'plK', 'plMode'];
+function ulStamp() { try { sessionStorage.setItem('ul', String(Date.now())); } catch (e) {} }
+function resSave() { try { const o = { t:Date.now() }; for (const k of RES_KEYS) if (S[k] !== undefined) o[k] = S[k]; sessionStorage.setItem('res', JSON.stringify(o)); } catch (e) {} }
+function resTake() {
+  try {
+    const nav = performance.getEntriesByType('navigation')[0]; if (!nav || nav.type !== 'reload') return null;
+    const ul = +sessionStorage.getItem('ul') || 0; if (!ul || Date.now() - ul > 30 * 60000) return null;
+    return JSON.parse(sessionStorage.getItem('res') || 'null') || {};
+  } catch (e) { return null; }
+}
+async function codeUpdated() {
+  if (!navigator.onLine) return false;
+  try { const r = await fetch('index.html', { cache:'no-store' }); if (!r.ok) return false; const m = /const VER = '([^']+)'/.exec(await r.text()); return !!(m && m[1] !== VER); } catch (e) { return false; }
+}
+function ptrInit() {
+  const el = $('#ptr'); let y0 = 0, x0 = 0, on = false, d = 0, busy = false;
+  const ok = t => {
+    if (busy || !S.session || $('#app').classList.contains('hide') || !$('#lock').classList.contains('hide') || S.view === 'form') return false;
+    if (document.querySelector('#psheet:not(.hide),#hsheet:not(.hide)')) return false;
+    if (window.scrollY > 0 || t.closest('input,select,textarea')) return false;
+    const w = t.closest('.tbw'); return !(w && w.scrollTop > 0);
+  };
+  const reset = () => { on = false; d = 0; el.style.transition = ''; el.style.transform = ''; el.classList.remove('on'); };
+  document.addEventListener('touchstart', e => { if (e.touches.length === 1 && ok(e.target)) { y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; on = true; d = 0; } }, { passive:true });
+  document.addEventListener('touchmove', e => {
+    if (!on) return; const dy = e.touches[0].clientY - y0, dx = Math.abs(e.touches[0].clientX - x0);
+    if (dy <= 0 || window.scrollY > 0 || dx > dy) { if (d) reset(); else on = dy > 0; return; }
+    d = Math.min(dy * 0.5, 72); el.style.transition = 'none'; el.style.transform = 'translate(-50%,' + (d - 52) + 'px)'; el.textContent = d >= 56 ? 'سيب للتحديث' : 'اسحب للتحديث';
+  }, { passive:true });
+  const end = async () => {
+    if (!on) return; const go_ = d >= 56; reset(); if (!go_) return;
+    busy = true; el.textContent = 'بنحدّث…'; el.classList.add('on');
+    try {
+      await sync();
+      if (await codeUpdated()) { resSave(); ulStamp(); el.textContent = 'فيه نسخة جديدة، بنفتحها…'; setTimeout(() => location.reload(), 600); return; }
+      toast(S.err ? (S.err === 'net' ? 'مفيش اتصال بالسيرفر' : 'فشلت المزامنة') : 'تم التحديث');
+    } finally { busy = false; el.classList.remove('on'); }
+  };
+  document.addEventListener('touchend', end, { passive:true }); document.addEventListener('touchcancel', reset, { passive:true });
+}
 async function init() {
-  db = await openDB(); setNav();
+  db = await openDB(); setNav(); ptrInit();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   $('#l-go').onclick = login; $('#l-pass').onkeydown = e => { if (e.key === 'Enter') login(); };
   $('#pill').onclick = () => sync(); $('#s-sync').onclick = () => sync();
@@ -3921,7 +3980,8 @@ async function init() {
   $('#stm-pdf').onclick = () => doPrint($('#ph-t').textContent);
   $('#lock-go').onclick = tryUnlock; $('#s-bio-btn').onclick = bioToggle; $('#s-pin-btn').onclick = pinToggle; $('#lock-pin-go').onclick = tryPin; $('#lock-pin').onkeydown = e => { if (e.key === 'Enter') tryPin(); }; 
   $('#s-url-save').onclick = () => { const u = $('#s-url').value.trim().replace(/\/+$/, ''); if (!/^https:\/\/[\w.-]+\.[a-z]{2,}$/i.test(u)) { toast('اكتب الرابط كامل زي https://xxxx.supabase.co'); return; } if (u === url()) { toast('نفس الرابط الحالي'); return; } if (!confirm('هتغيّر السيرفر اللي التطبيق بيتصل بيه. متأكد؟')) return; localStorage.setItem('sb_url', u); toast('اتحفظ. بنعيد فتح التطبيق…'); setTimeout(() => location.reload(), 900); };
-  $('#lock-pw').onclick = async () => { $('#lock').classList.add('hide'); await softLogout(''); };
+  $('#lock-pw').onclick = () => { $('#lock').classList.add('hide'); showLogin(''); }; /* بنفتح شاشة كلمة المرور من غير ما نمسح الجلسة، عشان البصمة تفضل شغالة لما تقفل التطبيق وتفتحه */
+  $('#l-bio').onclick = loginBio;
   $('#tiles').onclick = e => {
     const b = e.target.closest('.tile'); if (!b) return; const k = b.dataset.k;
     if (k === 'new') openForm(null); else if (k === 'list') push_('list'); else if (k === 'tb') { S.tbMonth = '*'; push_('tb'); } else if (k === 'gl') push_('gl'); else if (k === 'is') { S.isMonth = '*'; push_('is'); } else if (k === 'bs') { S.bsMonth = '*'; push_('bs'); } else if (k === 'db') { S.dbMonth = '*'; push_('db'); } else if (k === 'hr') { S.hrTab = 'p'; S.hrMonth = ''; push_('hr'); } else if (k === 'cs') { S.csTab = 's'; push_('cs'); } else if (k === 'pr') { S.prTab = 'o'; push_('pr'); } else if (k === 'mp') push_('mp'); else if (k === 'dp') { S.dpMonth = '*'; push_('dp'); } else if (k === 'an') push_('an');
