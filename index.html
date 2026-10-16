@@ -275,7 +275,6 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
     <input id="l-pass" type="password" autocomplete="current-password" dir="ltr" placeholder="كلمة المرور" aria-label="كلمة المرور">
     <div class="err" id="l-err"></div>
     <button class="btn" id="l-go" style="width:100%;margin-top:4px">دخول</button>
-    <button id="l-bio" type="button" class="bigfp" style="display:none" aria-label="الدخول بالبصمة"><svg viewBox="0 0 24 24" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 11v3.5c0 2-.5 3.8-1.6 5.5M8.2 17.5c.5-1.1.8-2.3.8-3.8V11a3 3 0 016 0v3.7c0 1.6.2 3 .9 4.3M5.5 15c.4-1 .5-2 .5-3.3V11a6 6 0 0112 0v1.2M3.5 9.5A9 9 0 0120.5 9"/></svg><span>الدخول بالبصمة</span></button>
     <div class="forgot">نسيت كلمة المرور؟ اطلب إعادة تعيينها من مسؤول النظام</div>
     <img class="vg" src="logo.png" alt="Vegan">
   </div>
@@ -334,7 +333,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
     </section>
 
     <section id="v-stm" class="hide">
-      <div class="sub"><button id="stm-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b id="stm-title"></b><button id="stm-wa" aria-label="واتساب" style="width:auto;padding:0 14px;font-weight:700">واتساب</button><button id="stm-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
+      <div class="sub"><button id="stm-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b id="stm-title"></b><button id="stm-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
       <div class="tot" id="stm-tot"></div>
       <div class="mrow"><select id="stm-month" aria-label="الشهر"></select></div>
       <div class="tbw"><table class="tb" id="stm-tb"></table></div>
@@ -520,7 +519,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
         <input id="s-url" dir="ltr"><button class="btn ghost" id="s-url-save" style="width:100%;margin-top:8px">حفظ الرابط</button>
       </div></details>
 
-      <details class="sec"><summary>نسخة احتياطية كاملة</summary><div class="in">
+      <details class="sec" id="s-bkbox"><summary>نسخة احتياطية كاملة</summary><div class="in">
         <p class="note" style="margin-top:0">ملف واحد فيه كل القيود، وكمان المرتبات والموظفين والوصفات والربط والجرد وتجاهلات المدقق. ابعته لنفسك على واتساب أو إيميل أو Drive، عشان يبقى عندك نسخة بره الموبايل والسيرفر.</p>
         <p class="note" id="bk-last"></p>
         <button class="btn" id="bk-go" style="width:100%">حفظ نسخة كاملة دلوقتي</button>
@@ -530,7 +529,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
         </div>
       </div></details>
 
-      <details class="sec"><summary>تصدير القيود للإكسيل</summary><div class="in">
+      <details class="sec" id="s-xlbox"><summary>تصدير القيود للإكسيل</summary><div class="in">
         <p class="note" style="margin-top:0">ملف CSV بالقيود. يفتح في الإكسيل، ويستورده ماكرو برنامج المحاسبة في شيتات الشهور.</p>
         <select id="x-month" aria-label="الشهر" style="margin-top:6px"></select>
         <button class="btn" id="x-go" style="width:100%;margin-top:8px">تصدير الملف</button>
@@ -549,7 +548,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
       </div></details>
 
       <button class="btn danger" id="s-out" style="width:100%;margin-top:18px">تسجيل الخروج</button>
-      <button class="lnk hide" id="s-out2" style="display:block;margin:10px auto 0">تسجيل خروج كامل (يمسح بيانات التطبيق من الموبايل)</button>
+      <p class="note" style="text-align:center">تسجيل الخروج بيرجعك لصفحة الدخول بس. بياناتك على الموبايل (واللي لسه ما اترفعش منها) بتفضل محفوظة ومش بتتمسح.</p>
       <p class="note" id="s-ver" style="text-align:center;margin-top:14px"></p>
     </section>
   </main>
@@ -848,7 +847,7 @@ function setPill() {
 /* ---------- auth ---------- */
 function showLogin(msg) {
   disarmBack(); $('#app').classList.add('hide'); $('#login').classList.remove('hide');
-  $('#l-err').textContent = msg || ''; bioAvail().then(a => { $('#l-bio').style.display = a ? '' : 'none'; });
+  $('#l-err').textContent = msg || '';
 }
 async function login() {
   let email = $('#l-email').value.trim().toLowerCase(); const pw = $('#l-pass').value;
@@ -870,13 +869,9 @@ async function login() {
 }
 async function softLogout(msg) { S.session = null; S.profile = null; await kvDel('session'); showLogin(msg); }
 async function logout() {
-  if (navigator.onLine) await sync();
-  const n = pending();
-  if (n && !confirm('فيه ' + n + ' قيد لسه ما اترفعش للسيرفر. لو خرجت هيتمسحوا. تكمل؟')) return;
-  await entClear(); S.ent.clear(); await docsClear(); S.docs.clear();
-  for (const k of ['session', 'uid', 'lastPull', 'lastPullDocs', 'lists', 'profile', 'lastSync', 'bio', 'pin', 'journal']) await kvDel(k);
-  jReset();
-  S.session = null; S.profile = null; showLogin('');
+  if (navigator.onLine) { try { await sync(); } catch (e) { /* مفيش مشكلة: اللي لسه ما اترفعش بيفضل محفوظ على الموبايل */ } }
+  jReset(); await kvDel('journal'); await kvDel('session');
+  S.ent.clear(); S.docs.clear(); S.session = null; S.profile = null; showLogin('');
 }
 async function changePw() {
   const a = $('#p-new').value, b = $('#p-new2').value, err = $('#p-err');
@@ -909,18 +904,23 @@ const balTxt = n => (n >= 0 ? 'مدين' : 'دائن');
 /* ---------- views ---------- */
 const VIEWS = ['home', 'list', 'an', 'acc', 'stm', 'form', 'set', 'tb', 'lg', 'gl', 'is', 'bs', 'mp', 'dp', 'db', 'hr', 'cs', 'pr', 'au', 'yr', 'arc', 'arcy', 'arcc'];
 /* صلاحيات عرض الشريك: المالك يحدد الأقسام اللي بتظهر له، ولحد تاريخ لو حب (الإخفاء في التطبيق نفسه، مش حماية على السيرفر) */
-const PERM_ITEMS = [['home', 'أرقام الرئيسية (الخزينة والعملاء والموردين ومبيعات الشهر)'], ['list', 'القيود'], ['db', 'لوحة المؤشرات'], ['tb', 'ميزان المراجعة'], ['gl', 'دفتر الأستاذ العام'], ['is', 'قائمة الدخل'], ['bs', 'المركز المالي'], ['mp', 'صافي الربح الشهري'], ['dp', 'إهلاك الأصول'], ['hr', 'المرتبات'], ['cs', 'التكاليف وقوائم الأسعار'], ['pr', 'الإنتاج'], ['au', 'المدقق'], ['yr', 'التقرير السنوي'], ['arc', 'الأرشيف'], ['an', 'التحليلات وكشوف الحسابات']];
+const PERM_ITEMS = [['home', 'أرقام الرئيسية (الخزينة والعملاء والموردين ومبيعات الشهر)'], ['list', 'القيود'], ['db', 'لوحة المؤشرات'], ['tb', 'ميزان المراجعة'], ['gl', 'دفتر الأستاذ العام'], ['is', 'قائمة الدخل'], ['bs', 'المركز المالي'], ['mp', 'صافي الربح الشهري'], ['dp', 'إهلاك الأصول'], ['hr', 'المرتبات'], ['cs', 'التكاليف وقوائم الأسعار'], ['pr', 'الإنتاج'], ['au', 'المدقق'], ['yr', 'التقرير السنوي'], ['arc', 'الأرشيف'], ['an', 'التحليلات وكشوف الحسابات'], ['exp', 'تصدير إكسيل والنسخة الاحتياطية الكاملة']];
 const PERM_VIEW = { list:'list', form:'list', db:'db', tb:'tb', gl:'gl', lg:'gl', is:'is', bs:'bs', mp:'mp', dp:'dp', hr:'hr', cs:'cs', pr:'pr', au:'au', yr:'yr', arc:'arc', arcy:'arc', arcc:'arc', an:'an', acc:'an', stm:'an' };
 function permData(uid) { const d = S.docs.get('perm:' + uid); return d && !d.deleted && d.data && Array.isArray(d.data.allow) ? d.data : null; }
 function canSee(k) {
   if (!S.profile || S.profile.role !== 'partner' || !S.session) return true;
+  if (k === 'exp') return canExport();
   const p = permData(S.session.user.id); if (!p) return true; /* مفيش إعداد = يشوف كل حاجة زي الأول */
   if (p.until && todayStr() > p.until) return false;
   return p.allow.includes(k);
 }
+function canExport() {
+  if (!S.profile || S.profile.role !== 'partner' || !S.session) return true;
+  const p = permData(S.session.user.id); return !!(p && !(p.until && todayStr() > p.until) && p.allow.includes('exp'));
+}
 const permText = uid => { const p = permData(uid); return p ? p.allow.length + ' من ' + PERM_ITEMS.length + ' أقسام' + (p.until ? ' · لحد ' + p.until : '') : 'كل حاجة'; };
 function openPerm(u) {
-  const p = permData(u.id), allow = p ? p.allow : PERM_ITEMS.map(x => x[0]); S.hs = { type:'perm', uid:u.id, email:u.email };
+  const p = permData(u.id), allow = p ? p.allow : PERM_ITEMS.map(x => x[0]).filter(k => k !== 'exp'); S.hs = { type:'perm', uid:u.id, email:u.email };
   $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">صلاحيات عرض ' + esc(u.full_name || u.email) + '</h2><div class="note">اللي مش معلّم عليه بيختفي من حسابه. التغيير بيوصله أول ما يزامن.</div>' +
     '<div class="actions"><button class="btn ghost" data-pmset="all">كل حاجة</button><button class="btn ghost" data-pmset="rep">تقارير بس</button><button class="btn ghost" data-pmset="none">مفيش</button></div>' +
     PERM_ITEMS.map(([k, l]) => '<label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><input type="checkbox" data-pm="' + k + '"' + (allow.includes(k) ? ' checked' : '') + ' style="width:22px;height:22px;min-height:0"> ' + esc(l) + '</label>').join('') +
@@ -930,7 +930,7 @@ function openPerm(u) {
 }
 function permSheetClick(e) {
   const t = e.target, set = t.closest('[data-pmset]');
-  if (set) { const rep = ['home', 'db', 'tb', 'is', 'bs', 'mp', 'yr']; document.querySelectorAll('#hs-pn [data-pm]').forEach(c => { c.checked = set.dataset.pmset === 'all' ? true : set.dataset.pmset === 'rep' ? rep.includes(c.dataset.pm) : false; }); return true; }
+  if (set) { const rep = ['home', 'db', 'tb', 'is', 'bs', 'mp', 'yr']; document.querySelectorAll('#hs-pn [data-pm]').forEach(c => { c.checked = set.dataset.pmset === 'all' ? c.dataset.pm !== 'exp' : set.dataset.pmset === 'rep' ? rep.includes(c.dataset.pm) : false; }); return true; }
   if (t.closest('#pm-save')) { const allow = [...document.querySelectorAll('#hs-pn [data-pm]')].filter(c => c.checked).map(c => c.dataset.pm); docSave('perm', 'perm:' + S.hs.uid, { allow, until:$('#pm-until').value || '', email:S.hs.email }); closeHS(); toast('تم حفظ صلاحيات العرض'); S.admAt = 0; loadUsers(); return true; }
   if (t.closest('#pm-reset')) { docSave('perm', 'perm:' + S.hs.uid, {}, true); closeHS(); toast('الشريك هيشوف كل حاجة'); S.admAt = 0; loadUsers(); return true; }
   return false;
@@ -1501,15 +1501,6 @@ function spec(A) {
     N('مدين', m => m.d, { z:1, sum:1 }), N('دائن', m => m.c, { z:1, sum:1 }), N('الرصيد', m => m.run, { neg:1 })];
 }
 function openStm(party) { S.party_ = party; S.stmMonth = null; push_('stm'); }
-/* كشف الحساب كرسالة واتساب (بيفتح الواتساب وإنت تختار العميل) */
-function stmWA() {
-  const A = S.acc, mv = movements(A, S.party_), rows = S.stmMonth === '*' || S.stmMonth == null ? mv : mv.filter(m => m.e.date.startsWith(S.stmMonth));
-  if (!rows.length) { toast('مفيش حركات'); return; }
-  const n = mv.length ? mv[mv.length - 1].run : 0, last = rows.slice(-15), L = ['كشف حساب: ' + (S.party_ || accT(A)), 'الحساب: ' + accT(A), 'الفترة: ' + (S.stmMonth && S.stmMonth !== '*' ? S.stmMonth : 'كل الشهور'), ''];
-  for (const m of last) L.push(m.e.date + ' | ' + cl(m.e.stmt) + (m.d ? ' | مدين ' + fmt(m.d) : '') + (m.c ? ' | دائن ' + fmt(m.c) : '') + ' | الرصيد ' + fmt(m.run));
-  L.push('', 'الرصيد الحالي: ' + fmt(Math.abs(n)) + ' (' + balTxt(n) + ')'); if (rows.length > last.length) L.push('(آخر ' + last.length + ' حركة من ' + rows.length + ')'); L.push('Vegan food');
-  window.open('https://wa.me/?text=' + encodeURIComponent(L.join('\n')), '_blank');
-}
 function renderStm() {
   const A = S.acc, cols = spec(A), mv = movements(A, S.party_), id = 'm:' + A;
   const months = [...new Set(mv.map(m => m.e.date.slice(0, 7)))].sort();
@@ -2940,7 +2931,7 @@ function printSlips(eids) {
 function hsClick(e) {
   if (e.target.id === 'hsheet' || e.target.closest('#he-x')) return closeHS();
   if (e.target.closest('#hd-pdf')) return printSlips([S.hs.eid]);
-  if (S.hs && S.hs.type === 'perm') return permSheetClick(e);
+  if (S.hs && S.hs.type === 'perm') { permSheetClick(e); return; }
   if (!canWrite()) return;
   if (csSheetClick(e)) return;
   if (e.target.closest('#he-save')) {
@@ -3358,10 +3349,12 @@ function disarmBack() { if (!S.guarded) return; const n = S.hi || 0; S.guarded =
 function armBack() {
   if (S.guarded) return; S.guarded = true; S.hi = 0;
   history.replaceState({ b:1 }, '');
-  /* Chrome بيتخطى القيود اللي بتتضاف من غير لمس، فبنزودها مع كل لمسة */
-  const fill = () => { if (!S.guarded || $('#app').classList.contains('hide')) return; while (S.hi < 5) { history.pushState({ g:1 }, ''); S.hi++; } };
+  /* Chrome بيتخطى القيود اللي بتتضاف قبل أي لمسة من المستخدم (فالرجوع يطلّعك برّه من أول ضغطة).
+     عشان كده مبنضيفش حراسة غير بعد ما المستخدم يلمس الشاشة فعلًا، ومع كل لمسة بنكمّل الناقص. */
+  const touched = () => !navigator.userActivation || navigator.userActivation.hasBeenActive;
+  const fill = () => { if (!S.guarded || $('#app').classList.contains('hide') || !touched()) return; while (S.hi < 5) { history.pushState({ g:1 }, ''); S.hi++; } };
   S.fillGuard = fill; fill();
-  if (!S.backBound) { S.backBound = true; document.addEventListener('pointerdown', () => { if (S.guarded) { S.fillGuard && S.fillGuard(); } else if (!S.exitArm && S.session && !$('#app').classList.contains('hide')) armBack(); }, true); window.addEventListener('popstate', onPop); }
+  if (!S.backBound) { S.backBound = true; const onTouch = () => { if (S.guarded) { S.fillGuard && S.fillGuard(); } else if (!S.exitArm && S.session && !$('#app').classList.contains('hide')) armBack(); }; document.addEventListener('pointerup', onTouch, true); document.addEventListener('click', onTouch, true); window.addEventListener('popstate', onPop); }
 }
 function onPop() {
   { if (!S.guarded || $('#app').classList.contains('hide')) return;
@@ -3388,8 +3381,8 @@ function renderSettings() {
   const owner = !!(S.profile && S.profile.role === 'owner');
   $('#s-adm').classList.toggle('hide', !owner);
   if (owner && navigator.onLine && Date.now() - (S.admAt || 0) > 30000) loadUsers();
-  pinOn().then(on => { $('#s-pin-btn').textContent = on ? 'إيقاف الرمز السريع' : 'تفعيل الرمز السريع (PIN)'; bioOn().then(b => { $('#s-out').textContent = (on || b) ? 'قفل التطبيق' : 'تسجيل الخروج'; $('#s-out2').classList.toggle('hide', !(on || b)); }); });
-  $('#s-urlbox').classList.toggle('hide', !owner); $('#s-url').value = url();
+  pinOn().then(on => { $('#s-pin-btn').textContent = on ? 'إيقاف الرمز السريع' : 'تفعيل الرمز السريع (PIN)'; });
+  $('#s-bkbox').classList.toggle('hide', !canExport()); $('#s-xlbox').classList.toggle('hide', !canExport()); $('#s-urlbox').classList.toggle('hide', !owner); $('#s-url').value = url();
   bioAvail().then(av => { bioOn().then(on => { $('#s-bio-btn').disabled = !av; $('#s-bio-btn').textContent = on ? 'إيقاف الدخول بالبصمة' : 'تفعيل الدخول بالبصمة'; $('#s-bio-st').textContent = !av ? 'الموبايل ده مش بيدعم الدخول بالبصمة، أو مفيش بصمة متسجلة في إعدادات الموبايل.' : on ? 'مفعّلة على الموبايل ده لحسابك.' : 'مش مفعّلة. فعّلها وبعدها التطبيق هيفتح ببصمتك أنت.'; }); });
 }
 
@@ -3716,17 +3709,11 @@ async function showLock() {
   $('#lock').classList.remove('hide'); $('#lock-err').textContent = ''; $('#lock-go').style.display = b ? '' : 'none'; $('#lock-pinbox').style.display = p ? '' : 'none';
   if (b) tryUnlock(); else if (p) setTimeout(() => $('#lock-pin').focus(), 200);
 }
-async function loginBio() {
-  const err = $('#l-err'); err.textContent = '';
-  if (!(await bioAvail())) { err.textContent = 'الموبايل ده مش بيدعم البصمة.'; return; }
-  const ss = await kvGet('session'), b = await kvGet('bio');
-  if (ss && b && ss.user && b.uid === ss.user.id) { try { await bioVerify(); S.session = ss; S.skipLock = true; await start(); S.skipLock = false; } catch (e) { err.textContent = 'البصمة ما اتأكدتش.'; } }
-  else err.textContent = 'ادخل بكلمة المرور مرة واحدة وفعّل البصمة من «حسابي»، وبعدها التطبيق يفتح بالبصمة.';
-}
 async function offerBio() {
   if (!(await bioAvail()) || (await bioOn()) || localStorage.getItem('bio_no')) return;
-  if (!confirm('تحب تفتح التطبيق بالبصمة بدل كلمة المرور؟')) { localStorage.setItem('bio_no', '1'); return; }
-  try { await bioEnable(); toast('تم تفعيل الدخول بالبصمة'); } catch (e) { toast('مقدرتش أفعّل البصمة. جرّب من «حسابي»'); }
+  localStorage.setItem('bio_no', '1'); /* بنسأل مرة واحدة بس. بعد كده من «حسابي» */
+  if (!confirm('تحب تفتح التطبيق بالبصمة بدل كلمة المرور؟ (تقدر تلغيها من «حسابي»)')) return;
+  try { await bioEnable(); localStorage.removeItem('bio_no'); toast('تم تفعيل الدخول بالبصمة'); } catch (e) { toast('مقدرتش أفعّل البصمة. جرّب من «حسابي»'); }
 }
 async function bioToggle() {
   if (await bioOn()) { await kvDel('bio'); localStorage.setItem('bio_no', '1'); toast('تم إيقاف البصمة'); }
@@ -3735,7 +3722,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.29';
+const VER = '1.32';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -3757,6 +3744,7 @@ function bkBuild() {
   return { app:'vegan-acc', fmt:1, at:new Date().toISOString(), ver:VER, entries:ents, docs, counts:{ entries:ents.filter(e => !e.deleted).length, docs:docs.filter(d => !d.deleted).length } };
 }
 async function bkExport() {
+  if (!canExport()) { toast('النسخة الاحتياطية مش متاحة لحسابك'); return; }
   if (!S.ent.size && !S.docs.size) { toast('مفيش بيانات للنسخ'); return; }
   const b = bkBuild(), ok = await shareFile('vegan-backup-' + todayStr() + '.json', JSON.stringify(b), 'application/json');
   if (ok === false) return;
@@ -3796,6 +3784,7 @@ async function bkRestore(file) {
   toast(pending() ? 'لسه ' + pending() + ' في الانتظار، دوس مزامنة' : 'تمت الاستعادة');
 }
 function exportXl() {
+  if (!canExport()) { toast('التصدير مش متاح لحسابك'); return; }
   const m = $('#x-month').value;
   const list = live().filter(e => m === '*' || e.date.startsWith(m)).sort((a, b) => a.date.localeCompare(b.date) || (a.no || 0) - (b.no || 0));
   if (!list.length) { toast('مفيش قيود للتصدير'); return; }
@@ -3866,7 +3855,7 @@ async function init() {
   $('#n-an').onclick = () => { S.stack = []; go('an'); }; $('#n-set').onclick = () => { S.stack = []; go('set'); };
   $('#n-add').onclick = () => openForm(null); $('#j-undo').onclick = () => jStep(-1); $('#j-redo').onclick = () => jStep(1); $('#s-cmp').onchange = e => cmpFile(e.target.files[0]);
   $('#e-cancel').onclick = closeForm; $('#e-save').onclick = () => saveEntry(); $('#e-again').onclick = () => saveEntry(true); $('#e-pair').onclick = pairStart; $('#e-pairbar').onclick = e => { if (e.target.closest('#e-pairedit')) pairSwap(); }; $('#e-copy').onclick = () => copyEntry(S.editing, false); $('#e-counter').onclick = () => copyEntry(S.editing, true); $('#e-del').onclick = delEntry;
-  $('#p-go').onclick = changePw; $('#s-out').onclick = async () => { if ((await bioOn()) || (await pinOn())) { showLock(); } else logout(); }; $('#s-out2').onclick = logout; $('#x-go').onclick = exportXl;
+  $('#p-go').onclick = changePw; $('#s-out').onclick = logout; $('#x-go').onclick = exportXl;
   $('#adm-list').onclick = e => { const b = e.target.closest('.adm-pw'); if (b) admSetPw(S.users[+b.dataset.u]); const g = e.target.closest('.adm-perm'); if (g) openPerm(S.users[+g.dataset.u]); };
   $('#adm-list').onchange = e => { const x = e.target.closest('.adm-role'); if (x) admSetRole(S.users[+x.dataset.u], x.value); };
   $('#s-file').onchange = e => importFile(e.target.files[0]); $('#bk-go').onclick = bkExport; $('#bk-file').onchange = e => bkRestore(e.target.files[0]);
@@ -3882,7 +3871,7 @@ async function init() {
   $('#acc-allx').onclick = () => { S.expGroup = '*'; renderAcc(); };
   $('#au-back').onclick = back; $('#yr-back').onclick = back; $('#arc-back').onclick = back; $('#arcy-back').onclick = back; $('#arcc-back').onclick = back;
   $('#arc-body').onclick = e => { const o = e.target.closest('[data-arcy]'); if (o) { S.arcY = o.dataset.arcy; push_('arcy'); } else if (e.target.closest('#arc-new')) push_('arcc'); };
-  $('#arcy-body').onclick = e => { const x = S.docs.get('arc:' + S.arcY); if (!x) return; if (e.target.closest('#arcy-pdf')) printHTML(x.data.pages); else if (e.target.closest('#arcy-csv')) { const L = live().filter(q => q.date.slice(0, 4) === S.arcY).sort((a, b) => a.date.localeCompare(b.date) || (a.no || 0) - (b.no || 0)); if (!L.length) toast('مفيش قيود'); else shareFile('vegan-entries-' + S.arcY + '.csv', csvOf(L), 'text/csv'); } else if (e.target.closest('#arcy-redo') && confirm('هتستبدل النسخة المجمّدة بالأرقام الحالية. تكمل؟')) { closeYear(S.arcY); renderARCY(); } };
+  $('#arcy-body').onclick = e => { const x = S.docs.get('arc:' + S.arcY); if (!x) return; if (e.target.closest('#arcy-pdf')) printHTML(x.data.pages); else if (e.target.closest('#arcy-csv')) { if (!canExport()) { toast('التصدير مش متاح لحسابك'); return; } const L = live().filter(q => q.date.slice(0, 4) === S.arcY).sort((a, b) => a.date.localeCompare(b.date) || (a.no || 0) - (b.no || 0)); if (!L.length) toast('مفيش قيود'); else shareFile('vegan-entries-' + S.arcY + '.csv', csvOf(L), 'text/csv'); } else if (e.target.closest('#arcy-redo') && confirm('هتستبدل النسخة المجمّدة بالأرقام الحالية. تكمل؟')) { closeYear(S.arcY); renderARCY(); } };
   $('#arcc-y').onchange = e => { S.arccY = e.target.value; renderARCC(); };
   $('#arcc-body').onclick = e => { if (e.target.closest('#arcc-au')) push_('au'); else if (e.target.closest('#arcc-go') && confirm('هتجمّد تقارير سنة ' + S.arccY + ' في الأرشيف. مفيش قيد هيتحذف أو يتعدل. تكمل؟')) { closeYear(S.arccY); go('arcy'); } }; $('#yr-y').onchange = e => { S.yrY = e.target.value; renderYR(); }; $('#yr-pdf').onclick = () => { if (S.yrY) printHTML(yrHTML(S.yrY)); }; $('#v-au').onclick = auClick; $('#v-au').onchange = auChange; $('#hr-back').onclick = back; $('#hr-slips').onclick = () => printSlips(hrRows(S.hrMonth).map(r => r.emp.id)); $('#hsheet').onchange = e => { const o = e.target.closest('[data-hro]'); if (!o || !canWrite()) return; docSave('ded', 'dedo:' + o.dataset.hro, { m:o.value }); const eid = S.hs && S.hs.eid; if (eid) openSlip(eid); renderHR(); }; $('#cs-back').onclick = back; $('#pr-back').onclick = back; $('#pr-t1').onclick = () => { S.prTab = 'o'; renderPR(); }; $('#pr-t2').onclick = () => { S.prTab = 'g'; renderPR(); }; $('#pr-t3').onclick = () => { S.prTab = 's'; renderPR(); }; $('#pr-t4').onclick = () => { S.prTab = 'i'; renderPR(); }; $('#pr-body').oninput = prBodyInput; $('#pr-body').onclick = prBodyClick; $('#pr-pdf').onclick = () => doPrint(prTitle()); $('#e-cr').addEventListener('change', csSrcUpdate);
   $('#cs-t1').onclick = () => { S.csTab = 's'; renderCS(); }; $('#cs-t2').onclick = () => { S.csTab = 'k'; renderCS(); }; $('#cs-t4').onclick = () => { S.csTab = 'g'; renderCS(); }; $('#cs-body').onclick = csBodyClick; $('#cs-body').oninput = e => { if (e.target.id === 'pl-title') S.plTitle = e.target.value; }; $('#cs-pdf').onclick = () => doPrint(csTitle()); $('#hr-pdf').onclick = () => { if (S.hrTab === 'p') doPrint($('#ph-t').textContent); else toast('الطباعة من تبويب كشف الرواتب'); };
@@ -3929,8 +3918,8 @@ async function init() {
   $('#lg-acc').onchange = e => { S.lgAcc = e.target.value; S.lgMonth = '*'; renderLG(); };
   $('#lg-month').onchange = e => { S.lgMonth = e.target.value; renderLG(); };
   $('#stm-month').onchange = e => { S.stmMonth = e.target.value; renderStm(); };
-  $('#stm-pdf').onclick = () => doPrint($('#ph-t').textContent); $('#stm-wa').onclick = stmWA;
-  $('#lock-go').onclick = tryUnlock; $('#s-bio-btn').onclick = bioToggle; $('#s-pin-btn').onclick = pinToggle; $('#lock-pin-go').onclick = tryPin; $('#lock-pin').onkeydown = e => { if (e.key === 'Enter') tryPin(); }; $('#l-bio').onclick = loginBio;
+  $('#stm-pdf').onclick = () => doPrint($('#ph-t').textContent);
+  $('#lock-go').onclick = tryUnlock; $('#s-bio-btn').onclick = bioToggle; $('#s-pin-btn').onclick = pinToggle; $('#lock-pin-go').onclick = tryPin; $('#lock-pin').onkeydown = e => { if (e.key === 'Enter') tryPin(); }; 
   $('#s-url-save').onclick = () => { const u = $('#s-url').value.trim().replace(/\/+$/, ''); if (!/^https:\/\/[\w.-]+\.[a-z]{2,}$/i.test(u)) { toast('اكتب الرابط كامل زي https://xxxx.supabase.co'); return; } if (u === url()) { toast('نفس الرابط الحالي'); return; } if (!confirm('هتغيّر السيرفر اللي التطبيق بيتصل بيه. متأكد؟')) return; localStorage.setItem('sb_url', u); toast('اتحفظ. بنعيد فتح التطبيق…'); setTimeout(() => location.reload(), 900); };
   $('#lock-pw').onclick = async () => { $('#lock').classList.add('hide'); await softLogout(''); };
   $('#tiles').onclick = e => {

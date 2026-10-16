@@ -1,8 +1,9 @@
-const V = 'vegan-v53';
+const V = 'vegan-v56';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'logo.png', 'cover.jpg'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  /* كل ملف لوحده: لو ملف ناقص (صورة مثلًا) الباقي يتحفظ والتطبيق يشتغل أوفلاين */
+  e.waitUntil(caches.open(V).then(c => Promise.allSettled(SHELL.map(f => c.add(f)))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
