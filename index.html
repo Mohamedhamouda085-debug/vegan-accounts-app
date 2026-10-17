@@ -2007,7 +2007,7 @@ function plSelSave(K) { if (canWrite()) plCfgCommit({ K, v:[...plSelGet(K)] }); 
 function plXSave(K, a) { if (canWrite()) plCfgCommit(null, { K, v:a }); else { try { localStorage.setItem('pl_x_' + K, JSON.stringify(a)); } catch (x) { /* ignore */ } } }
 function plProd(D, kind, link) { return link ? D.prods.find(p => p.k === kind && csKey(p.n) === csKey(link)) : null; }
 function plCost(D, kind, it, which) {
-  const p = plProd(D, kind, it.link); if (!p) return null;
+  const p = it.lp || plProd(D, kind, it.link); if (!p) return null;
   const z = kind === 'جردل' ? (p.s.find(z => Math.abs(fgCont(D, z.c).kg - (it.d || 0)) < 0.01) || p.s[0]) : p.s.find(z => fgCont(D, z.c).n.includes(which));
   return z ? fgCost(D, p, z) : null;
 }
@@ -2016,9 +2016,9 @@ function fgPriceHTML(D, w) {
   const P = plData() || Object.assign({ v:1 }, PL_SEED), K = S.plK === 'برطمان' ? 'J' : 'B', L = P[K], kind = K === 'J' ? 'برطمان' : 'جردل', custom = S.plMode === 'c', X = !!S.plX, sel = plSelGet(K), f = x => esc(fmt0(x));
   const ctl = '<div class="mrow"><div class="seg" style="margin:0"><button class="' + (K === 'B' ? 'on' : '') + '" data-plk="جردل">جرادل</button><button class="' + (K === 'J' ? 'on' : '') + '" data-plk="برطمان">برطمانات</button></div></div>' +
     '<div class="mrow"><div class="seg" style="margin:0"><button class="' + (custom ? '' : 'on') + '" data-plm="f">قائمة كاملة</button><button class="' + (custom ? 'on' : '') + '" data-plm="c">قائمة مخصصة</button></div></div>' +
-    (custom ? '<div class="mrow"><input id="pl-title" placeholder="اسم العميل / عنوان القائمة (اختياري)" value="' + esc(S.plTitle || '') + '"></div><div class="mrow"><button class="btn" id="pl-sel" style="width:100%">اختيار من قائمة ' + (K === 'B' ? 'الجرادل' : 'البرطمانات') + ' (' + [...sel].filter(id => L.secs.some(s => s.items.some(i => i.id === id))).length + ')</button></div><div class="mrow"><button class="btn" id="pl-fx" style="width:100%">＋ منتجات من شيت المنتجات (' + (plXGet('B').length + plXGet('J').length + plXGet('O').length) + ')</button></div>' : '') +
+    (custom ? '<div class="mrow"><input id="pl-title" placeholder="اسم العميل / عنوان القائمة (اختياري)" value="' + esc(S.plTitle || '') + '"></div><div class="mrow"><button class="btn" id="pl-sel" style="width:100%">اختيار من قائمة ' + (K === 'B' ? 'الجرادل' : 'البرطمانات') + ' (' + [...sel].filter(id => L.secs.some(s => s.items.some(i => i.id === id))).length + ')</button></div><div class="mrow"><button class="btn" id="pl-fx" style="width:100%">＋ منتجات من شيت المنتجات (' + plXN(D) + ')</button></div>' : '') +
     '<div class="mrow" style="display:flex;gap:8px"><button class="btn ghost" data-plx="1" style="flex:1">' + (X ? 'إخفاء التكلفة والربح' : 'إظهار التكلفة والربح') + '</button>' + (w && !custom ? '<button class="btn ghost" id="pl-add" style="flex:1">＋ صنف</button><button class="btn ghost" id="pl-adds" style="flex:1">＋ قسم</button>' : '') + '</div>' + (w ? '<div class="mrow" style="display:flex;gap:8px"><button class="btn ghost" id="pl-hd" style="flex:1">بيانات رأس القائمة</button><button class="btn ghost" id="pl-nt" style="flex:1">ملاحظات القائمة</button></div>' : '');
-  const head = '<div class="hrow" style="text-align:center"><div class="n">' + esc(L.head) + '</div><div class="note">' + esc(L.contact) + '</div>' + (custom && cl(S.plTitle) ? '<div class="n" style="margin-top:6px">' + esc(S.plTitle) + '</div>' : '') + '</div>';
+  const head = '<div class="hrow" style="text-align:center"><div class="n">' + esc(L.head) + '</div><div class="note">' + esc(L.contact) + '</div>' + '<div class="n" style="margin-top:6px">التاريخ: ' + esc(new Date().toLocaleDateString('en-GB')) + (custom && cl(S.plTitle) ? ' &nbsp;·&nbsp; العميل: ' + esc(S.plTitle) : '') + '</div></div>';
   let no = 0;
   const mk = K => { /* جدول لنوع عبوة واحد (القائمة المخصصة بتجمع الأنواع كلها) */
   const L = P[K], kind = K === 'J' ? 'برطمان' : 'جردل', sel = plSelGet(K); let cols, wd, th;
@@ -2048,15 +2048,15 @@ function fgPriceHTML(D, w) {
       if (it.p2 != null) o.push({ ...base, cn:cnJ('1050'), e:bt ? '' : '1050 g', d:bt ? '' : '550 g', pk:bt ? null : it.p2 / 0.55, pt:it.p2, cost:plCost(D, 'برطمان', it, '1050') });
       return o; };
     const rowO = it => ({ id:it.id, x:1, n:it.n, note:it.note, cn:it.cn, e:it.e, d:it.d, pk:it.pk, pt:it.pr, cost:it.pz ? fgCost(D, it.pz[0], it.pz[1]) : null });
-    const order = [], map = new Map(), seed = ttl => { const k = cl(ttl) || 'منتجات خاصة'; if (!map.has(k)) { map.set(k, []); order.push(k); } return k; }, add = (ttl, r) => map.get(seed(ttl)).push(r);
-    for (const k of ['B', 'J']) for (const sec of (P[k] ? P[k].secs : [])) seed(sec.t);
+    const order = [], map = new Map(), seed = ttl => { const k = ttl == null ? 'منتجات خاصة' : cl(ttl); if (!map.has(k)) { map.set(k, []); order.push(k); } return k; }, add = (ttl, r) => map.get(seed(ttl)).push(r);
+    seed(''); for (const k of ['B', 'J']) for (const sec of (P[k] ? P[k].secs : [])) seed(sec.t);
     for (const k of ['B', 'J']) { const sl = plSelGet(k); for (const sec of (P[k] ? P[k].secs : [])) for (const it of sec.items) if (sl.has(it.id)) for (const r of (k === 'B' ? [rowB(it)] : rowsJ(it))) add(sec.t, r); }
     for (const it of plXItems(D, 'B')) add(it.s, rowB(it)); for (const it of plXItems(D, 'J')) for (const r of rowsJ(it)) add(it.s, r); for (const it of plXItems(D, 'O')) add(it.s, rowO(it));
     const th = X ? ['م', 'الصنف', 'نوع العبوة', 'السعر', 'التكلفة', 'الربح', '%'] : ['م', 'الصنف', 'نوع العبوة', 'وزن الصافي', 'وزن المصفي', 'سعر الكيلو', 'السعر الإجمالي'], wd = X ? [6, 27, 19, 12, 12, 12, 12] : [6, 25, 17, 11, 11, 14, 16], cols = th.length;
     const wf = w => w === '' || w == null ? '' : typeof w === 'string' ? w : w < 1 ? Math.round(w * 1000) + ' g' : fmt(w);
     let b = '';
     for (const ttl of order) { const rs = map.get(ttl); if (!rs.length) continue;
-      b += '<tr class="h"><td class="l" colspan="' + cols + '">' + esc(ttl) + '</td></tr>' + rs.map(r => { no++;
+      b += (ttl === '' ? '' : '<tr class="h"><td class="l" colspan="' + cols + '">' + esc(ttl) + '</td></tr>') + rs.map(r => { no++;
         const tr0 = '<tr' + (r.x ? ' data-plxi="' + r.id + '" style="cursor:pointer"' : '') + '><td class="v">' + no + '</td><td class="l">' + esc(r.n) + (r.note ? '<small style="display:block;color:var(--muted)">' + esc(r.note) + '</small>' : '') + '</td><td class="v">' + esc(r.cn || '') + '</td>';
         if (X) { const pr = r.pt != null ? r.pt : r.pk, c = r.cost, bad = c != null && pr != null && pr < c; return tr0 + '<td class="v">' + (pr != null ? f(pr) : '-') + '</td><td class="v">' + (c != null ? f(c) : '') + '</td><td class="v' + (bad ? ' neg' : '') + '">' + (c != null && pr != null ? f(pr - c) : '') + '</td><td class="v' + (bad ? ' neg' : '') + '">' + (c && pr != null ? f((pr - c) / c * 100) + '%' : '') + '</td></tr>'; }
         return tr0 + '<td class="v">' + esc(wf(r.e)) + '</td><td class="v">' + esc(wf(r.d)) + '</td><td class="v">' + (r.pk != null ? f(r.pk) : '-') + '</td><td class="v">' + (r.pt != null ? f(r.pt) : '-') + '</td></tr>'; }).join(''); }
@@ -2096,27 +2096,31 @@ function openPLN() {
 }
 /* منتجات القائمة المخصصة من شيت المنتجات مباشرة (للقائمة المخصصة بس، ومش بتلمس القائمة الرئيسية) */
 function plXSize(D, p, n) { return p.s.find(z => fgCont(D, z.c).n.includes(n)); }
+const plSig = p => p.s.map(z => z.c).join(',');
+function plXFind(D, x, kind) { const c = D.prods.filter(q => (kind ? q.k === kind : q.k !== 'جردل' && q.k !== 'برطمان') && csKey(q.n) === csKey(x.p)); return (x.q ? c.find(q => plSig(q) === x.q) : null) || c[0] || null; }
+const plXHas = (D, x, p) => csKey(x.p) === csKey(p.n) && (x.q ? x.q === plSig(p) : plXFind(D, x, p.k) === p);
+const plXN = D => plXItems(D, 'B').length + plXItems(D, 'J').length + plXItems(D, 'O').length;
 function plXItems(D, K) {
   const kind = K === 'J' ? 'برطمان' : 'جردل', out = [];
-  if (K === 'O') { for (const x of plXGet('O')) { const p = D.prods.find(q => q.k !== 'جردل' && q.k !== 'برطمان' && (!x.g || q.k === x.g) && csKey(q.n) === csKey(x.p)); if (!p) continue; const z = p.s.find(q => q.c === x.c); if (!z) continue; const c = fgCont(D, z.c); const pr = x.po != null ? x.po : z.price; out.push({ id:x.id, x:1, n:cl(x.t) || (p.s.length > 1 ? p.n + ' - ' + c.n : p.n), cn:c.n, e:c.gw || '', d:c.kg, pk:c.kg ? pr / c.kg : null, pr, pz:[p, z], note:x.note, link:p.n, s:x.s }); } return out; }
+  if (K === 'O') { for (const x of plXGet('O')) { const p = plXFind(D, x, x.g || null); if (!p) continue; const z = p.s.find(q => q.c === x.c); if (!z) continue; const c = fgCont(D, z.c); const pr = x.po != null ? x.po : z.price; out.push({ id:x.id, x:1, n:cl(x.t) || (p.s.length > 1 ? p.n + ' - ' + c.n : p.n), cn:c.n, e:c.gw || '', d:c.kg, pk:c.kg ? pr / c.kg : null, pr, pz:[p, z], note:x.note, link:p.n, lp:p, s:x.s }); } return out; }
   for (const x of plXGet(K)) {
-    const p = D.prods.find(q => q.k === kind && csKey(q.n) === csKey(x.p)); if (!p) continue;
+    const p = plXFind(D, x, kind); if (!p) continue;
     if (K === 'B') {
       const z = p.s.find(q => q.c === x.c); if (!z) continue; const c = fgCont(D, z.c), pr = x.po != null ? x.po : z.price;
-      out.push({ id:x.id, x:1, n:cl(x.t) || (p.s.length > 1 ? p.n + ' - ' + c.n : p.n), cn:c.n, e:c.gw || '', d:c.kg, pk:c.kg ? pr / c.kg : 0, note:x.note, link:p.n, s:x.s });
+      out.push({ id:x.id, x:1, n:cl(x.t) || (p.s.length > 1 ? p.n + ' - ' + c.n : p.n), cn:c.n, e:c.gw || '', d:c.kg, pk:c.kg ? pr / c.kg : 0, note:x.note, link:p.n, lp:p, s:x.s });
     } else {
       const a = plXSize(D, p, '720'), b = plXSize(D, p, '1050'); if (!a && !b) continue;
-      out.push({ id:x.id, x:1, n:cl(x.t) || p.n, p1:x.p1 != null ? x.p1 : (a ? a.price : null), p2:x.p2 != null ? x.p2 : (b ? b.price : null), note:x.note, link:p.n, s:x.s });
+      out.push({ id:x.id, x:1, n:cl(x.t) || p.n, p1:x.p1 != null ? x.p1 : (a ? a.price : null), p2:x.p2 != null ? x.p2 : (b ? b.price : null), note:x.note, link:p.n, lp:p, s:x.s });
     }
   }
   return out;
 }
 function plSecSel(id, cur) {
-  const P = plData(), L = P ? P[S.plK === 'برطمان' ? 'J' : 'B'] : { secs:[] }, names = L.secs.map(q => cl(q.t)); const def = 'منتجات خاصة', c = cl(cur) || '';
+  const P = plData(), L = P ? P[S.plK === 'برطمان' ? 'J' : 'B'] : { secs:[] }, names = L.secs.map(q => cl(q.t)); const def = 'منتجات خاصة', c = cur == null ? '' : cl(cur);
   const opts = [...names]; if (!opts.includes(def)) opts.push(def); if (c && !opts.includes(c)) opts.push(c);
-  return '<select id="' + id + '">' + opts.map(n => '<option value="' + esc(n) + '"' + (n === (c || def) ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select>';
+  return '<select id="' + id + '"><option value=""' + (c === '' ? ' selected' : '') + '>— بدون بند —</option>' + opts.map(n => '<option value="' + esc(n) + '"' + (n === c ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select>';
 }
-function plSecVal(selId, newId) { return cl($(newId).value) || cl($(selId).value) || 'منتجات خاصة'; }
+function plSecVal(selId, newId) { return cl($(newId).value) || cl($(selId).value); }
 const plKinds = D => [...new Set(D.prods.map(p => p.k))], plKindK = k => k === 'جردل' ? 'B' : k === 'برطمان' ? 'J' : 'O', plKindLbl = k => k === 'جردل' ? 'جرادل' : k === 'برطمان' ? 'برطمانات' : k;
 function openPLX() {
   const D = fgData(); if (!D) { toast('افتح شيت المنتجات الأول'); return; } S.hs = { type:'plx', K:S.plK === 'برطمان' ? 'J' : 'B' };
@@ -2124,17 +2128,17 @@ function openPLX() {
   const kind = S.plxG, gi = kinds.indexOf(kind), K = plKindK(kind), cur = plXGet(K), prods = D.prods.filter(p => p.k === kind);
   const lab = 'display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)', cb = (v, on) => '<input type="checkbox" data-plxa="' + v + '" style="width:22px;height:22px;min-height:0"' + (on ? ' checked' : '') + '>';
   const list = prods.map((p, i) => '<div class="note" style="margin-top:10px"><b>' + esc(p.n) + '</b></div>' + (K === 'J'
-    ? '<label style="' + lab + '">' + cb(gi + ',' + i + ',0', cur.some(x => csKey(x.p) === csKey(p.n))) + ' 720: ' + esc(plXSize(D, p, '720') ? fmt0(plXSize(D, p, '720').price) : '-') + ' · 1050: ' + esc(plXSize(D, p, '1050') ? fmt0(plXSize(D, p, '1050').price) : '-') + '</label>'
-    : p.s.map((z, j) => '<label style="' + lab + '">' + cb(gi + ',' + i + ',' + j, cur.some(x => csKey(x.p) === csKey(p.n) && x.c === z.c && (K !== 'O' || !x.g || x.g === p.k))) + ' ' + esc(fgCont(D, z.c).n) + ' — ' + esc(fmt0(z.price)) + '</label>').join(''))).join('') || '<div class="empty">مفيش منتجات من النوع ده في الشيت.</div>';
-  const n = plXGet('B').length + plXGet('J').length + plXGet('O').length;
-  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">منتجات من شيت المنتجات</h2><div class="note">اختار نوع العبوة من القايمة وعلّم المنتجات، وبدّل النوع وكمّل اختيار من نوع تاني في نفس القائمة. المنتجات بتتضاف للقائمة المخصصة دي بس، ومش بتتحط في القائمة الرئيسية. (اتختار لحد دلوقتي: ' + n + ')</div>' +
+    ? '<label style="' + lab + '">' + cb(gi + ',' + i + ',0', cur.some(x => plXHas(D, x, p))) + ' 720: ' + esc(plXSize(D, p, '720') ? fmt0(plXSize(D, p, '720').price) : '-') + ' · 1050: ' + esc(plXSize(D, p, '1050') ? fmt0(plXSize(D, p, '1050').price) : '-') + '</label>'
+    : p.s.map((z, j) => '<label style="' + lab + '">' + cb(gi + ',' + i + ',' + j, cur.some(x => plXHas(D, x, p) && x.c === z.c && (K !== 'O' || !x.g || x.g === p.k))) + ' ' + esc(fgCont(D, z.c).n) + ' — ' + esc(fmt0(z.price)) + '</label>').join(''))).join('') || '<div class="empty">مفيش منتجات من النوع ده في الشيت.</div>';
+  const n = plXN(D);
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">منتجات من شيت المنتجات</h2><div class="note">اختار نوع العبوة من القايمة وعلّم المنتجات، وبدّل النوع وكمّل اختيار من نوع تاني في نفس القائمة. المنتجات بتتضاف للقائمة المخصصة دي بس، ومش بتتحط في القائمة الرئيسية. (اتختار لحد دلوقتي: <b id="plx-n">' + n + '</b>)</div>' +
     '<label for="plx-g">نوع العبوة</label><select id="plx-g">' + kinds.map(k => '<option value="' + esc(k) + '"' + (k === kind ? ' selected' : '') + '>' + esc(plKindLbl(k)) + '</option>').join('') + '</select>' +
-    '<label for="plx-sec">حط المنتجات اللي هتختارها تحت بند</label>' + plSecSel('plx-sec', S.plxSec) + '<label for="plx-new">أو اكتب اسم بند جديد (اختياري)</label>' + fgIn('plx-new', '', '', 0) + list + '<div class="actions"><button class="btn" id="plx-ok">تم</button></div>';
+    '<label for="plx-sec">حط المنتجات اللي هتختارها تحت بند (سيبه «بدون بند» لو مش عايز عنوان)</label>' + plSecSel('plx-sec', S.plxSec) + '<label for="plx-new">أو اكتب اسم بند جديد (اختياري)</label>' + fgIn('plx-new', '', '', 0) + list + '<div class="actions"><button class="btn" id="plx-ok">تم</button></div>';
   $('#hsheet').classList.remove('hide');
 }
 function openPLXE(id) {
   const K = ['B', 'J', 'O'].find(k => plXGet(k).some(q => q.id === id)) || 'B', x = plXGet(K).find(q => q.id === id); if (!x) return; S.hs = { type:'plxe', K, id };
-  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">تعديل منتج في القائمة المخصصة</h2><label for="pxe-t">الاسم في القائمة (اختياري)</label>' + fgIn('pxe-t', x.t, '', 0) + '<label for="pxe-note">ملاحظات</label>' + fgIn('pxe-note', x.note, '', 0) + '<label for="pxe-sec">البند</label>' + plSecSel('pxe-sec', x.s) + '<label for="pxe-new">أو اكتب اسم بند جديد (اختياري)</label>' + fgIn('pxe-new', '', '', 0) +
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">تعديل منتج في القائمة المخصصة</h2><label for="pxe-t">الاسم في القائمة (اختياري)</label>' + fgIn('pxe-t', x.t, '', 0) + '<label for="pxe-note">ملاحظات</label>' + fgIn('pxe-note', x.note, '', 0) + '<label for="pxe-sec">البند</label>' + plSecSel('pxe-sec', x.s == null ? 'منتجات خاصة' : x.s) + '<label for="pxe-new">أو اكتب اسم بند جديد (اختياري)</label>' + fgIn('pxe-new', '', '', 0) +
     (K !== 'J' ? '<label for="pxe-po">' + (K === 'O' ? 'سعر العبوة' : 'سعر الجردل') + ' (فاضي = سعر المنتج في الشيت)</label>' + fgIn('pxe-po', x.po) : '<div class="grid"><div><label for="pxe-p1">سعر 720</label>' + fgIn('pxe-p1', x.p1, 'من الشيت') + '</div><div><label for="pxe-p2">سعر 1050</label>' + fgIn('pxe-p2', x.p2, 'من الشيت') + '</div></div>') +
     '<div class="actions"><button class="btn" id="pxe-save">حفظ</button><button class="btn danger" id="pxe-del">شيله من القائمة</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
   $('#hsheet').classList.remove('hide');
@@ -2167,9 +2171,9 @@ function plSheetClick(e) {
     const D = fgData();
     if (t.matches && t.matches('[data-plxa]')) {
       const [g0, i0, j0] = t.dataset.plxa.split(','), kind = plKinds(D)[+g0], K = plKindK(kind), i = +i0, j = +j0, p = D.prods.filter(q => q.k === kind)[i]; if (!p) return false; let a = plXGet(K);
-      if (t.checked) { if (K === 'J' && !plXSize(D, p, '720') && !plXSize(D, p, '1050')) { t.checked = false; toast('المنتج ده مفيهوش حجم 720 أو 1050'); return false; } const sec = plSecVal('#plx-sec', '#plx-new'); S.plxSec = sec; a.push(K === 'J' ? { id:'x' + uid8(), p:p.n, s:sec } : K === 'O' ? { id:'x' + uid8(), p:p.n, g:p.k, c:p.s[j].c, s:sec } : { id:'x' + uid8(), p:p.n, c:p.s[j].c, s:sec }); }
-      else a = a.filter(x => !(csKey(x.p) === csKey(p.n) && (K === 'J' || (x.c === p.s[j].c && (K !== 'O' || !x.g || x.g === p.k)))));
-      plXSave(K, a); return false;
+      if (t.checked) { if (K === 'J' && !plXSize(D, p, '720') && !plXSize(D, p, '1050')) { t.checked = false; toast('المنتج ده مفيهوش حجم 720 أو 1050'); return false; } const sec = plSecVal('#plx-sec', '#plx-new'); S.plxSec = sec; a.push(K === 'J' ? { id:'x' + uid8(), p:p.n, q:plSig(p), s:sec } : K === 'O' ? { id:'x' + uid8(), p:p.n, q:plSig(p), g:p.k, c:p.s[j].c, s:sec } : { id:'x' + uid8(), p:p.n, q:plSig(p), c:p.s[j].c, s:sec }); }
+      else a = a.filter(x => !(plXHas(D, x, p) && (K === 'J' || (x.c === p.s[j].c && (K !== 'O' || !x.g || x.g === p.k)))));
+      plXSave(K, a); { const nn = $('#plx-n'); if (nn) nn.textContent = plXN(D); } return false;
     }
     if (t.closest('#plx-ok')) { closeHS(); renderCS(); return true; }
   }
@@ -2202,7 +2206,7 @@ function csTitle() {
   if (T === 's') return 'التكاليف - البيعات';
   if (T === 'k') return S.rawView === 'p' ? 'التكاليف - أصناف الفاقد والتشغيل' : 'التكاليف - المخزون الخام';
   const V = S.fgView || 'p';
-  if (V === 'l') return S.plMode === 'c' ? 'قائمة الأسعار' + (cl(S.plTitle) ? ' - ' + S.plTitle : '') : 'قائمة الأسعار - ' + (S.plK === 'برطمان' ? 'برطمانات' : 'جرادل');
+  if (V === 'l') return S.plMode === 'c' ? 'قائمة الأسعار' : 'قائمة الأسعار - ' + (S.plK === 'برطمان' ? 'برطمانات' : 'جرادل');
   return 'المنتج التام - ' + (V === 'c' ? 'العبوات والتكاليف' : V === 's' ? 'مخزن المنتج التام' : 'المنتجات');
 }
 function fgHTML(w) {
@@ -3794,7 +3798,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.37';
+const VER = '1.38';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
