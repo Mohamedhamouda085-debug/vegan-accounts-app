@@ -3658,8 +3658,9 @@ function entCheck(R) {
   const v = R.v;
   if (!v.date) return 'اختار التاريخ.';
   if (!v.stmt) return 'اكتب البيان.';
-  if (!v.dr || !v.cr) return 'اختار الحساب المدين والدائن.';
-  if (v.dr === v.cr) return 'الحساب المدين والدائن لازم يختلفوا.';
+  const op0 = S.editing && S.ent.get(S.editing), op = !!(op0 && op0.opening); /* القيد الافتتاحي طرف واحد: مدين أو دائن بس */
+  if (op ? !v.dr && !v.cr : !v.dr || !v.cr) return op ? 'اختار حساب مدين أو دائن (واحد منهم على الأقل).' : 'اختار الحساب المدين والدائن.';
+  if (v.dr && v.dr === v.cr) return 'الحساب المدين والدائن لازم يختلفوا.';
   if (!(v.amt > 0)) return 'اكتب المبلغ.';
   if (PARTY_ACC.includes(v.dr) && !v.pa) return 'اختار اسم الطرف المدين (' + accT(v.dr) + ') — القيد من غير اسم بيبوّظ التحليلات.';
   if (PARTY_ACC.includes(v.cr) && !v.pb) return 'اختار اسم الطرف الدائن (' + accT(v.cr) + ') — القيد من غير اسم بيبوّظ التحليلات.';
@@ -3676,7 +3677,7 @@ async function entCommit(v, srcV, old) {
   if (live().some(x => x.no === no && x.id !== (old && old.id))) { no = maxNo + 1; toast('الرقم كان مستخدم، اتغيّر لـ ' + no); }
   const e = Object.assign(old ? { ...old } : { id:crypto.randomUUID(), star:false, opening:false, deleted:false },
     { no, date:v.date, stmt:v.stmt, dr:v.dr, cr:v.cr, pa:v.pa, pb:v.pb, prod:v.prod, qty:v.qty, disc:v.disc, price:v.price,
-      amtD:v.amt, amtC:v.amt, updated:Date.now(), dirty:true });
+      amtD:v.dr ? v.amt : 0, amtC:v.cr ? v.amt : 0, updated:Date.now(), dirty:true });
   S.ent.set(e.id, e); await entPut(e);
   let cg = null; try { cg = await csApplySrc(e, srcV); } catch (x) { console.error(x); }
   return { e, cg };
@@ -3809,7 +3810,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.42';
+const VER = '1.43';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
