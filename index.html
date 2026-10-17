@@ -567,6 +567,11 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
         <div id="adm-list"></div>
       </div></details>
 
+      <details class="sec hide" id="s-vl"><summary>سجل المشاهدين</summary><div class="in">
+        <p class="note" style="margin-top:0">للمالك فقط. بيعرض كل شريك (مشاهدة): فاتح دلوقتي ولا لأ، وبيعمل إيه لحظة بلحظة، وجلساته ومدتها والصفحات اللي دخلها.</p>
+        <div id="vl-box"><div class="note">جاري التحميل...</div></div>
+      </div></details>
+
       <button class="btn danger" id="s-out" style="width:100%;margin-top:18px">تسجيل الخروج</button>
       <p class="note" style="text-align:center">تسجيل الخروج بيرجعك لصفحة الدخول بس. بياناتك على الموبايل (واللي لسه ما اترفعش منها) بتفضل محفوظة ومش بتتمسح.</p>
       <p class="note" id="s-ver" style="text-align:center;margin-top:14px"></p>
@@ -890,7 +895,7 @@ async function login() {
 async function softLogout(msg) { S.session = null; S.profile = null; await kvDel('session'); showLogin(msg); }
 async function logout() {
   if (navigator.onLine) { try { await sync(); } catch (e) { /* مفيش مشكلة: اللي لسه ما اترفعش بيفضل محفوظ على الموبايل */ } }
-  jReset(); await kvDel('journal'); await kvDel('session');
+  await vlEnd(); jReset(); await kvDel('journal'); await kvDel('session');
   S.ent.clear(); S.docs.clear(); S.session = null; S.profile = null; showLogin('');
 }
 async function changePw() {
@@ -961,7 +966,7 @@ function go(v) {
   for (const x of VIEWS) $('#v-' + x).classList.toggle('hide', x !== v);
   const tab = { home:'home', tb:'home', lg:'home', gl:'home', is:'home', bs:'home', mp:'home', dp:'home', db:'home', hr:'home', cs:'home', pr:'home', au:'home', yr:'home', arc:'home', arcy:'home', arcc:'home', cc:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
   for (const t of ['home', 'list', 'an', 'set']) $('#n-' + t).classList.toggle('on', t === tab);
-  draw(v); window.scrollTo(0, 0); resSave(); ulStamp();
+  draw(v); window.scrollTo(0, 0); resSave(); ulStamp(); vlNav(v);
 }
 function draw(v) {
   if (v === 'home') renderHome(); else if (v === 'list') renderList(); else if (v === 'an') renderAn();
@@ -3452,7 +3457,7 @@ function renderSettings() {
   const months = [...new Set(live().map(e => e.date.slice(0, 7)))].sort().reverse();
   xm.innerHTML = '<option value="*">كل الشهور</option>' + months.map(m => '<option value="' + m + '">' + m + '</option>').join(''); xm.value = months.includes(keep) || keep === '*' ? keep : '*';
   const owner = !!(S.profile && S.profile.role === 'owner');
-  $('#s-adm').classList.toggle('hide', !owner);
+  $('#s-adm').classList.toggle('hide', !owner); $('#s-vl').classList.toggle('hide', !owner);
   if (owner && navigator.onLine && Date.now() - (S.admAt || 0) > 30000) loadUsers();
   pinOn().then(on => { $('#s-pin-btn').textContent = on ? 'إيقاف الرمز السريع' : 'تفعيل الرمز السريع (PIN)'; });
   $('#s-bkbox').classList.toggle('hide', !canExport()); $('#s-xlbox').classList.toggle('hide', !canExport()); $('#s-urlbox').classList.toggle('hide', !owner); $('#s-url').value = url();
@@ -3801,7 +3806,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.39';
+const VER = '1.40';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -3907,6 +3912,62 @@ async function admSetRole(u, role) {
   S.admAt = 0; loadUsers();
 }
 
+/* ---------- سجل المشاهدين: الشريك (مشاهدة) بيسجّل جلسته والصفحات اللي بيدخلها، والمالك بيشوفها من حسابي ---------- */
+const VL_AR = { home:'الرئيسية', list:'القيود', an:'التحليلات', acc:'حساب', stm:'كشف حساب', form:'قيد', set:'حسابي', tb:'ميزان المراجعة', lg:'كشف حساب', gl:'دفتر الأستاذ', is:'قائمة الدخل', bs:'المركز المالي', mp:'صافي الربح الشهري', dp:'إهلاك الأصول', db:'لوحة المؤشرات', hr:'المرتبات', cs:'التكاليف وقوائم الأسعار', pr:'الإنتاج', au:'المدقق', yr:'التقرير السنوي', arc:'الأرشيف', arcy:'أرشيف سنة', arcc:'إقفال سنة', cc:'حاسبة التكاليف' };
+const vlOn = () => !!(S.profile && S.profile.role === 'partner' && S.session);
+function vlLabel(v) { const t = VL_AR[v] || v, d = v === 'acc' ? S.acc : v === 'stm' ? S.party_ : ''; return typeof d === 'string' && d ? t + ': ' + d : t; }
+function vlStart(v) { const now = Date.now(); S.vl = { id:uid8() + uid8(), uid:S.session.user.id, start:now, last:now, tk:now, fl:0, act:0, views:[], dirty:true }; vlPush(v); }
+function vlPush(v) { const c = S.vl, l = vlLabel(v), x = c.views[c.views.length - 1]; if (x && x.l === l) return; c.views.push({ l, t:Date.now(), s:0 }); if (c.views.length > 400) c.views.shift(); c.dirty = true; }
+function vlTick() {
+  if (!vlOn()) return; const now = Date.now();
+  if (!S.vl) { vlStart(S.view || 'home'); return; }
+  const c = S.vl;
+  if (document.hidden) { c.tk = now; return; }
+  if (now - c.last > 30 * 60000) { const old = S.vl; S.vl = null; vlFlush(old); vlStart(S.view || 'home'); return; }
+  const dt = Math.min(now - c.tk, 10000); c.tk = now; c.last = now; c.act += dt;
+  const x = c.views[c.views.length - 1]; if (x) x.s += dt;
+  c.dirty = true;
+  if (now - c.fl > 10000) vlFlush(c);
+}
+function vlNav(v) { if (!vlOn()) return; vlTick(); if (S.vl) vlPush(v); }
+async function vlFlush(c = S.vl) {
+  if (!c || !vlOn() || c.busy || !c.dirty || !navigator.onLine) return;
+  c.busy = true; c.fl = Date.now(); c.dirty = false;
+  try { await api('/rest/v1/rpc/log_view', { method:'POST', body:{ p_id:c.id, p_started:c.start, p_last:c.last, p_active:Math.round(c.act / 1000), p_views:c.views.map(x => ({ l:x.l, t:x.t, s:Math.round(x.s / 1000) })) } }); }
+  catch (e) { c.dirty = true; }
+  c.busy = false; if (c === S.vl) { try { await kvSet('vl', c); } catch (e) {} }
+}
+async function vlInit() {
+  if (!vlOn()) return; const p = await kvGet('vl'); if (!p || p.uid !== S.session.user.id) return;
+  p.busy = false;
+  if (Date.now() - p.last < 30 * 60000) { p.tk = Date.now(); S.vl = p; } else { p.dirty = true; vlFlush(p); await kvDel('vl'); }
+}
+async function vlEnd() { if (S.vl) { vlTick(); await vlFlush(); } S.vl = null; try { await kvDel('vl'); } catch (e) {} }
+/* عرض المالك */
+const vlDur = n => { n = Math.max(0, Math.round(+n || 0)); return n < 60 ? n + ' ث' : Math.floor(n / 60) + ' د' + (n % 60 ? ' ' + (n % 60) + ' ث' : ''); };
+const vlHM = ms => new Date(+ms).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+const vlWhen = ms => new Date(+ms).toLocaleDateString('en-GB') + ' ' + vlHM(ms);
+const vlSteps = (v, n) => (v || []).slice(-n).reverse().map(x => '<div class="kv"><span>' + esc(x.l) + '</span><span dir="ltr">' + vlHM(x.t) + ' · ' + vlDur(x.s) + '</span></div>').join('');
+async function vlLoad() {
+  const box = $('#vl-box'); if (!box || S.vlBusy) return; S.vlBusy = true;
+  try {
+    const [us, rows] = await Promise.all([api('/rest/v1/profiles?role=eq.partner&select=id,email,full_name&order=created_at.asc'), api('/rest/v1/view_log?select=*&order=started_ms.desc&limit=300')]);
+    const now = Date.now(); S.vlOpen = S.vlOpen || new Set();
+    if (!us.length) { box.innerHTML = '<div class="note">مفيش شركاء (مشاهدة) لسه.</div>'; return; }
+    const anyLive = rows.some(r => now - +r.last_ms < 45000), sig = rows.length + ':' + (rows[0] ? rows[0].last_ms : 0) + ':' + us.length;
+    if (!anyLive && sig === S.vlSig) return; S.vlSig = sig;
+    box.innerHTML = us.map(u => {
+      const L = rows.filter(r => r.user_id === u.id), cur = L[0], live = !!cur && now - +cur.last_ms < 45000, tot = L.reduce((a, r) => a + (+r.active_s || 0), 0), k = 'u' + u.id;
+      let h = '<div class="box" style="margin-top:8px"><div class="kv"><span>' + esc(u.full_name || u.email) + '</span><span>' + (live ? '🟢 فاتح دلوقتي' : cur ? 'آخر نشاط ' + vlWhen(cur.last_ms) : 'لسه ما دخلش') + '</span></div>';
+      if (live) { const v = cur.views || [], l = v[v.length - 1]; h += '<div class="note" style="margin-top:4px"><b>دلوقتي في:</b> ' + esc(l ? l.l : '—') + '</div><div class="note">خطواته في الجلسة دي (الأحدث فوق):</div>' + vlSteps(v, 15); }
+      if (L.length) h += '<details class="sec" style="margin-top:8px"' + (S.vlOpen.has(k) ? ' open' : '') + '><summary data-k="' + k + '">الجلسات (' + L.length + ') · إجمالي ' + vlDur(tot) + '</summary><div class="in">' +
+        L.slice(0, 30).map(r => { const kk = 's' + r.id; return '<details class="sec" style="margin-top:6px"' + (S.vlOpen.has(kk) ? ' open' : '') + '><summary data-k="' + kk + '">' + vlWhen(r.started_ms) + ' · ' + vlDur(r.active_s) + '</summary><div class="in">' + (vlSteps(r.views, 60) || '<div class="note">مفيش صفحات.</div>') + '</div></details>'; }).join('') + '</div></details>';
+      return h + '</div>';
+    }).join('');
+  } catch (e) { box.innerHTML = '<div class="note">' + (e.net ? 'مفيش اتصال بالسيرفر.' : /view_log|relation|404|PGRST/i.test(String(e.message) + e.status) ? 'لازم تشغّل ملف 05_view_log.sql في Supabase مرة واحدة عشان السجل يشتغل.' : esc(srvMsg(e.message))) + '</div>'; }
+  finally { S.vlBusy = false; }
+}
+
 /* ---------- start ---------- */
 async function start() {
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
@@ -3915,7 +3976,7 @@ async function start() {
   const ls = await kvGet('lastSync'); S.lastSync = ls ? new Date(ls) : null;
   S.ent = new Map((await entAll()).map(e => [e.id, e]));
   S.docs = new Map((await docsAll()).map(d => [d.id, d]));
-  await jInit();
+  await jInit(); await vlInit();
   const rs = resTake(); /* لو الصفحة اتعمل لها ريلود (تحديث) بنرجّعك لنفس المكان من غير شاشة البصمة */
   S.stack = [];
   if (rs && rs.view && rs.view !== 'form') { for (const k of RES_KEYS) if (rs[k] !== undefined && k !== 'view' && k !== 'stack') S[k] = rs[k]; S.stack = Array.isArray(rs.stack) ? rs.stack : []; go(rs.view); } else go('home');
@@ -4070,11 +4131,14 @@ async function init() {
   window.addEventListener('online', () => sync()); window.addEventListener('offline', setPill);
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { hiddenAt = Date.now(); return; }
+    if (document.hidden) { hiddenAt = Date.now(); vlTick(); vlFlush(); return; }
     if (S.session && hiddenAt && Date.now() - hiddenAt > 120000) bioOn().then(on => { if (on) showLock(); });
     sync();
   });
   setInterval(() => { if (!document.hidden && S.session) sync(); }, 120000);
+  setInterval(vlTick, 5000);
+  $('#s-vl').ontoggle = () => { clearInterval(S.vlPoll); if ($('#s-vl').open) { S.vlSig = ''; vlLoad(); S.vlPoll = setInterval(() => { if (!document.hidden && $('#s-vl').open && S.view === 'set') vlLoad(); }, 8000); } };
+  $('#vl-box').addEventListener('click', e => { const sm = e.target.closest('summary[data-k]'); if (!sm) return; S.vlOpen = S.vlOpen || new Set(); const k = sm.dataset.k; if (S.vlOpen.has(k)) S.vlOpen.delete(k); else S.vlOpen.add(k); });
   S.session = await kvGet('session');
   if (S.session) await start(); else showLogin('');
 }
