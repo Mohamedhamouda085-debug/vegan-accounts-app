@@ -28,6 +28,15 @@ svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.9;stroke
 #vl-prev .r2{display:flex;gap:8px;align-items:center;margin-top:6px}
 #vl-prev .r2 input{flex:1;min-width:0;min-height:0;height:24px;padding:0;border:0;background:transparent;accent-color:#fff}
 #vl-prev button{background:#fff;color:#7A3E00;border:0;border-radius:8px;padding:6px 10px;font-weight:700;white-space:nowrap;min-height:0}
+#vl-rp{position:fixed;inset:0;z-index:95;background:#1b1b1b;color:#fff;display:flex;flex-direction:column}
+#vl-rp .rp-h{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;font-size:13px}
+#vl-rp .rp-c{display:flex;gap:8px;align-items:center;padding:8px 12px calc(env(safe-area-inset-bottom) + 10px)}
+#vl-rp .rp-c input{flex:1;min-width:0;min-height:0;height:24px;padding:0;border:0;background:transparent;accent-color:#fff}
+#vl-rp button{background:#fff;color:#222;border:0;border-radius:8px;padding:6px 12px;font-weight:700;white-space:nowrap;min-height:0}
+#rp-stage{flex:1;position:relative;overflow:hidden}
+#rp-box{position:absolute;left:50%;top:4px;transform-origin:top center;background:#fff;overflow:hidden}
+#rp-fr{width:100%;height:100%;border:0;pointer-events:none;background:#fff}
+.rp-dot{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(232,60,60,.45);border:2px solid #E83C3C;pointer-events:none;animation:vldot .6s ease-out;z-index:5}
 body.vlp{padding-top:var(--vlh,48px)}
 body.vlp header{top:var(--vlh,48px)}
 #vl-dot{position:fixed;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:rgba(232,60,60,.45);border:2px solid #E83C3C;z-index:90;pointer-events:none}
@@ -309,6 +318,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
 <div id="app" class="hide">
   <div id="vl-prev" class="hide"><div class="r1"><span id="vl-prev-t"></span><button id="vl-prev-x">إنهاء</button></div><div class="r2"><button id="vl-pp">▶</button><button id="vl-sp">1×</button><input type="range" id="vl-rg" min="0" max="1000" value="0"><span id="vl-tm" dir="ltr"></span></div></div>
   <div id="vl-dot" class="hide"></div>
+  <div id="vl-rp" class="hide"><div class="rp-h"><span id="rp-t"></span><button id="rp-x">إغلاق</button></div><div id="rp-stage"><div id="rp-box"><iframe id="rp-fr" sandbox="allow-same-origin"></iframe></div></div><div class="rp-c"><button id="rp-pp">▶</button><button id="rp-sp">1×</button><input type="range" id="rp-rg" min="0" max="1000" value="0"><span id="rp-tm" dir="ltr"></span></div></div>
   <header id="hdr">
     <img src="logo.png" alt="Vegan">
     <div class="t"><h1>Vegan food</h1><small>الإدارة المالية</small></div>
@@ -580,6 +590,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
 
       <details class="sec hide" id="s-vl"><summary>سجل المشاهدين</summary><div class="in">
         <p class="note" style="margin-top:0">للمالك فقط. بيعرض كل شريك (مشاهدة): فاتح دلوقتي ولا لأ، وبيعمل إيه لحظة بلحظة، وجلساته ومدتها والصفحات اللي دخلها. وتقدر تعيد تشغيل أي جلسة زي الفيديو بالسرعة اللي تحبها.</p>
+        <button class="btn ghost" id="vl-clean" style="min-height:0;padding:6px 12px;margin-bottom:8px">مسح لقطات الجلسات الأقدم من 14 يوم</button>
         <div id="vl-box"><div class="note">جاري التحميل...</div></div>
       </div></details>
 
@@ -3821,7 +3832,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.45';
+const VER = '1.46';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -3934,10 +3945,10 @@ function vlSnap(v) { const ks = VL_KEYS[v]; if (!ks) return null; const o = {}; 
 const vlOn = () => !!(S.profile && S.profile.role === 'partner' && S.session);
 function vlLabel(v) { const t = VL_AR[v] || v, d = v === 'acc' ? S.acc : v === 'stm' ? S.party_ : ''; return typeof d === 'string' && d ? t + ': ' + d : t; }
 function vlStart(v) { const now = Date.now(); S.vl = { id:uid8() + uid8(), uid:S.session.user.id, start:now, last:now, tk:now, fl:0, act:0, views:[], dirty:true }; vlPush(v); }
-function vlPush(v) { const c = S.vl, l = vlLabel(v), x = c.views[c.views.length - 1]; if (x && x.l === l) return; c.views.push({ l, v, t:Date.now(), s:0, st:vlSnap(v) }); if (c.views.length > 200) c.views.shift(); c.dirty = true; }
+function vlPush(v) { const c = S.vl, l = vlLabel(v), x = c.views[c.views.length - 1]; if (x && x.l === l) return; c.views.push({ l, v, m:2, t:Date.now(), s:0, st:vlSnap(v) }); vlFrameSoon(500); if (c.views.length > 200) c.views.shift(); c.dirty = true; }
 function vlEv(a) {
   if (!vlOn() || !S.vl || document.hidden) return; const c = S.vl, x = c.views[c.views.length - 1]; if (!x) return;
-  x.ev = x.ev || []; if (x.ev.length >= 150 || (c.nev || 0) >= 1500) return; c.nev = (c.nev || 0) + 1;
+  x.ev = x.ev || []; if (a[0] !== 'f' && (x.ev.length >= 150 || (c.nev || 0) >= 1500)) return; c.nev = (c.nev || 0) + 1;
   a.unshift(Math.round(Date.now() - x.t)); x.ev.push(a); c.dirty = true;
 }
 function vlStChk() {
@@ -3947,14 +3958,57 @@ function vlStChk() {
 let vlScT = null; const vlCT = {};
 document.addEventListener('scroll', e => {
   if (!vlOn()) return; const t = e.target;
-  if (t === document || t === document.documentElement || t === document.body) { clearTimeout(vlScT); vlScT = setTimeout(() => { const m = document.documentElement.scrollHeight - innerHeight; vlEv(['s', m > 0 ? Math.round(scrollY / m * 1000) : 0]); }, 200); }
+  if (t === document || t === document.documentElement || t === document.body) { clearTimeout(vlScT); vlScT = setTimeout(() => vlEv(['s', Math.round(scrollY)]), 150); }
   else if (t.classList && t.classList.contains('tbw')) {
     const i = [...document.querySelectorAll('#v-' + S.view + ' .tbw')].indexOf(t); if (i < 0) return; clearTimeout(vlCT[i]);
-    vlCT[i] = setTimeout(() => { const mx = t.scrollWidth - t.clientWidth, my = t.scrollHeight - t.clientHeight; vlEv(['c', i, mx > 0 ? Math.round(Math.abs(t.scrollLeft) / mx * 1000) : 0, my > 0 ? Math.round(t.scrollTop / my * 1000) : 0]); }, 200);
+    vlCT[i] = setTimeout(() => vlEv(['c', i, Math.round(Math.abs(t.scrollLeft)), Math.round(t.scrollTop)]), 150);
   }
 }, true);
-document.addEventListener('pointerdown', e => { if (!vlOn()) return; vlEv(['t', Math.round(e.clientX / innerWidth * 1000), Math.round(e.clientY / innerHeight * 1000)]); setTimeout(vlStChk, 300); }, true);
-document.addEventListener('change', () => setTimeout(vlStChk, 100), true);
+document.addEventListener('pointerdown', e => { if (!vlOn()) return; vlEv(['t', Math.round(e.clientX), Math.round(e.clientY)]); vlFrameSoon(350); setTimeout(vlStChk, 300); }, true);
+document.addEventListener('change', () => { setTimeout(vlStChk, 100); vlFrameSoon(350); }, true);
+/* لقطات الشاشة: بنسجّل HTML الشاشة اللي الشريك شافها (مضغوط) عشان المحاكي يعرضها زي ما هي */
+const vlUpQ = []; let vlUpBusy = false, vlFT = null;
+async function vlZip(str) {
+  if (!window.CompressionStream) return 'r:' + btoa(unescape(encodeURIComponent(str)));
+  const cs = new CompressionStream('gzip'), w = cs.writable.getWriter(); w.write(new TextEncoder().encode(str)); w.close();
+  const buf = new Uint8Array(await new Response(cs.readable).arrayBuffer()); let b = '';
+  for (let i = 0; i < buf.length; i += 0x8000) b += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  return 'g:' + btoa(b);
+}
+async function vlUnzip(z) {
+  if (z.startsWith('r:')) return decodeURIComponent(escape(atob(z.slice(2))));
+  const bin = atob(z.slice(2)), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  const ds = new DecompressionStream('gzip'), w = ds.writable.getWriter(); w.write(u); w.close();
+  return await new Response(ds.readable).text();
+}
+function vlHash(t) { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return h; }
+function vlSnapHTML() {
+  document.querySelectorAll('input,select').forEach(el => { if (el.type === 'password') return; if (el.tagName === 'SELECT') [...el.options].forEach(o => o.toggleAttribute('selected', o.selected)); else if (el.type === 'checkbox' || el.type === 'radio') el.toggleAttribute('checked', el.checked); else el.setAttribute('value', el.value); });
+  const c = document.createElement('div'); for (const ch of document.body.children) if (ch.tagName !== 'SCRIPT') c.appendChild(ch.cloneNode(true));
+  c.querySelectorAll('script,iframe,.hide,[hidden],#vl-prev,#vl-dot,#vl-rp,#toast').forEach(n => n.remove());
+  c.querySelectorAll('input[type=password]').forEach(n => n.setAttribute('value', ''));
+  return c.innerHTML;
+}
+function vlFrameSoon(ms) { clearTimeout(vlFT); vlFT = setTimeout(vlFrame, ms || 400); }
+async function vlFrame() {
+  if (!vlOn() || !S.vl || document.hidden) return; const c = S.vl;
+  if ((c.nf || 0) >= 60 || (c.zb || 0) > 3e6 || document.getElementsByTagName('*').length > 7000) return;
+  const html = vlSnapHTML(); if (html.length > 400000) return; const h = vlHash(html); if (h === c.fh) return; c.fh = h;
+  const fid = c.id + '-' + (c.nf = (c.nf || 0) + 1), t = Date.now();
+  const cs = [...document.querySelectorAll('#v-' + S.view + ' .tbw')].map((el, i) => [i, Math.round(Math.abs(el.scrollLeft)), Math.round(el.scrollTop)]).filter(a => a[1] || a[2]);
+  const meta = { w:innerWidth, h:innerHeight, sy:Math.round(scrollY), cs, v:S.view, l:vlLabel(S.view), bc:document.body.className.replace(/\bvlp\b/g, '').trim() };
+  vlEv(['f', fid]);
+  let z; try { z = await vlZip(html); } catch (e) { return; }
+  c.zb = (c.zb || 0) + z.length; vlUpQ.push({ id:fid, sid:c.id, t, meta, z }); if (vlUpQ.length > 30) vlUpQ.shift(); vlUpRun();
+}
+async function vlUpRun() {
+  if (vlUpBusy || !vlOn() || !navigator.onLine || !vlUpQ.length) return; vlUpBusy = true;
+  try { while (vlUpQ.length) { const f = vlUpQ[0]; await api('/rest/v1/rpc/log_frame', { method:'POST', body:{ p_id:f.id, p_sid:f.sid, p_t:f.t, p_meta:f.meta, p_z:f.z } }); vlUpQ.shift(); } } catch (e) {}
+  vlUpBusy = false;
+}
+function vlObs() {
+  new MutationObserver(ms => { if (!vlOn()) return; for (const m of ms) { const n = m.target.nodeType === 1 ? m.target : m.target.parentElement; if (n && n.closest && n.closest('#vl-prev,#vl-dot,#vl-rp,#toast')) continue; vlFrameSoon(450); return; } }).observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] });
+}
 function vlTick() {
   if (!vlOn()) return; const now = Date.now();
   if (!S.vl) { vlStart(S.view || 'home'); return; }
@@ -3963,7 +4017,7 @@ function vlTick() {
   if (now - c.last > 30 * 60000) { const old = S.vl; S.vl = null; vlFlush(old); vlStart(S.view || 'home'); return; }
   const dt = Math.min(now - c.tk, 10000); c.tk = now; c.last = now; c.act += dt;
   const x = c.views[c.views.length - 1]; if (x) x.s += dt;
-  vlStChk();
+  vlStChk(); vlUpRun();
   c.dirty = true;
   if (now - c.fl > 10000) vlFlush(c);
 }
@@ -3971,7 +4025,7 @@ function vlNav(v) { if (!vlOn()) return; vlTick(); if (S.vl) vlPush(v); }
 async function vlFlush(c = S.vl) {
   if (!c || !vlOn() || c.busy || !c.dirty || !navigator.onLine) return;
   c.busy = true; c.fl = Date.now(); c.dirty = false;
-  try { await api('/rest/v1/rpc/log_view', { method:'POST', body:{ p_id:c.id, p_started:c.start, p_last:c.last, p_active:Math.round(c.act / 1000), p_views:c.views.map(x => ({ l:x.l, v:x.v, t:x.t, s:Math.round(x.s / 1000), st:x.st, ev:x.ev })) } }); }
+  try { await api('/rest/v1/rpc/log_view', { method:'POST', body:{ p_id:c.id, p_started:c.start, p_last:c.last, p_active:Math.round(c.act / 1000), p_views:c.views.map(x => ({ l:x.l, v:x.v, m:x.m, t:x.t, s:Math.round(x.s / 1000), st:x.st, ev:x.ev })) } }); }
   catch (e) { c.dirty = true; }
   c.busy = false; if (c === S.vl) { try { await kvSet('vl', c); } catch (e) {} }
 }
@@ -3996,7 +4050,7 @@ function vlBuild(rid) {
   return { rid, who:d.who, vs, total:t0 };
 }
 function vlApplyVisit(z) {
-  const x = z.x; R.label = x.l; R.at = x.t; if (!vlCan(x)) return;
+  const x = z.x; R.label = x.l; R.at = x.t; R.m2 = x.m === 2; if (!vlCan(x)) return;
   for (const k in (x.st || {})) S[k] = x.st[k];
   if (x.v === 'acc' && $('#acc-q')) $('#acc-q').value = S.accQ || '';
   if (x.v === 'list' && $('#f-q')) $('#f-q').value = S.q || '';
@@ -4009,9 +4063,9 @@ function vlDot(fx, fy) {
 }
 function vlApplyEv(e, seek) {
   const t = e[1];
-  if (t === 's') { const m = document.documentElement.scrollHeight - innerHeight; window.scrollTo(0, m > 0 ? m * e[2] / 1000 : 0); }
-  else if (t === 'c') { const el = document.querySelectorAll('#v-' + S.view + ' .tbw')[e[2]]; if (el) { const mx = el.scrollWidth - el.clientWidth, my = el.scrollHeight - el.clientHeight, rtl = getComputedStyle(el).direction === 'rtl'; el.scrollLeft = (rtl ? -1 : 1) * mx * e[3] / 1000; el.scrollTop = my * e[4] / 1000; } }
-  else if (t === 't') { if (!seek) vlDot(e[2], e[3]); }
+  if (t === 's') { const m = document.documentElement.scrollHeight - innerHeight; window.scrollTo(0, R.m2 ? e[2] : (m > 0 ? m * e[2] / 1000 : 0)); }
+  else if (t === 'c') { const el = document.querySelectorAll('#v-' + S.view + ' .tbw')[e[2]]; if (el) { const mx = el.scrollWidth - el.clientWidth, my = el.scrollHeight - el.clientHeight, rtl = getComputedStyle(el).direction === 'rtl'; el.scrollLeft = (rtl ? -1 : 1) * (R.m2 ? e[3] : mx * e[3] / 1000); el.scrollTop = R.m2 ? e[4] : my * e[4] / 1000; } }
+  else if (t === 't') { if (!seek) { if (R.m2) vlDot(e[2] / innerWidth * 1000, e[3] / innerHeight * 1000); else vlDot(e[2], e[3]); } }
   else if (t === 'st') { if (R.curView === S.view && e[2]) { Object.assign(S, e[2]); if (S.view === 'acc' && $('#acc-q')) $('#acc-q').value = S.accQ || ''; draw(S.view); } }
 }
 function vlStep(prev, T, seek) {
@@ -4046,7 +4100,78 @@ function vlPlay(rid, k, paused) {
   document.body.classList.add('vlp'); $('#vl-prev').classList.remove('hide');
   vlSeek(k != null ? b.vs[k].a : 0); vlUi(); R.raf = requestAnimationFrame(vlLoop);
 }
-function vlPreview(ref) { const k = ref.lastIndexOf(':'); vlPlay(ref.slice(0, k), +ref.slice(k + 1), true); }
+const R2 = { on:false, speed:1 };
+async function vlPlay2(rid, k, paused) {
+  const d = S.vlData && S.vlData[rid]; if (!d) return false; toast('بحمّل لقطات الجلسة...');
+  let rows; try { rows = await api('/rest/v1/view_frames?session_id=eq.' + encodeURIComponent(rid) + '&select=id,t_ms,meta,z&order=t_ms.asc'); } catch (e) { toast(e.net ? 'مفيش اتصال' : 'مقدرتش أحمّل اللقطات. اتأكد إنك شغّلت ملف 06_view_frames.sql'); return false; }
+  if (!rows || !rows.length) return false;
+  const frames = {}; for (const f of rows) { try { frames[f.id] = { html:await vlUnzip(f.z), meta:f.meta || {}, t:+f.t_ms }; } catch (e) {} }
+  const seen = new Set(), it = [];
+  (d.v || []).forEach(x => { for (const e of (x.ev || [])) { it.push({ ts:x.t + e[0], e }); if (e[1] === 'f') seen.add(e[2]); } });
+  for (const id in frames) if (!seen.has(id)) it.push({ ts:frames[id].t, e:[0, 'f', id] });
+  it.sort((a, b) => a.ts - b.ts); if (!it.some(z => z.e[1] === 'f' && frames[z.e[2]])) return false;
+  let rt = 0, prev = it[0].ts; for (const z of it) { const g = z.ts - prev; prev = z.ts; rt += g > 4000 ? 1200 : g; z.rt = rt; }
+  let T0 = 0; if (k != null && d.v[k]) { const z = it.find(q => q.ts >= d.v[k].t); if (z) T0 = z.rt; }
+  if (R2.on) cancelAnimationFrame(R2.raf);
+  Object.assign(R2, { on:true, play:!paused, items:it, frames, total:rt + 1500, who:d.who, last:performance.now(), ui:0, drag:false, fid:null, pi:-1 });
+  $('#vl-rp').classList.remove('hide'); vlSeek2(T0); R2.raf = requestAnimationFrame(vlLoop2); return true;
+}
+function vlSetCs2(m) { R2.cs = {}; (m.cs || []).forEach(a => { R2.cs[a[0]] = [a[1], a[2]]; }); }
+function vlState2(T) {
+  let fr = null, sy = 0, idx = -1; R2.cs = {};
+  for (let i = 0; i < R2.items.length; i++) {
+    const z = R2.items[i]; if (z.rt > T) break; idx = i; const e = z.e;
+    if (e[1] === 'f' && R2.frames[e[2]]) { fr = e[2]; const m = R2.frames[e[2]].meta; sy = m.sy || 0; vlSetCs2(m); }
+    else if (e[1] === 's') sy = e[2]; else if (e[1] === 'c') R2.cs[e[2]] = [e[3], e[4]];
+  }
+  if (!fr) { const z = R2.items.find(q => q.e[1] === 'f' && R2.frames[q.e[2]]); if (z) { fr = z.e[2]; const m = R2.frames[fr].meta; sy = m.sy || 0; vlSetCs2(m); } }
+  return { fr, sy, idx };
+}
+function vlSeek2(T) { T = Math.max(0, Math.min(R2.total, T)); R2.T = T; const s = vlState2(T); R2.pi = s.idx; vlShow2(s.fr, s.sy); vlUi2(); }
+function vlFit2(W, H) {
+  const st = $('#rp-stage'), k = Math.min(1, (st.clientWidth - 8) / W, (st.clientHeight - 8) / H), b = $('#rp-box');
+  b.style.width = W + 'px'; b.style.height = H + 'px'; b.style.marginLeft = (-W / 2) + 'px'; b.style.transform = 'scale(' + k + ')';
+}
+function vlShow2(fid, sy) {
+  R2.sy = sy;
+  if (fid && fid !== R2.fid) {
+    R2.fid = fid; const f = R2.frames[fid], m = f.meta; vlFit2(m.w || 390, m.h || 800);
+    const css = [...document.querySelectorAll('style')].map(x => x.textContent).join('\n'), ha = [...document.documentElement.attributes].map(a => a.name + '="' + String(a.value).replace(/"/g, '&quot;') + '"').join(' ');
+    const fr = $('#rp-fr'); fr.onload = vlScroll2;
+    fr.srcdoc = '<!doctype html><html ' + ha + '><head><meta charset="utf-8"><style>' + css + '</style><style>*{animation:none!important;transition:none!important;caret-color:transparent}::-webkit-scrollbar{display:none}html{scrollbar-width:none}</style></head><body class="' + String(m.bc || '').replace(/"/g, '') + '">' + f.html + '</body></html>';
+  } else vlScroll2();
+}
+function vlScroll2() {
+  const fr = $('#rp-fr'), w = fr.contentWindow, d = fr.contentDocument; if (!w || !d || !d.body || !R2.fid) return;
+  w.scrollTo(0, R2.sy || 0); const list = d.querySelectorAll('#v-' + R2.frames[R2.fid].meta.v + ' .tbw');
+  for (const i in R2.cs) { const el = list[i]; if (el) { const rtl = w.getComputedStyle(el).direction === 'rtl'; el.scrollLeft = (rtl ? -1 : 1) * R2.cs[i][0]; el.scrollTop = R2.cs[i][1]; } }
+}
+function vlDot2(x, y) { const d = document.createElement('div'); d.className = 'rp-dot'; d.style.left = x + 'px'; d.style.top = y + 'px'; $('#rp-box').appendChild(d); setTimeout(() => d.remove(), 650); }
+function vlUi2() {
+  $('#rp-t').textContent = (R2.play ? '▶ ' : '⏸ ') + R2.who + (R2.fid ? ' · ' + R2.frames[R2.fid].meta.l : '');
+  $('#rp-pp').textContent = R2.play ? '⏸' : '▶'; $('#rp-sp').textContent = R2.speed + '×';
+  if (!R2.drag) $('#rp-rg').value = R2.total ? Math.round(R2.T / R2.total * 1000) : 0;
+  $('#rp-tm').textContent = vlMS(R2.T) + '/' + vlMS(R2.total);
+}
+function vlLoop2(now) {
+  if (!R2.on) return; const dt = now - R2.last; R2.last = now;
+  if (R2.play) {
+    R2.T = Math.min(R2.total, R2.T + dt * R2.speed);
+    while (R2.pi + 1 < R2.items.length && R2.items[R2.pi + 1].rt <= R2.T) {
+      const e = R2.items[++R2.pi].e;
+      if (e[1] === 'f' && R2.frames[e[2]]) { const m = R2.frames[e[2]].meta; vlSetCs2(m); vlShow2(e[2], m.sy || 0); }
+      else if (e[1] === 's') { R2.sy = e[2]; vlScroll2(); }
+      else if (e[1] === 'c') { R2.cs[e[2]] = [e[3], e[4]]; vlScroll2(); }
+      else if (e[1] === 't') vlDot2(e[2], e[3]);
+    }
+    if (R2.T >= R2.total) R2.play = false;
+  }
+  if (now - R2.ui > 120) { R2.ui = now; vlUi2(); }
+  R2.raf = requestAnimationFrame(vlLoop2);
+}
+function vlStop2() { R2.on = false; cancelAnimationFrame(R2.raf); R2.frames = null; R2.items = null; $('#vl-rp').classList.add('hide'); $('#rp-fr').srcdoc = ''; }
+async function vlPlayAny(rid, k, paused) { const d = S.vlData && S.vlData[rid]; if (d && d.v.some(x => x.m === 2) && await vlPlay2(rid, k, paused)) return; vlPlay(rid, k, paused); }
+function vlPreview(ref) { const k = ref.lastIndexOf(':'); vlPlayAny(ref.slice(0, k), +ref.slice(k + 1), true); }
 function vlStop() { R.on = false; cancelAnimationFrame(R.raf); $('#vl-prev').classList.add('hide'); $('#vl-dot').classList.add('hide'); document.body.classList.remove('vlp'); }
 function vlPrevEnd() { vlStop(); if (S.stack[S.stack.length - 1] === 'set') S.stack.pop(); go('set'); const d = $('#s-vl'); S.vlSig = ''; if (d) { d.open = true; vlLoad(); } }
 async function vlLoad() {
@@ -4239,13 +4364,20 @@ async function init() {
   });
   setInterval(() => { if (!document.hidden && S.session) sync(); }, 120000);
   setInterval(vlTick, 5000);
+  vlObs();
+  $('#rp-x').onclick = vlStop2;
+  $('#rp-pp').onclick = () => { if (!R2.on) return; if (!R2.play && R2.T >= R2.total - 1) vlSeek2(0); R2.play = !R2.play; R2.last = performance.now(); vlUi2(); };
+  $('#rp-sp').onclick = () => { const a = [1, 2, 4, 8, 16]; R2.speed = a[(a.indexOf(R2.speed) + 1) % a.length]; vlUi2(); };
+  $('#rp-rg').oninput = e => { if (R2.on) { R2.drag = true; vlSeek2(+e.target.value / 1000 * R2.total); } };
+  $('#rp-rg').onchange = () => { R2.drag = false; };
+  $('#vl-clean').onclick = async () => { if (!confirm('تمسح لقطات الجلسات الأقدم من 14 يوم؟ سجل الخطوات هيفضل زي ما هو.')) return; try { await api('/rest/v1/view_frames?t_ms=lt.' + (Date.now() - 14 * 864e5), { method:'DELETE' }); toast('اتمسحت اللقطات القديمة'); } catch (e) { toast(e.net ? 'مفيش اتصال' : 'تعذر المسح: ' + srvMsg(e.message)); } };
   $('#vl-prev-x').onclick = vlPrevEnd;
   $('#vl-pp').onclick = () => { if (!R.on) return; if (!R.play && R.T >= R.b.total - 1) vlSeek(0); R.play = !R.play; R.last = performance.now(); vlUi(); };
   $('#vl-sp').onclick = () => { const a = [1, 2, 4, 8, 16]; R.speed = a[(a.indexOf(R.speed) + 1) % a.length]; vlUi(); };
   $('#vl-rg').oninput = e => { if (R.on) { R.drag = true; vlSeek(+e.target.value / 1000 * R.b.total); vlUi(); } };
   $('#vl-rg').onchange = () => { R.drag = false; };
   $('#s-vl').ontoggle = () => { clearInterval(S.vlPoll); if ($('#s-vl').open) { S.vlSig = ''; vlLoad(); S.vlPoll = setInterval(() => { if (!document.hidden && $('#s-vl').open && S.view === 'set') vlLoad(); }, 8000); } };
-  $('#vl-box').addEventListener('click', e => { const pl = e.target.closest('[data-vpl]'); if (pl) { vlPlay(pl.dataset.vpl); return; } const vp = e.target.closest('[data-vp]'); if (vp) { vlPreview(vp.dataset.vp); return; } const sm = e.target.closest('summary[data-k]'); if (!sm) return; S.vlOpen = S.vlOpen || new Set(); const k = sm.dataset.k; if (S.vlOpen.has(k)) S.vlOpen.delete(k); else S.vlOpen.add(k); });
+  $('#vl-box').addEventListener('click', e => { const pl = e.target.closest('[data-vpl]'); if (pl) { vlPlayAny(pl.dataset.vpl); return; } const vp = e.target.closest('[data-vp]'); if (vp) { vlPreview(vp.dataset.vp); return; } const sm = e.target.closest('summary[data-k]'); if (!sm) return; S.vlOpen = S.vlOpen || new Set(); const k = sm.dataset.k; if (S.vlOpen.has(k)) S.vlOpen.delete(k); else S.vlOpen.add(k); });
   S.session = await kvGet('session');
   if (S.session) await start(); else showLogin('');
 }
