@@ -1873,6 +1873,7 @@ function csStock(upto) {
   es.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.no || 0) - (b.no || 0));
   for (const e of es) {
     const k = csKey(e.prod), x = m.get(k) || { L:[], last:0, name:cl(e.prod) }; m.set(k, x); if (e.dr === CS_RAW && !x.named) { x.name = cl(e.prod); x.named = 1; }
+    x.gl = (x.gl || 0) + (e.dr === CS_RAW ? (+e.amtD || 0) : -(+e.amtC || 0)); /* رصيد الفلوس بتاع الصنف في الدفاتر */
     if (e.dr === CS_RAW && e.stmt === IV_ST && e.pb === 'جرد عجز') x.def = Math.max(0, (x.def || 0) - (+e.qty || 0)); /* قيد تصفية العجز: بيصفّي العجز من غير ما يضيف دفعة مخزون */
     else if (e.dr === CS_RAW) { const q = (+e.qty || 0) * (1 - (+e.disc || 0)); if (q > 0 && e.amtD > 0) { x.L.push([q, e.amtD / q]); x.last = e.amtD / q; } }
     else { let need = +e.qty || 0; while (need > 1e-9 && x.L.length) { const t = Math.min(need, x.L[0][0]); x.L[0][0] -= t; need -= t; if (x.L[0][0] <= 1e-9) x.L.shift(); } if (need > 1e-9) x.def = (x.def || 0) + need; }
@@ -2642,7 +2643,7 @@ async function ivSave() {
   const stock = csStock(), fm = fgStockMap(), now = Date.now(), ens = [], fas = [], rows = [], skipped = []; let no = Math.max(0, ...live().map(z => z.no || 0));
   const mkE = (dr, cr, prod, qty, amt, loss, prior) => ({ id:crypto.randomUUID(), no:++no, date, stmt:IV_ST, dr:loss ? 'المصروفات' : prior ? PRIOR_ACC : dr, cr, pa:loss ? SPOIL : '', pb:loss ? '' : 'جرد', prod, qty, disc:0, price:qty ? amt / qty : 0, amtD:amt, amtC:amt, star:false, opening:false, deleted:false, updated:now, dirty:true });
   for (const { k, a, loss, prior } of rawIn) { const x = stock.get(k); if (!x) continue; const df = x.def || 0;
-    if (df > 0.0005) { const pr0 = x.last > 0 ? x.last : x.L.length ? x.L[x.L.length - 1][1] : 0; if (pr0 > 0) { const e0 = mkE(CS_RAW, CS_COGS, x.name, df, df * pr0); e0.pb = 'جرد عجز'; ens.push(e0); rows.push({ g:'raw', name:x.name, sys:x.q - df, act:x.q, diff:df, amt:df * pr0, to:'s' }); } } /* تصفية العجز: بيرجّع التكلفة اللي اتحسبت زيادة */
+    if (df > 0.0005) { const sa = x.a - (x.gl || 0); if (sa > 0.005) { const e0 = mkE(CS_RAW, CS_COGS, x.name, df, sa); e0.pb = 'جرد عجز'; ens.push(e0); rows.push({ g:'raw', name:x.name, sys:x.q - df, act:x.q, diff:df, amt:sa, to:'s' }); } } /* تصفية العجز: بيرجّع رصيد الفلوس السالب في الدفاتر (قيمة الدفعات - رصيد الدفاتر) فيرجع صفر مع الكمية */
     const diff = a - x.q; if (Math.abs(diff) < 0.0005) continue;
     if (diff < 0) { const amt = csTake(x, -diff); ens.push(mkE(CS_COGS, CS_RAW, x.name, -diff, amt, loss, prior)); rows.push({ g:'raw', name:x.name, sys:x.q, act:a, diff, amt:-amt, to:loss ? 'l' : prior ? 'p' : 'c' }); }
     else { const pr = x.last > 0 ? x.last : x.L.length ? x.L[x.L.length - 1][1] : 0; if (!(pr > 0)) { skipped.push(x.name); continue; } ens.push(mkE(CS_RAW, CS_COGS, x.name, diff, diff * pr)); rows.push({ g:'raw', name:x.name, sys:x.q, act:a, diff, amt:diff * pr }); } }
@@ -3808,7 +3809,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.41';
+const VER = '1.42';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
