@@ -1684,7 +1684,7 @@ function bsRows(M) {
   const rec = n('العملاء') + n('ارصدة مدينة اخري') + n('العهد.الماليه');
   const cur = cash + inv + rec, fx = n('اصول.ثابتة') + accDep, assets = cur + fx;
   const sup = -n('الموردين'), oc = -n('ارصده.دائنه.اخري'), liab = sup + oc;
-  const cap = -n('رأس.مال'), part = -n('جاري.الشركاء'), eq = cap + part + P.np - P.dep, tot = liab + eq, diff = assets - tot;
+  const cap = -n('رأس.مال'), part = -n('جاري.الشركاء'), adj = -n(PRIOR_ACC), eq = cap + part + adj + P.np - P.dep, tot = liab + eq, diff = assets - tot;
   const R = [{ l:'الأصول', c:'h' }, { l:'أولاً: الأصول المتداولة', c:'h' },
     { l:'الخزينة', b:n('الخزينة'), k:'الخزينة' }, { l:'الخزينة الخاصة', b:n('خزينة.خاصة') }, { l:'البنك', b:n('البنك') }, { l:'إجمالي النقدية', b:cash, c:'t' },
     { l:'المخزون الخام', b:n('المخزون.الخام'), k:'المخزون.الخام' }, { l:'مخزون المنتج التام', b:n('مخزن منتج تام'), k:'مخزن منتج تام' }];
@@ -1695,6 +1695,7 @@ function bsRows(M) {
     { l:'صافي الأصول الثابتة', b:fx, c:'t' }, { l:'إجمالي الأصول', b:assets, c:'t' },
     { l:'الخصوم وحقوق الملكية', c:'h' }, { l:'أولاً: الخصوم المتداولة', c:'h' }, { l:'الموردين', b:sup, k:'الموردين' }, { l:'أرصدة دائنة أخرى', b:oc, k:'ارصده.دائنه.اخري' },
     { l:'إجمالي الخصوم المتداولة', b:liab, c:'t' }, { l:'ثانياً: حقوق الملكية', c:'h' }, { l:'رأس المال', b:cap }, { l:'جاري الشركاء', b:part, k:'جاري.الشركاء' },
+    ...(Math.abs(adj) > 0.005 ? [{ l:'تسويات سنوات سابقة (تالف مخزون)', b:adj, k:PRIOR_ACC }] : []),
     { l:'أرباح محتجزة (صافي الربح بعد التوزيع)', b:P.np }, { l:'(-) إهلاك الأصول الثابتة للسنة (من شيت الإهلاك)', b:-P.dep }, { l:'إجمالي حقوق الملكية', b:eq, c:'t' }, { l:'إجمالي الخصوم وحقوق الملكية', b:tot, c:'t' });
   R.push(Math.abs(diff) > 0.5 ? { l:'الفرق بين الأصول والخصوم وحقوق الملكية', b:diff, c:'w' } : { l:'✓ الميزانية متوازنة', c:'m' });
   return R;
@@ -2620,11 +2621,11 @@ function poAlClick(e) {
 const IV_ST = 'تسوية جرد';
 function ivHTML(w) {
   const stock = csStock(), rawL = [...stock.values()].sort((a, b) => csColl.compare(a.name, b.name)), fm = fgStockMap(), fgL = [...fm.values()].filter(x => Math.abs(x.q) > 1e-6).sort((a, b) => csColl.compare(a.name, b.name));
-  const sel = '<select data-ivt aria-label="تحميل النقص على" style="display:none;width:100%;margin-top:3px;padding:2px;font-size:11px"><option value="c">تكلفة</option><option value="l">خسائر</option></select>';
+  const sel = '<select data-ivt aria-label="تحميل النقص على" style="display:none;width:100%;margin-top:3px;padding:2px;font-size:11px"><option value="c">تكلفة</option><option value="l">خسائر</option><option value="p">سنوات سابقة</option></select>';
   const row = (at, k, name, q, df) => '<tr><td class="l">' + esc(name) + '</td><td class="v">' + esc(fmt(q)) + (df > 0.0005 ? '<div class="neg" style="font-size:11px">الدفاتر ' + esc(fmt(q - df)) + '</div>' : '') + '</td><td class="v">' + (w ? '<input ' + at + '="' + esc(k) + '" data-sys="' + q + '" dir="ltr" inputmode="decimal" style="width:100%;padding:6px 2px;text-align:center">' : '') + '</td><td class="v ivd"><span class="ivs"></span>' + (w ? sel : '') + '</td></tr>';
   const hist = docsOf('ij').sort((a, b) => a.data.date < b.data.date ? 1 : -1);
   return '<div class="mrow"><label for="iv-d">تاريخ الجرد</label><input id="iv-d" type="date" value="' + esc(todayStr()) + '"></div>' +
-    '<div class="note np" style="padding:8px 14px">اكتب الكمية الفعلية للأصناف اللي عدّيتها بس (اللي تسيبه فاضي ما يتعدلش). الفرق بيتسجل قيد تسوية: النقص بتكلفة الدفعات الأقدم، والزيادة بآخر سعر شراء (للخام) وبتكلفة الوصفة (للمنتج التام). النقص بيظهر جنبه اختيار: «تكلفة» (بيتحمّل على تكلفة المبيعات) أو «خسائر» (تالف أو مرمي، بيظهر في بند «خسائر تالف مخزون» في قائمة الدخل ومش على التكلفة ولا مجمل الربح). الأصناف اللي رصيدها صفر ظاهرة كمان، والصنف اللي اتسحب منه أكتر من رصيده بيظهر تحته «الدفاتر» بالسالب: أول ما تكتب له الكمية الفعلية (حتى صفر) العجز بيتصفّى في قيد منفصل بيرجّع تكلفة الكمية الزيادة اللي اتحسبت، ومبيعملش مخزون وهمي.</div>' +
+    '<div class="note np" style="padding:8px 14px">اكتب الكمية الفعلية للأصناف اللي عدّيتها بس (اللي تسيبه فاضي ما يتعدلش). الفرق بيتسجل قيد تسوية: النقص بتكلفة الدفعات الأقدم، والزيادة بآخر سعر شراء (للخام) وبتكلفة الوصفة (للمنتج التام). النقص بيظهر جنبه اختيار: «سنوات سابقة» (تالف من سنة فاتت: بينقص المخزون وحقوق الملكية في الميزانية من غير ما يدخل قائمة الدخل خالص)، أو «تكلفة» (بيتحمّل على تكلفة المبيعات) أو «خسائر» (تالف أو مرمي، بيظهر في بند «خسائر تالف مخزون» في قائمة الدخل ومش على التكلفة ولا مجمل الربح). الأصناف اللي رصيدها صفر ظاهرة كمان، والصنف اللي اتسحب منه أكتر من رصيده بيظهر تحته «الدفاتر» بالسالب: أول ما تكتب له الكمية الفعلية (حتى صفر) العجز بيتصفّى في قيد منفصل بيرجّع تكلفة الكمية الزيادة اللي اتحسبت، ومبيعملش مخزون وهمي.</div>' +
     '<div class="note" style="padding:8px 14px 2px"><b>الخامات والعبوات</b></div>' + csTbl([34, 21, 22, 23], ['الصنف', 'النظام', 'الفعلي', 'الفرق'], rawL.length ? rawL.map(x => row('data-ivr', csKey(x.name), x.name, x.q, x.def || 0)).join('') : '<tr><td class="l" colspan="4">مفيش خامات في المخزون.</td></tr>') +
     '<div class="note" style="padding:12px 14px 2px"><b>المنتج التام</b></div>' + csTbl([34, 21, 22, 23], ['المنتج', 'النظام', 'الفعلي', 'الفرق'], fgL.length ? fgL.map(x => row('data-ivf', csKey(x.name), x.name, x.q)).join('') : '<tr><td class="l" colspan="4">مخزن المنتج التام فاضي.</td></tr>') +
     (w ? '<div class="mrow"><button class="btn" id="iv-save" style="width:100%">تسجيل الجرد وعمل التسوية</button></div>' : '') +
@@ -2636,18 +2637,18 @@ function prBodyInput(e) {
 }
 async function ivSave() {
   const D = fgData(), date = $('#iv-d').value; if (!date) { toast('اكتب تاريخ الجرد'); return; }
-  const ins = sel => [...document.querySelectorAll(sel)].filter(i => i.value.trim() !== '').map(i => { const s = i.closest('tr').querySelector('select[data-ivt]'); return { k:i.dataset.ivr || i.dataset.ivf, a:num(i.value), loss:!!(s && s.value === 'l') }; });
+  const ins = sel => [...document.querySelectorAll(sel)].filter(i => i.value.trim() !== '').map(i => { const s = i.closest('tr').querySelector('select[data-ivt]'); return { k:i.dataset.ivr || i.dataset.ivf, a:num(i.value), loss:!!(s && s.value === 'l'), prior:!!(s && s.value === 'p') }; });
   const rawIn = ins('[data-ivr]'), fgI = ins('[data-ivf]'); if (!rawIn.length && !fgI.length) { toast('اكتب الكمية الفعلية لصنف واحد على الأقل'); return; }
   const stock = csStock(), fm = fgStockMap(), now = Date.now(), ens = [], fas = [], rows = [], skipped = []; let no = Math.max(0, ...live().map(z => z.no || 0));
-  const mkE = (dr, cr, prod, qty, amt, loss) => ({ id:crypto.randomUUID(), no:++no, date, stmt:IV_ST, dr:loss ? 'المصروفات' : dr, cr, pa:loss ? SPOIL : '', pb:loss ? '' : 'جرد', prod, qty, disc:0, price:qty ? amt / qty : 0, amtD:amt, amtC:amt, star:false, opening:false, deleted:false, updated:now, dirty:true });
-  for (const { k, a, loss } of rawIn) { const x = stock.get(k); if (!x) continue; const df = x.def || 0;
+  const mkE = (dr, cr, prod, qty, amt, loss, prior) => ({ id:crypto.randomUUID(), no:++no, date, stmt:IV_ST, dr:loss ? 'المصروفات' : prior ? PRIOR_ACC : dr, cr, pa:loss ? SPOIL : '', pb:loss ? '' : 'جرد', prod, qty, disc:0, price:qty ? amt / qty : 0, amtD:amt, amtC:amt, star:false, opening:false, deleted:false, updated:now, dirty:true });
+  for (const { k, a, loss, prior } of rawIn) { const x = stock.get(k); if (!x) continue; const df = x.def || 0;
     if (df > 0.0005) { const pr0 = x.last > 0 ? x.last : x.L.length ? x.L[x.L.length - 1][1] : 0; if (pr0 > 0) { const e0 = mkE(CS_RAW, CS_COGS, x.name, df, df * pr0); e0.pb = 'جرد عجز'; ens.push(e0); rows.push({ g:'raw', name:x.name, sys:x.q - df, act:x.q, diff:df, amt:df * pr0, to:'s' }); } } /* تصفية العجز: بيرجّع التكلفة اللي اتحسبت زيادة */
     const diff = a - x.q; if (Math.abs(diff) < 0.0005) continue;
-    if (diff < 0) { const amt = csTake(x, -diff); ens.push(mkE(CS_COGS, CS_RAW, x.name, -diff, amt, loss)); rows.push({ g:'raw', name:x.name, sys:x.q, act:a, diff, amt:-amt, to:loss ? 'l' : 'c' }); }
+    if (diff < 0) { const amt = csTake(x, -diff); ens.push(mkE(CS_COGS, CS_RAW, x.name, -diff, amt, loss, prior)); rows.push({ g:'raw', name:x.name, sys:x.q, act:a, diff, amt:-amt, to:loss ? 'l' : prior ? 'p' : 'c' }); }
     else { const pr = x.last > 0 ? x.last : x.L.length ? x.L[x.L.length - 1][1] : 0; if (!(pr > 0)) { skipped.push(x.name); continue; } ens.push(mkE(CS_RAW, CS_COGS, x.name, diff, diff * pr)); rows.push({ g:'raw', name:x.name, sys:x.q, act:a, diff, amt:diff * pr }); } }
-  for (const { k, a, loss } of fgI) { const x = fm.get(k); if (!x) continue; const diff = a - x.q; if (Math.abs(diff) < 0.0005) continue; const f = fgMatch(x.name);
+  for (const { k, a, loss, prior } of fgI) { const x = fm.get(k); if (!x) continue; const diff = a - x.q; if (Math.abs(diff) < 0.0005) continue; const f = fgMatch(x.name);
     if (diff < 0) { let need = -diff, amt = 0; for (const l of x.L) { if (need <= 1e-9) break; const t = Math.min(need, l[0]); amt += t * l[1]; need -= t; } if (need > 1e-9 && f) amt += need * fgCost(D, f.p, f.z);
-      const e = mkE(CS_COGS, FG_STOCK, x.name, -diff, amt, loss); ens.push(e); fas.push({ key:x.name, units:diff, cost:amt / -diff, date, e:[e.id] }); rows.push({ g:'fg', name:x.name, sys:x.q, act:a, diff, amt:-amt, to:loss ? 'l' : 'c' }); }
+      const e = mkE(CS_COGS, FG_STOCK, x.name, -diff, amt, loss, prior); ens.push(e); fas.push({ key:x.name, units:diff, cost:amt / -diff, date, e:[e.id] }); rows.push({ g:'fg', name:x.name, sys:x.q, act:a, diff, amt:-amt, to:loss ? 'l' : prior ? 'p' : 'c' }); }
     else { const cu = f ? fgCost(D, f.p, f.z) : 0; if (!(cu > 0)) { skipped.push(x.name); continue; } const e = mkE(FG_STOCK, CS_COGS, x.name, diff, diff * cu); ens.push(e); fas.push({ key:x.name, units:diff, cost:cu, date, e:[e.id] }); rows.push({ g:'fg', name:x.name, sys:x.q, act:a, diff, amt:diff * cu }); } }
   if (!ens.length) { toast(skipped.length ? 'مفيش سعر نحسب بيه الزيادة: ' + skipped.join('، ') : 'مفيش فروق'); return; }
   for (const en of ens) { S.ent.set(en.id, en); await entPut(en); }
@@ -3197,7 +3198,7 @@ function yrK(Y) {
   const days = Math.max(1, Math.round((new Date(to) - new Date(Y + '-01-01')) / 864e5) + 1), r = (a, b) => b && Math.abs(b) > 0.5 ? a / b : null;
   const cash = n('الخزينة') + n('خزينة.خاصة') + n('البنك'), inv = n('المخزون.الخام') + n('مخزن منتج تام') + n('مخزن فلفل'), rec = n('العملاء');
   const cur = cash + inv + rec + n('ارصدة مدينة اخري') + n('العهد.الماليه'), sup = -n('الموردين'), liab = sup - n('ارصده.دائنه.اخري');
-  const eq = -n('رأس.مال') - n('جاري.الشركاء') + B.np - B.dep, wd = P.d('جاري.الشركاء');
+  const eq = -n('رأس.مال') - n('جاري.الشركاء') - n(PRIOR_ACC) + B.np - B.dep, wd = P.d('جاري.الشركاء');
   return { to, days, P, B, cash, inv, rec, sup, liab, cur, eq, wd, gm:r(P.gross * 100, P.net), nm:r(P.pre * 100, P.net), ex:r((P.oper + P.admin + P.sell + P.sal) * 100, P.net), cr:r(cur, liab),
     dso:r(rec * days, P.net), dpo:r(sup * days, P.pur), dio:r(inv * days, P.cogs), roe:r(P.np * 100, eq), wdp:r(wd * 100, P.np) };
 }
@@ -3521,7 +3522,8 @@ async function importFile(file) {
 }
 
 /* ---------- entry form ---------- */
-const BASE_ACCOUNTS = ['الخزينة','خزينة.خاصة','البنك','مبيعات منتج تام','المشتريات','العملاء','الموردين','جاري.الشركاء','رأس.مال','المخزون.الخام','الايرادات','المصروفات','ارصدة مدينة اخري','ارصده.دائنه.اخري','اصول.ثابتة','تكلفة المبيعات','العهد.الماليه','المرتبات','مخزن منتج تام','مجمع.الاهلاك','مسموحات المبيعات','مبيعات توريد'];
+const PRIOR_ACC = 'تسويات.سنوات.سابقة';
+const BASE_ACCOUNTS = ['الخزينة','خزينة.خاصة','البنك','مبيعات منتج تام','المشتريات','العملاء','الموردين','جاري.الشركاء','رأس.مال','المخزون.الخام','الايرادات','المصروفات','ارصدة مدينة اخري','ارصده.دائنه.اخري','اصول.ثابتة','تكلفة المبيعات','العهد.الماليه','المرتبات','مخزن منتج تام','مجمع.الاهلاك','مسموحات المبيعات','مبيعات توريد',PRIOR_ACC];
 const arSort = (x, y) => x.localeCompare(y, 'ar');
 const cl = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 function accountList() {
@@ -3806,7 +3808,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.40';
+const VER = '1.41';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
