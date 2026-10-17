@@ -23,10 +23,15 @@ html,body{overscroll-behavior-y:none}
 #ptr.on{transform:translate(-50%,calc(env(safe-area-inset-top) + 12px))}
 button,input,select{font:inherit;color:inherit}
 svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
-#vl-prev{position:fixed;top:0;left:0;right:0;z-index:70;background:#7A3E00;color:#fff;padding:calc(env(safe-area-inset-top) + 6px) 12px 6px;display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:13px;line-height:1.4}
-#vl-prev button{background:#fff;color:#7A3E00;border:0;border-radius:8px;padding:6px 10px;font-weight:700;white-space:nowrap}
-body.vlp{padding-top:calc(env(safe-area-inset-top) + 48px)}
-body.vlp header{top:calc(env(safe-area-inset-top) + 48px)}
+#vl-prev{position:fixed;top:0;left:0;right:0;z-index:70;background:#7A3E00;color:#fff;padding:calc(env(safe-area-inset-top) + 6px) 12px 8px;font-size:13px;line-height:1.4}
+#vl-prev .r1{display:flex;gap:8px;align-items:center;justify-content:space-between}
+#vl-prev .r2{display:flex;gap:8px;align-items:center;margin-top:6px}
+#vl-prev .r2 input{flex:1;min-width:0;min-height:0;height:24px;padding:0;border:0;background:transparent;accent-color:#fff}
+#vl-prev button{background:#fff;color:#7A3E00;border:0;border-radius:8px;padding:6px 10px;font-weight:700;white-space:nowrap;min-height:0}
+body.vlp{padding-top:var(--vlh,48px)}
+body.vlp header{top:var(--vlh,48px)}
+#vl-dot{position:fixed;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:rgba(232,60,60,.45);border:2px solid #E83C3C;z-index:90;pointer-events:none}
+@keyframes vldot{from{transform:scale(.4);opacity:1}to{transform:scale(1.6);opacity:.2}}
 header{position:sticky;top:0;z-index:5;background:var(--paper);padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
 header img{height:36px;width:auto;display:block}
 header .t{flex:1;line-height:1.25}
@@ -302,7 +307,8 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
 </div>
 
 <div id="app" class="hide">
-  <div id="vl-prev" class="hide"><span id="vl-prev-t"></span><button id="vl-prev-x">إنهاء المعاينة</button></div>
+  <div id="vl-prev" class="hide"><div class="r1"><span id="vl-prev-t"></span><button id="vl-prev-x">إنهاء</button></div><div class="r2"><button id="vl-pp">▶</button><button id="vl-sp">1×</button><input type="range" id="vl-rg" min="0" max="1000" value="0"><span id="vl-tm" dir="ltr"></span></div></div>
+  <div id="vl-dot" class="hide"></div>
   <header id="hdr">
     <img src="logo.png" alt="Vegan">
     <div class="t"><h1>Vegan food</h1><small>الإدارة المالية</small></div>
@@ -573,7 +579,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
       </div></details>
 
       <details class="sec hide" id="s-vl"><summary>سجل المشاهدين</summary><div class="in">
-        <p class="note" style="margin-top:0">للمالك فقط. بيعرض كل شريك (مشاهدة): فاتح دلوقتي ولا لأ، وبيعمل إيه لحظة بلحظة، وجلساته ومدتها والصفحات اللي دخلها.</p>
+        <p class="note" style="margin-top:0">للمالك فقط. بيعرض كل شريك (مشاهدة): فاتح دلوقتي ولا لأ، وبيعمل إيه لحظة بلحظة، وجلساته ومدتها والصفحات اللي دخلها. وتقدر تعيد تشغيل أي جلسة زي الفيديو بالسرعة اللي تحبها.</p>
         <div id="vl-box"><div class="note">جاري التحميل...</div></div>
       </div></details>
 
@@ -3815,7 +3821,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.44';
+const VER = '1.45';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -3929,6 +3935,26 @@ const vlOn = () => !!(S.profile && S.profile.role === 'partner' && S.session);
 function vlLabel(v) { const t = VL_AR[v] || v, d = v === 'acc' ? S.acc : v === 'stm' ? S.party_ : ''; return typeof d === 'string' && d ? t + ': ' + d : t; }
 function vlStart(v) { const now = Date.now(); S.vl = { id:uid8() + uid8(), uid:S.session.user.id, start:now, last:now, tk:now, fl:0, act:0, views:[], dirty:true }; vlPush(v); }
 function vlPush(v) { const c = S.vl, l = vlLabel(v), x = c.views[c.views.length - 1]; if (x && x.l === l) return; c.views.push({ l, v, t:Date.now(), s:0, st:vlSnap(v) }); if (c.views.length > 200) c.views.shift(); c.dirty = true; }
+function vlEv(a) {
+  if (!vlOn() || !S.vl || document.hidden) return; const c = S.vl, x = c.views[c.views.length - 1]; if (!x) return;
+  x.ev = x.ev || []; if (x.ev.length >= 150 || (c.nev || 0) >= 1500) return; c.nev = (c.nev || 0) + 1;
+  a.unshift(Math.round(Date.now() - x.t)); x.ev.push(a); c.dirty = true;
+}
+function vlStChk() {
+  const c = S.vl; if (!vlOn() || !c) return; const x = c.views[c.views.length - 1]; if (!x || !x.v || x.v !== S.view) return;
+  const sn = vlSnap(x.v), cur = x.sc || x.st; if (JSON.stringify(sn) !== JSON.stringify(cur)) { x.sc = sn; vlEv(['st', sn]); }
+}
+let vlScT = null; const vlCT = {};
+document.addEventListener('scroll', e => {
+  if (!vlOn()) return; const t = e.target;
+  if (t === document || t === document.documentElement || t === document.body) { clearTimeout(vlScT); vlScT = setTimeout(() => { const m = document.documentElement.scrollHeight - innerHeight; vlEv(['s', m > 0 ? Math.round(scrollY / m * 1000) : 0]); }, 200); }
+  else if (t.classList && t.classList.contains('tbw')) {
+    const i = [...document.querySelectorAll('#v-' + S.view + ' .tbw')].indexOf(t); if (i < 0) return; clearTimeout(vlCT[i]);
+    vlCT[i] = setTimeout(() => { const mx = t.scrollWidth - t.clientWidth, my = t.scrollHeight - t.clientHeight; vlEv(['c', i, mx > 0 ? Math.round(Math.abs(t.scrollLeft) / mx * 1000) : 0, my > 0 ? Math.round(t.scrollTop / my * 1000) : 0]); }, 200);
+  }
+}, true);
+document.addEventListener('pointerdown', e => { if (!vlOn()) return; vlEv(['t', Math.round(e.clientX / innerWidth * 1000), Math.round(e.clientY / innerHeight * 1000)]); setTimeout(vlStChk, 300); }, true);
+document.addEventListener('change', () => setTimeout(vlStChk, 100), true);
 function vlTick() {
   if (!vlOn()) return; const now = Date.now();
   if (!S.vl) { vlStart(S.view || 'home'); return; }
@@ -3937,7 +3963,7 @@ function vlTick() {
   if (now - c.last > 30 * 60000) { const old = S.vl; S.vl = null; vlFlush(old); vlStart(S.view || 'home'); return; }
   const dt = Math.min(now - c.tk, 10000); c.tk = now; c.last = now; c.act += dt;
   const x = c.views[c.views.length - 1]; if (x) x.s += dt;
-  if (x && x.v && x.v === S.view) { const sn = vlSnap(x.v); if (JSON.stringify(sn) !== JSON.stringify(x.st)) x.st = sn; }
+  vlStChk();
   c.dirty = true;
   if (now - c.fl > 10000) vlFlush(c);
 }
@@ -3945,7 +3971,7 @@ function vlNav(v) { if (!vlOn()) return; vlTick(); if (S.vl) vlPush(v); }
 async function vlFlush(c = S.vl) {
   if (!c || !vlOn() || c.busy || !c.dirty || !navigator.onLine) return;
   c.busy = true; c.fl = Date.now(); c.dirty = false;
-  try { await api('/rest/v1/rpc/log_view', { method:'POST', body:{ p_id:c.id, p_started:c.start, p_last:c.last, p_active:Math.round(c.act / 1000), p_views:c.views.map(x => ({ l:x.l, v:x.v, t:x.t, s:Math.round(x.s / 1000), st:x.st })) } }); }
+  try { await api('/rest/v1/rpc/log_view', { method:'POST', body:{ p_id:c.id, p_started:c.start, p_last:c.last, p_active:Math.round(c.act / 1000), p_views:c.views.map(x => ({ l:x.l, v:x.v, t:x.t, s:Math.round(x.s / 1000), st:x.st, ev:x.ev })) } }); }
   catch (e) { c.dirty = true; }
   c.busy = false; if (c === S.vl) { try { await kvSet('vl', c); } catch (e) {} }
 }
@@ -3961,17 +3987,68 @@ const vlHM = ms => new Date(+ms).toLocaleTimeString('en-GB', { hour:'2-digit', m
 const vlWhen = ms => new Date(+ms).toLocaleDateString('en-GB') + ' ' + vlHM(ms);
 const vlStTxt = x => { const q = x.st || {}, m = q.accMonth || q.stmMonth || q.month || q.tbMonth || q.lgMonth || q.isMonth || q.bsMonth || q.dbMonth || q.hrMonth || q.dpMonth; return m && m !== '*' ? ' <small>(' + esc(String(m)) + ')</small>' : ''; };
 const vlCan = x => !!(x && x.v && VIEWS.includes(x.v) && x.v !== 'form' && x.v !== 'set');
-const vlSteps = (v, n, rid) => { v = v || []; const a = Math.max(0, v.length - n); return v.slice(a).map((x, i) => [x, a + i]).reverse().map(([x, i]) => '<div class="kv"><span>' + esc(x.l) + vlStTxt(x) + '</span><span dir="ltr">' + vlHM(x.t) + ' · ' + vlDur(x.s) + (vlCan(x) ? ' <button class="btn ghost" style="min-height:0;padding:2px 10px;font-size:12px" data-vp="' + esc(String(rid)) + ':' + i + '">معاينة</button>' : '') + '</span></div>').join(''); };
-function vlBanner() { const p = S.vlPrev; document.body.classList.toggle('vlp', !!p); $('#vl-prev').classList.toggle('hide', !p); if (p) $('#vl-prev-t').textContent = '👁 معاينة لما شافه ' + p.who + ' الساعة ' + vlHM(p.t) + ' (شاشة: ' + p.l + ') · الأرقام الحالية مش وقت دخوله'; }
-function vlPreview(ref) {
-  const k = ref.lastIndexOf(':'), rid = ref.slice(0, k), i = +ref.slice(k + 1), d = S.vlData && S.vlData[rid], x = d && d.v[i];
-  if (!vlCan(x)) { toast('المعاينة مش متاحة للخطوة دي'); return; }
-  for (const key in (x.st || {})) S[key] = x.st[key];
+const vlSteps = (v, n, rid) => { v = v || []; const a = Math.max(0, v.length - n); return v.slice(a).map((x, i) => [x, a + i]).reverse().map(([x, i]) => '<div class="kv"><span>' + esc(x.l) + vlStTxt(x) + '</span><span dir="ltr">' + vlHM(x.t) + ' · ' + vlDur(x.s) + (vlCan(x) ? ' <button class="btn ghost" style="min-height:0;padding:2px 10px;font-size:12px" data-vp="' + esc(String(rid)) + ':' + i + '">▶ من هنا</button>' : '') + '</span></div>').join(''); };
+const R = { on:false, speed:1 };
+const vlMS = ms => { const n = Math.round(ms / 1000); return Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0'); };
+function vlBuild(rid) {
+  const d = S.vlData && S.vlData[rid]; if (!d) return null; let t0 = 0; const vs = [];
+  (d.v || []).forEach((x, i) => { const ev = x.ev || [], last = ev.length ? ev[ev.length - 1][0] : 0, dur = Math.max(1500, (x.s || 0) * 1000, last + 300); vs.push({ x, i, a:t0, dur }); t0 += dur; });
+  return { rid, who:d.who, vs, total:t0 };
+}
+function vlApplyVisit(z) {
+  const x = z.x; R.label = x.l; R.at = x.t; if (!vlCan(x)) return;
+  for (const k in (x.st || {})) S[k] = x.st[k];
   if (x.v === 'acc' && $('#acc-q')) $('#acc-q').value = S.accQ || '';
   if (x.v === 'list' && $('#f-q')) $('#f-q').value = S.q || '';
-  S.vlPrev = { who:d.who, l:x.l, t:x.t }; vlBanner(); S.stack.push('set'); go(x.v);
+  R.curView = x.v; go(x.v);
 }
-function vlPrevEnd() { S.vlPrev = null; vlBanner(); go('set'); const d = $('#s-vl'); S.vlSig = ''; if (d) { d.open = true; vlLoad(); } }
+function vlDot(fx, fy) {
+  const d = $('#vl-dot'); d.style.left = (fx / 1000 * innerWidth) + 'px'; d.style.top = (fy / 1000 * innerHeight) + 'px';
+  d.classList.remove('hide'); d.style.animation = 'none'; void d.offsetWidth; d.style.animation = 'vldot .6s ease-out';
+  clearTimeout(R.dt); R.dt = setTimeout(() => d.classList.add('hide'), 600);
+}
+function vlApplyEv(e, seek) {
+  const t = e[1];
+  if (t === 's') { const m = document.documentElement.scrollHeight - innerHeight; window.scrollTo(0, m > 0 ? m * e[2] / 1000 : 0); }
+  else if (t === 'c') { const el = document.querySelectorAll('#v-' + S.view + ' .tbw')[e[2]]; if (el) { const mx = el.scrollWidth - el.clientWidth, my = el.scrollHeight - el.clientHeight, rtl = getComputedStyle(el).direction === 'rtl'; el.scrollLeft = (rtl ? -1 : 1) * mx * e[3] / 1000; el.scrollTop = my * e[4] / 1000; } }
+  else if (t === 't') { if (!seek) vlDot(e[2], e[3]); }
+  else if (t === 'st') { if (R.curView === S.view && e[2]) { Object.assign(S, e[2]); if (S.view === 'acc' && $('#acc-q')) $('#acc-q').value = S.accQ || ''; draw(S.view); } }
+}
+function vlStep(prev, T, seek) {
+  const b = R.b; let k = b.vs.findIndex(z => T >= z.a && T < z.a + z.dur); if (k < 0) k = b.vs.length - 1; const z = b.vs[k];
+  if (k !== R.cur) { R.cur = k; vlApplyVisit(z); if (!seek) prev = z.a - 1; }
+  if (seek) return;
+  for (const e of (z.x.ev || [])) { const et = z.a + Math.min(e[0], z.dur); if (et > prev && et <= T) vlApplyEv(e, false); }
+}
+function vlSeek(T) {
+  const b = R.b; T = Math.max(0, Math.min(b.total, T)); R.T = T; R.cur = -1; vlStep(T, T, true);
+  const k = R.cur, z = b.vs[k];
+  setTimeout(() => { if (!R.on || R.cur !== k) return; for (const e of (z.x.ev || [])) { const et = z.a + Math.min(e[0], z.dur); if (et <= T && e[1] !== 't') vlApplyEv(e, true); } }, 160);
+}
+function vlUi() {
+  const b = R.b; if (!b) return;
+  $('#vl-prev-t').textContent = (R.play ? '▶ ' : '⏸ ') + b.who + ' · ' + (R.label || '') + (R.at ? ' · ' + vlHM(R.at) : '');
+  $('#vl-pp').textContent = R.play ? '⏸' : '▶'; $('#vl-sp').textContent = R.speed + '×';
+  if (!R.drag) $('#vl-rg').value = b.total ? Math.round(R.T / b.total * 1000) : 0;
+  $('#vl-tm').textContent = vlMS(R.T) + '/' + vlMS(b.total);
+  document.body.style.setProperty('--vlh', $('#vl-prev').offsetHeight + 'px');
+}
+function vlLoop(now) {
+  if (!R.on) return; const dt = now - R.last; R.last = now;
+  if (R.play) { const prev = R.T; R.T = Math.min(R.b.total, R.T + dt * R.speed); vlStep(prev, R.T, false); if (R.T >= R.b.total) R.play = false; }
+  if (now - (R.ui || 0) > 120) { R.ui = now; vlUi(); }
+  R.raf = requestAnimationFrame(vlLoop);
+}
+function vlPlay(rid, k, paused) {
+  const b = vlBuild(rid); if (!b || !b.vs.some(z => vlCan(z.x))) { toast('الجلسة دي اتسجلت قبل التحديث، مش قابلة للتشغيل'); return; }
+  if (R.on) cancelAnimationFrame(R.raf); else S.stack.push('set');
+  R.b = b; R.on = true; R.play = !paused; R.last = performance.now(); R.ui = 0; R.drag = false;
+  document.body.classList.add('vlp'); $('#vl-prev').classList.remove('hide');
+  vlSeek(k != null ? b.vs[k].a : 0); vlUi(); R.raf = requestAnimationFrame(vlLoop);
+}
+function vlPreview(ref) { const k = ref.lastIndexOf(':'); vlPlay(ref.slice(0, k), +ref.slice(k + 1), true); }
+function vlStop() { R.on = false; cancelAnimationFrame(R.raf); $('#vl-prev').classList.add('hide'); $('#vl-dot').classList.add('hide'); document.body.classList.remove('vlp'); }
+function vlPrevEnd() { vlStop(); if (S.stack[S.stack.length - 1] === 'set') S.stack.pop(); go('set'); const d = $('#s-vl'); S.vlSig = ''; if (d) { d.open = true; vlLoad(); } }
 async function vlLoad() {
   const box = $('#vl-box'); if (!box || S.vlBusy) return; S.vlBusy = true;
   try {
@@ -3984,9 +4061,9 @@ async function vlLoad() {
     box.innerHTML = us.map(u => {
       const L = rows.filter(r => r.user_id === u.id), cur = L[0], live = !!cur && now - +cur.last_ms < 45000, tot = L.reduce((a, r) => a + (+r.active_s || 0), 0), k = 'u' + u.id;
       let h = '<div class="box" style="margin-top:8px"><div class="kv"><span>' + esc(u.full_name || u.email) + '</span><span>' + (live ? '🟢 فاتح دلوقتي' : cur ? 'آخر نشاط ' + vlWhen(cur.last_ms) : 'لسه ما دخلش') + '</span></div>';
-      if (live) { const v = cur.views || [], l = v[v.length - 1]; h += '<div class="note" style="margin-top:4px"><b>دلوقتي في:</b> ' + esc(l ? l.l : '—') + '</div><div class="note">خطواته في الجلسة دي (الأحدث فوق):</div>' + vlSteps(v, 15, cur.id); }
+      if (live) { const v = cur.views || [], l = v[v.length - 1]; h += '<div class="note" style="margin-top:4px"><b>دلوقتي في:</b> ' + esc(l ? l.l : '—') + '</div><div class="note">خطواته في الجلسة دي (الأحدث فوق):</div><button class="btn" data-vpl="' + cur.id + '" style="min-height:0;padding:6px 12px;margin:6px 0">▶ شغّل الجلسة</button>' + vlSteps(v, 15, cur.id); }
       if (L.length) h += '<details class="sec" style="margin-top:8px"' + (S.vlOpen.has(k) ? ' open' : '') + '><summary data-k="' + k + '">الجلسات (' + L.length + ') · إجمالي ' + vlDur(tot) + '</summary><div class="in">' +
-        L.slice(0, 30).map(r => { const kk = 's' + r.id; return '<details class="sec" style="margin-top:6px"' + (S.vlOpen.has(kk) ? ' open' : '') + '><summary data-k="' + kk + '">' + vlWhen(r.started_ms) + ' · ' + vlDur(r.active_s) + '</summary><div class="in">' + (vlSteps(r.views, 60, r.id) || '<div class="note">مفيش صفحات.</div>') + '</div></details>'; }).join('') + '</div></details>';
+        L.slice(0, 30).map(r => { const kk = 's' + r.id; return '<details class="sec" style="margin-top:6px"' + (S.vlOpen.has(kk) ? ' open' : '') + '><summary data-k="' + kk + '">' + vlWhen(r.started_ms) + ' · ' + vlDur(r.active_s) + '</summary><div class="in"><button class="btn" data-vpl="' + r.id + '" style="min-height:0;padding:6px 12px;margin-bottom:6px">▶ شغّل الجلسة</button>' + (vlSteps(r.views, 60, r.id) || '<div class="note">مفيش صفحات.</div>') + '</div></details>'; }).join('') + '</div></details>';
       return h + '</div>';
     }).join('');
   } catch (e) { box.innerHTML = '<div class="note">' + (e.net ? 'مفيش اتصال بالسيرفر.' : /view_log|relation|404|PGRST/i.test(String(e.message) + e.status) ? 'لازم تشغّل ملف 05_view_log.sql في Supabase مرة واحدة عشان السجل يشتغل.' : esc(srvMsg(e.message))) + '</div>'; }
@@ -4163,8 +4240,12 @@ async function init() {
   setInterval(() => { if (!document.hidden && S.session) sync(); }, 120000);
   setInterval(vlTick, 5000);
   $('#vl-prev-x').onclick = vlPrevEnd;
+  $('#vl-pp').onclick = () => { if (!R.on) return; if (!R.play && R.T >= R.b.total - 1) vlSeek(0); R.play = !R.play; R.last = performance.now(); vlUi(); };
+  $('#vl-sp').onclick = () => { const a = [1, 2, 4, 8, 16]; R.speed = a[(a.indexOf(R.speed) + 1) % a.length]; vlUi(); };
+  $('#vl-rg').oninput = e => { if (R.on) { R.drag = true; vlSeek(+e.target.value / 1000 * R.b.total); vlUi(); } };
+  $('#vl-rg').onchange = () => { R.drag = false; };
   $('#s-vl').ontoggle = () => { clearInterval(S.vlPoll); if ($('#s-vl').open) { S.vlSig = ''; vlLoad(); S.vlPoll = setInterval(() => { if (!document.hidden && $('#s-vl').open && S.view === 'set') vlLoad(); }, 8000); } };
-  $('#vl-box').addEventListener('click', e => { const vp = e.target.closest('[data-vp]'); if (vp) { vlPreview(vp.dataset.vp); return; } const sm = e.target.closest('summary[data-k]'); if (!sm) return; S.vlOpen = S.vlOpen || new Set(); const k = sm.dataset.k; if (S.vlOpen.has(k)) S.vlOpen.delete(k); else S.vlOpen.add(k); });
+  $('#vl-box').addEventListener('click', e => { const pl = e.target.closest('[data-vpl]'); if (pl) { vlPlay(pl.dataset.vpl); return; } const vp = e.target.closest('[data-vp]'); if (vp) { vlPreview(vp.dataset.vp); return; } const sm = e.target.closest('summary[data-k]'); if (!sm) return; S.vlOpen = S.vlOpen || new Set(); const k = sm.dataset.k; if (S.vlOpen.has(k)) S.vlOpen.delete(k); else S.vlOpen.add(k); });
   S.session = await kvGet('session');
   if (S.session) await start(); else showLogin('');
 }
