@@ -2016,14 +2016,13 @@ function fgPriceHTML(D, w) {
   const P = plData() || Object.assign({ v:1 }, PL_SEED), K = S.plK === 'برطمان' ? 'J' : 'B', L = P[K], kind = K === 'J' ? 'برطمان' : 'جردل', custom = S.plMode === 'c', X = !!S.plX, sel = plSelGet(K), f = x => esc(fmt0(x));
   const ctl = '<div class="mrow"><div class="seg" style="margin:0"><button class="' + (K === 'B' ? 'on' : '') + '" data-plk="جردل">جرادل</button><button class="' + (K === 'J' ? 'on' : '') + '" data-plk="برطمان">برطمانات</button></div></div>' +
     '<div class="mrow"><div class="seg" style="margin:0"><button class="' + (custom ? '' : 'on') + '" data-plm="f">قائمة كاملة</button><button class="' + (custom ? 'on' : '') + '" data-plm="c">قائمة مخصصة</button></div></div>' +
-    (custom ? '<div class="mrow"><input id="pl-title" placeholder="اسم العميل / عنوان القائمة (اختياري)" value="' + esc(S.plTitle || '') + '"></div><div class="mrow"><button class="btn" id="pl-sel" style="width:100%">اختيار من قائمة ' + (K === 'B' ? 'الجرادل' : 'البرطمانات') + ' (' + [...sel].filter(id => L.secs.some(s => s.items.some(i => i.id === id))).length + ')</button></div><div class="mrow"><button class="btn" id="pl-fx" style="width:100%">＋ منتجات من شيت المنتجات (' + plXGet(K).length + ')</button></div>' : '') +
+    (custom ? '<div class="mrow"><input id="pl-title" placeholder="اسم العميل / عنوان القائمة (اختياري)" value="' + esc(S.plTitle || '') + '"></div><div class="mrow"><button class="btn" id="pl-sel" style="width:100%">اختيار من قائمة ' + (K === 'B' ? 'الجرادل' : 'البرطمانات') + ' (' + [...sel].filter(id => L.secs.some(s => s.items.some(i => i.id === id))).length + ')</button></div><div class="mrow"><button class="btn" id="pl-fx" style="width:100%">＋ منتجات من شيت المنتجات (' + (plXGet('B').length + plXGet('J').length + plXGet('O').length) + ')</button></div>' : '') +
     '<div class="mrow" style="display:flex;gap:8px"><button class="btn ghost" data-plx="1" style="flex:1">' + (X ? 'إخفاء التكلفة والربح' : 'إظهار التكلفة والربح') + '</button>' + (w && !custom ? '<button class="btn ghost" id="pl-add" style="flex:1">＋ صنف</button><button class="btn ghost" id="pl-adds" style="flex:1">＋ قسم</button>' : '') + '</div>' + (w ? '<div class="mrow" style="display:flex;gap:8px"><button class="btn ghost" id="pl-hd" style="flex:1">بيانات رأس القائمة</button><button class="btn ghost" id="pl-nt" style="flex:1">ملاحظات القائمة</button></div>' : '');
   const head = '<div class="hrow" style="text-align:center"><div class="n">' + esc(L.head) + '</div><div class="note">' + esc(L.contact) + '</div>' + (custom && cl(S.plTitle) ? '<div class="n" style="margin-top:6px">' + esc(S.plTitle) + '</div>' : '') + '</div>';
   let no = 0;
   const mk = K => { /* جدول لنوع عبوة واحد (القائمة المخصصة بتجمع الأنواع كلها) */
-  const L = P[K] || { secs:[] }, kind = K === 'J' ? 'برطمان' : 'جردل', sel = plSelGet(K); let cols, wd, th;
-  if (K === 'O') { th = X ? ['م', 'الصنف', 'السعر', 'التكلفة', 'الربح'] : ['م', 'الصنف', 'العبوة', 'السعر']; wd = X ? [8, 40, 17, 17, 18] : [8, 46, 22, 24]; }
-  else if (K === 'B') { th = X ? ['م', 'الصنف', 'سعر الجردل', 'التكلفة', 'الربح', '%'] : ['م', 'الصنف', 'وزن الصافي', 'وزن المصفي', 'سعر الكيلو', 'سعر الجردل']; wd = X ? [7, 37, 16, 14, 13, 13] : [7, 33, 14, 14, 16, 16]; }
+  const L = P[K], kind = K === 'J' ? 'برطمان' : 'جردل', sel = plSelGet(K); let cols, wd, th;
+  if (K === 'B') { th = X ? ['م', 'الصنف', 'سعر الجردل', 'التكلفة', 'الربح', '%'] : ['م', 'الصنف', 'وزن الصافي', 'وزن المصفي', 'سعر الكيلو', 'سعر الجردل']; wd = X ? [7, 37, 16, 14, 13, 13] : [7, 33, 14, 14, 16, 16]; }
   else { th = X ? ['م', 'الصنف', 'سعر 720', 'تكلفة 720', 'سعر 1050', 'تكلفة 1050'] : ['م', 'الصنف', 'الصافي', 'المصفي', 'سعر 720', 'الصافي', 'المصفي', 'سعر 1050']; wd = X ? [7, 33, 15, 15, 15, 15] : [6, 29, 10, 10, 12, 10, 10, 13]; }
   cols = th.length;
   const wt = (g, d, et) => et || (g ? fmt(g) : '');
@@ -2033,7 +2032,6 @@ function fgPriceHTML(D, w) {
   const body = secs.map(sec => {
     const items = sec.items.filter(it => !custom || it.x || sel.has(it.id)); if (!items.length) return '';
     return '<tr class="h"><td class="l" colspan="' + cols + '">' + esc(sec.t) + '</td></tr>' + items.map(it => { no++; const m = custom ? no : it.m, pb = it.pk && it.d ? it.pk * it.d : null, tr0 = '<tr' + (w && !custom ? ' data-pli="' + it.id + '" style="cursor:pointer"' : '') + (it.x ? ' data-plxi="' + it.id + '" style="cursor:pointer"' : '') + '><td class="v">' + esc(m) + '</td><td class="l">' + esc(it.n) + (it.note ? '<small style="display:block;color:var(--muted)">' + esc(it.note) + '</small>' : '') + '</td>';
-      if (K === 'O') { const c = it.pz ? fgCost(D, it.pz[0], it.pz[1]) : null; return X ? tr0 + '<td class="v">' + f(it.pr) + '</td><td class="v">' + (c != null ? f(c) : '') + '</td><td class="v' + (c != null && it.pr < c ? ' neg' : '') + '">' + (c != null ? f(it.pr - c) : '') + '</td></tr>' : tr0 + '<td class="v">' + esc(it.cn || '') + '</td><td class="v">' + f(it.pr) + '</td></tr>'; }
       if (K === 'B') { if (X) { const c = plCost(D, kind, it), pr = pb != null ? pb : it.pk; return tr0 + '<td class="v">' + f(pr) + '</td><td class="v">' + (c != null ? f(c) : '') + '</td><td class="v">' + (c != null ? f(pr - c) : '') + '</td><td class="v' + (c != null && pr < c ? ' neg' : '') + '">' + (c ? f((pr - c) / c * 100) + '%' : '') + '</td></tr>'; }
         return tr0 + '<td class="v">' + esc(it.et || wt(it.e)) + '</td><td class="v">' + esc(it.d ? fmt(it.d) : '') + '</td><td class="v">' + (it.pk != null ? f(it.pk) : '-') + '</td><td class="v">' + (pb != null ? f(pb) : '') + '</td></tr>'; }
       if (X) { const c1 = plCost(D, kind, it, '720'), c2 = plCost(D, kind, it, '1050'); return tr0 + '<td class="v">' + (it.p1 != null ? f(it.p1) : '-') + '</td><td class="v">' + (c1 != null ? f(c1) : '') + '</td><td class="v">' + (it.p2 != null ? f(it.p2) : '-') + '</td><td class="v">' + (c2 != null ? f(c2) : '') + '</td></tr>'; }
@@ -2041,7 +2039,30 @@ function fgPriceHTML(D, w) {
   }).join('');
   return { body, wd, th };
   };
-  const parts = (custom ? ['B', 'J', 'O'] : [K]).map(k => { const r = mk(k); return r.body ? (custom ? '<div class="hrow" style="margin-top:8px"><div class="n">' + (k === 'B' ? 'الجرادل' : k === 'J' ? 'البرطمانات' : 'علب وأنواع تانية') + '</div></div>' : '') + csTbl(r.wd, r.th, r.body) : ''; }).join('');
+  const mkC = () => { /* القائمة المخصصة: جدول واحد لكل أنواع العبوات وفيه عمود «نوع العبوة» */
+    const cnB = d => { const c = D.cont.find(q => q.k === 'جردل' && Math.abs(q.kg - (d || 0)) < 0.01); return c ? c.n : (d ? 'جردل ' + fmt(d) + ' ك' : 'جردل'); };
+    const cnJ = n => { const c = D.cont.find(q => q.k === 'برطمان' && q.n.includes(n)); return c ? c.n : 'برطمان ' + n; };
+    const rowB = it => ({ id:it.id, x:it.x, n:it.n, note:it.note, cn:it.cn || cnB(it.d), e:it.et || it.e || '', d:it.d || '', pk:it.pk, pt:it.pk && it.d ? it.pk * it.d : null, cost:plCost(D, 'جردل', it) });
+    const rowsJ = it => { const o = [], bt = !!it.et, base = { id:it.id, x:it.x, n:it.n, note:it.note };
+      if (it.p1 != null) o.push({ ...base, cn:cnJ('720'), e:bt ? it.et : '720 g', d:bt ? '' : '400 g', pk:bt ? null : it.p1 / 0.4, pt:it.p1, cost:plCost(D, 'برطمان', it, '720') });
+      if (it.p2 != null) o.push({ ...base, cn:cnJ('1050'), e:bt ? '' : '1050 g', d:bt ? '' : '550 g', pk:bt ? null : it.p2 / 0.55, pt:it.p2, cost:plCost(D, 'برطمان', it, '1050') });
+      return o; };
+    const rowO = it => ({ id:it.id, x:1, n:it.n, note:it.note, cn:it.cn, e:it.e, d:it.d, pk:it.pk, pt:it.pr, cost:it.pz ? fgCost(D, it.pz[0], it.pz[1]) : null });
+    const order = [], map = new Map(), seed = ttl => { const k = cl(ttl) || 'منتجات خاصة'; if (!map.has(k)) { map.set(k, []); order.push(k); } return k; }, add = (ttl, r) => map.get(seed(ttl)).push(r);
+    for (const k of ['B', 'J']) for (const sec of (P[k] ? P[k].secs : [])) seed(sec.t);
+    for (const k of ['B', 'J']) { const sl = plSelGet(k); for (const sec of (P[k] ? P[k].secs : [])) for (const it of sec.items) if (sl.has(it.id)) for (const r of (k === 'B' ? [rowB(it)] : rowsJ(it))) add(sec.t, r); }
+    for (const it of plXItems(D, 'B')) add(it.s, rowB(it)); for (const it of plXItems(D, 'J')) for (const r of rowsJ(it)) add(it.s, r); for (const it of plXItems(D, 'O')) add(it.s, rowO(it));
+    const th = X ? ['م', 'الصنف', 'نوع العبوة', 'السعر', 'التكلفة', 'الربح', '%'] : ['م', 'الصنف', 'نوع العبوة', 'وزن الصافي', 'وزن المصفي', 'سعر الكيلو', 'السعر الإجمالي'], wd = X ? [6, 27, 19, 12, 12, 12, 12] : [6, 25, 17, 11, 11, 14, 16], cols = th.length;
+    const wf = w => w === '' || w == null ? '' : typeof w === 'string' ? w : w < 1 ? Math.round(w * 1000) + ' g' : fmt(w);
+    let b = '';
+    for (const ttl of order) { const rs = map.get(ttl); if (!rs.length) continue;
+      b += '<tr class="h"><td class="l" colspan="' + cols + '">' + esc(ttl) + '</td></tr>' + rs.map(r => { no++;
+        const tr0 = '<tr' + (r.x ? ' data-plxi="' + r.id + '" style="cursor:pointer"' : '') + '><td class="v">' + no + '</td><td class="l">' + esc(r.n) + (r.note ? '<small style="display:block;color:var(--muted)">' + esc(r.note) + '</small>' : '') + '</td><td class="v">' + esc(r.cn || '') + '</td>';
+        if (X) { const pr = r.pt != null ? r.pt : r.pk, c = r.cost, bad = c != null && pr != null && pr < c; return tr0 + '<td class="v">' + (pr != null ? f(pr) : '-') + '</td><td class="v">' + (c != null ? f(c) : '') + '</td><td class="v' + (bad ? ' neg' : '') + '">' + (c != null && pr != null ? f(pr - c) : '') + '</td><td class="v' + (bad ? ' neg' : '') + '">' + (c && pr != null ? f((pr - c) / c * 100) + '%' : '') + '</td></tr>'; }
+        return tr0 + '<td class="v">' + esc(wf(r.e)) + '</td><td class="v">' + esc(wf(r.d)) + '</td><td class="v">' + (r.pk != null ? f(r.pk) : '-') + '</td><td class="v">' + (r.pt != null ? f(r.pt) : '-') + '</td></tr>'; }).join(''); }
+    return b ? csTbl(wd, th, b) : '';
+  };
+  const parts = custom ? mkC() : (() => { const r = mk(K); return r.body ? csTbl(r.wd, r.th, r.body) : ''; })();
   return ctl + head + (parts || '<div class="empty">' + (custom ? 'اختار منتجات من القائمة الرئيسية أو من شيت المنتجات.' : 'القائمة فاضية.') + '</div>') + (cl(L.notes) ? '<div class="hrow" style="margin-top:10px"><div class="n">ملاحظات</div><div style="white-space:pre-wrap">' + esc(L.notes) + '</div></div>' : '') + '<div class="note np" style="padding:8px 14px">السعر المكتوب هو السعر المعتمد (قطاعي). اضغط على أي صنف تعدل سعره أو وزنه أو ملاحظته. لو عايز قائمة لمنتجات معينة اختار «قائمة مخصصة» وبعدها PDF.</div>';
 }
 function openPLI(id, secIdx) {
@@ -2077,12 +2098,12 @@ function openPLN() {
 function plXSize(D, p, n) { return p.s.find(z => fgCont(D, z.c).n.includes(n)); }
 function plXItems(D, K) {
   const kind = K === 'J' ? 'برطمان' : 'جردل', out = [];
-  if (K === 'O') { for (const x of plXGet('O')) { const p = D.prods.find(q => q.k !== 'جردل' && q.k !== 'برطمان' && (!x.g || q.k === x.g) && csKey(q.n) === csKey(x.p)); if (!p) continue; const z = p.s.find(q => q.c === x.c); if (!z) continue; const c = fgCont(D, z.c); out.push({ id:x.id, x:1, n:cl(x.t) || (p.s.length > 1 ? p.n + ' - ' + c.n : p.n), cn:c.n, pr:x.po != null ? x.po : z.price, pz:[p, z], note:x.note, link:p.n, s:x.s }); } return out; }
+  if (K === 'O') { for (const x of plXGet('O')) { const p = D.prods.find(q => q.k !== 'جردل' && q.k !== 'برطمان' && (!x.g || q.k === x.g) && csKey(q.n) === csKey(x.p)); if (!p) continue; const z = p.s.find(q => q.c === x.c); if (!z) continue; const c = fgCont(D, z.c); const pr = x.po != null ? x.po : z.price; out.push({ id:x.id, x:1, n:cl(x.t) || (p.s.length > 1 ? p.n + ' - ' + c.n : p.n), cn:c.n, e:c.gw || '', d:c.kg, pk:c.kg ? pr / c.kg : null, pr, pz:[p, z], note:x.note, link:p.n, s:x.s }); } return out; }
   for (const x of plXGet(K)) {
     const p = D.prods.find(q => q.k === kind && csKey(q.n) === csKey(x.p)); if (!p) continue;
     if (K === 'B') {
       const z = p.s.find(q => q.c === x.c); if (!z) continue; const c = fgCont(D, z.c), pr = x.po != null ? x.po : z.price;
-      out.push({ id:x.id, x:1, n:cl(x.t) || (p.s.length > 1 ? p.n + ' - ' + c.n : p.n), e:c.gw || '', d:c.kg, pk:c.kg ? pr / c.kg : 0, note:x.note, link:p.n, s:x.s });
+      out.push({ id:x.id, x:1, n:cl(x.t) || (p.s.length > 1 ? p.n + ' - ' + c.n : p.n), cn:c.n, e:c.gw || '', d:c.kg, pk:c.kg ? pr / c.kg : 0, note:x.note, link:p.n, s:x.s });
     } else {
       const a = plXSize(D, p, '720'), b = plXSize(D, p, '1050'); if (!a && !b) continue;
       out.push({ id:x.id, x:1, n:cl(x.t) || p.n, p1:x.p1 != null ? x.p1 : (a ? a.price : null), p2:x.p2 != null ? x.p2 : (b ? b.price : null), note:x.note, link:p.n, s:x.s });
@@ -2096,18 +2117,21 @@ function plSecSel(id, cur) {
   return '<select id="' + id + '">' + opts.map(n => '<option value="' + esc(n) + '"' + (n === (c || def) ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select>';
 }
 function plSecVal(selId, newId) { return cl($(newId).value) || cl($(selId).value) || 'منتجات خاصة'; }
+const plKinds = D => [...new Set(D.prods.map(p => p.k))], plKindK = k => k === 'جردل' ? 'B' : k === 'برطمان' ? 'J' : 'O', plKindLbl = k => k === 'جردل' ? 'جرادل' : k === 'برطمان' ? 'برطمانات' : k;
 function openPLX() {
   const D = fgData(); if (!D) { toast('افتح شيت المنتجات الأول'); return; } S.hs = { type:'plx', K:S.plK === 'برطمان' ? 'J' : 'B' };
+  const kinds = plKinds(D); if (!kinds.includes(S.plxG)) S.plxG = kinds.includes(S.plK === 'برطمان' ? 'برطمان' : 'جردل') ? (S.plK === 'برطمان' ? 'برطمان' : 'جردل') : kinds[0];
+  const kind = S.plxG, gi = kinds.indexOf(kind), K = plKindK(kind), cur = plXGet(K), prods = D.prods.filter(p => p.k === kind);
   const lab = 'display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)', cb = (v, on) => '<input type="checkbox" data-plxa="' + v + '" style="width:22px;height:22px;min-height:0"' + (on ? ' checked' : '') + '>';
-  const grp = K => { const cur = plXGet(K), prods = plXList(D, K), ttl = K === 'B' ? 'الجرادل' : K === 'J' ? 'البرطمانات' : 'علب وأنواع تانية'; let last = '';
-    return prods.length ? '<h3 style="margin:16px 0 0;font-size:16px;color:var(--green-d)">' + ttl + '</h3>' + prods.map((p, i) => (K === 'O' && p.k !== last ? (last = p.k, '<div class="note" style="margin-top:8px">' + esc(p.k) + '</div>') : '') + '<div class="note" style="margin-top:10px"><b>' + esc(p.n) + '</b></div>' + (K === 'J'
-      ? '<label style="' + lab + '">' + cb(K + ',' + i + ',0', cur.some(x => csKey(x.p) === csKey(p.n))) + ' 720: ' + esc(plXSize(D, p, '720') ? fmt0(plXSize(D, p, '720').price) : '-') + ' · 1050: ' + esc(plXSize(D, p, '1050') ? fmt0(plXSize(D, p, '1050').price) : '-') + '</label>'
-      : p.s.map((z, j) => '<label style="' + lab + '">' + cb(K + ',' + i + ',' + j, cur.some(x => csKey(x.p) === csKey(p.n) && x.c === z.c && (K !== 'O' || !x.g || x.g === p.k))) + ' ' + esc(fgCont(D, z.c).n) + ' — ' + esc(fmt0(z.price)) + '</label>').join(''))).join('') : K === 'O' ? '' : '<h3 style="margin:16px 0 0;font-size:16px;color:var(--green-d)">' + ttl + '</h3><div class="empty">مفيش منتجات من النوع ده في الشيت.</div>'; };
-  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">منتجات من شيت المنتجات</h2><div class="note">تقدر تختار من أي نوع عبوة (جرادل أو برطمانات أو علب) في نفس القائمة. بتتضاف للقائمة المخصصة دي بس، ومش بتتحط في القائمة الرئيسية.</div><label for="plx-sec">حط المنتجات اللي هتختارها تحت بند</label>' + plSecSel('plx-sec', S.plxSec) + '<label for="plx-new">أو اكتب اسم بند جديد (اختياري)</label>' + fgIn('plx-new', '', '', 0) +
-    grp('B') + grp('J') + grp('O') + '<div class="actions"><button class="btn" id="plx-ok">تم</button></div>';
+  const list = prods.map((p, i) => '<div class="note" style="margin-top:10px"><b>' + esc(p.n) + '</b></div>' + (K === 'J'
+    ? '<label style="' + lab + '">' + cb(gi + ',' + i + ',0', cur.some(x => csKey(x.p) === csKey(p.n))) + ' 720: ' + esc(plXSize(D, p, '720') ? fmt0(plXSize(D, p, '720').price) : '-') + ' · 1050: ' + esc(plXSize(D, p, '1050') ? fmt0(plXSize(D, p, '1050').price) : '-') + '</label>'
+    : p.s.map((z, j) => '<label style="' + lab + '">' + cb(gi + ',' + i + ',' + j, cur.some(x => csKey(x.p) === csKey(p.n) && x.c === z.c && (K !== 'O' || !x.g || x.g === p.k))) + ' ' + esc(fgCont(D, z.c).n) + ' — ' + esc(fmt0(z.price)) + '</label>').join(''))).join('') || '<div class="empty">مفيش منتجات من النوع ده في الشيت.</div>';
+  const n = plXGet('B').length + plXGet('J').length + plXGet('O').length;
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">منتجات من شيت المنتجات</h2><div class="note">اختار نوع العبوة من القايمة وعلّم المنتجات، وبدّل النوع وكمّل اختيار من نوع تاني في نفس القائمة. المنتجات بتتضاف للقائمة المخصصة دي بس، ومش بتتحط في القائمة الرئيسية. (اتختار لحد دلوقتي: ' + n + ')</div>' +
+    '<label for="plx-g">نوع العبوة</label><select id="plx-g">' + kinds.map(k => '<option value="' + esc(k) + '"' + (k === kind ? ' selected' : '') + '>' + esc(plKindLbl(k)) + '</option>').join('') + '</select>' +
+    '<label for="plx-sec">حط المنتجات اللي هتختارها تحت بند</label>' + plSecSel('plx-sec', S.plxSec) + '<label for="plx-new">أو اكتب اسم بند جديد (اختياري)</label>' + fgIn('plx-new', '', '', 0) + list + '<div class="actions"><button class="btn" id="plx-ok">تم</button></div>';
   $('#hsheet').classList.remove('hide');
 }
-function plXList(D, K) { return K === 'O' ? D.prods.filter(p => p.k !== 'جردل' && p.k !== 'برطمان').sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : 0) : D.prods.filter(p => p.k === (K === 'J' ? 'برطمان' : 'جردل')); }
 function openPLXE(id) {
   const K = ['B', 'J', 'O'].find(k => plXGet(k).some(q => q.id === id)) || 'B', x = plXGet(K).find(q => q.id === id); if (!x) return; S.hs = { type:'plxe', K, id };
   $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">تعديل منتج في القائمة المخصصة</h2><label for="pxe-t">الاسم في القائمة (اختياري)</label>' + fgIn('pxe-t', x.t, '', 0) + '<label for="pxe-note">ملاحظات</label>' + fgIn('pxe-note', x.note, '', 0) + '<label for="pxe-sec">البند</label>' + plSecSel('pxe-sec', x.s) + '<label for="pxe-new">أو اكتب اسم بند جديد (اختياري)</label>' + fgIn('pxe-new', '', '', 0) +
@@ -2142,7 +2166,7 @@ function plSheetClick(e) {
   if (S.hs && S.hs.type === 'plx') {
     const D = fgData();
     if (t.matches && t.matches('[data-plxa]')) {
-      const [K, i0, j0] = t.dataset.plxa.split(','), i = +i0, j = +j0, p = plXList(D, K)[i]; if (!p) return false; let a = plXGet(K);
+      const [g0, i0, j0] = t.dataset.plxa.split(','), kind = plKinds(D)[+g0], K = plKindK(kind), i = +i0, j = +j0, p = D.prods.filter(q => q.k === kind)[i]; if (!p) return false; let a = plXGet(K);
       if (t.checked) { if (K === 'J' && !plXSize(D, p, '720') && !plXSize(D, p, '1050')) { t.checked = false; toast('المنتج ده مفيهوش حجم 720 أو 1050'); return false; } const sec = plSecVal('#plx-sec', '#plx-new'); S.plxSec = sec; a.push(K === 'J' ? { id:'x' + uid8(), p:p.n, s:sec } : K === 'O' ? { id:'x' + uid8(), p:p.n, g:p.k, c:p.s[j].c, s:sec } : { id:'x' + uid8(), p:p.n, c:p.s[j].c, s:sec }); }
       else a = a.filter(x => !(csKey(x.p) === csKey(p.n) && (K === 'J' || (x.c === p.s[j].c && (K !== 'O' || !x.g || x.g === p.k)))));
       plXSave(K, a); return false;
@@ -3770,7 +3794,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.36';
+const VER = '1.37';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -3981,6 +4005,7 @@ async function init() {
     if (e.target.classList.contains('tot')) hrSetAtt(eid, { ot:num(e.target.value) });
     else if (e.target.classList.contains('tin') || e.target.classList.contains('tout')) { const a = row.querySelector('.tin').value, b = row.querySelector('.tout').value; hrSetAtt(eid, { in:a, out:b, ot:otHours(a, b, +emp.hours || 8) }); hrAttendance(); } };
   $('#hsheet').onclick = hsClick;
+  $('#hs-pn').addEventListener('change', e => { if (e.target.id === 'plx-g' && S.hs && S.hs.type === 'plx') { S.plxSec = plSecVal('#plx-sec', '#plx-new'); S.plxG = e.target.value; openPLX(); } });
   $('#db-back').onclick = back; $('#db-month').onchange = e => { S.dbMonth = e.target.value; renderDB(); };
   $('#mp-back').onclick = back; $('#dp-back').onclick = back;
   $('#mp-pdf').onclick = () => doPrint($('#ph-t').textContent); $('#dp-pdf').onclick = () => doPrint($('#ph-t').textContent);
