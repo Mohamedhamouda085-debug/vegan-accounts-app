@@ -590,7 +590,7 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
 
       <details class="sec hide" id="s-vl"><summary>سجل المشاهدين</summary><div class="in">
         <p class="note" style="margin-top:0">للمالك فقط. بيعرض كل شريك (مشاهدة): فاتح دلوقتي ولا لأ، وبيعمل إيه لحظة بلحظة، وجلساته ومدتها والصفحات اللي دخلها. وتقدر تعيد تشغيل أي جلسة زي الفيديو بالسرعة اللي تحبها.</p>
-        <button class="btn ghost" id="vl-clean" style="min-height:0;padding:6px 12px;margin-bottom:8px">مسح لقطات الجلسات الأقدم من 14 يوم</button>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"><button class="btn ghost" id="vl-selall" style="min-height:0;padding:6px 10px">تحديد الكل</button><button class="btn danger" id="vl-delsel" style="min-height:0;padding:6px 10px">مسح المحدد (0)</button><button class="btn danger" id="vl-delall" style="min-height:0;padding:6px 10px">مسح السجل كله</button><button class="btn ghost" id="vl-clean" style="min-height:0;padding:6px 10px">مسح اللقطات الأقدم من 14 يوم</button></div>
         <div id="vl-box"><div class="note">جاري التحميل...</div></div>
       </div></details>
 
@@ -984,7 +984,8 @@ function permSheetClick(e) {
 }
 function go(v) {
   const pk = PERM_VIEW[v]; if (pk && !canSee(pk)) { toast('الصفحة دي مش متاحة لحسابك'); v = 'home'; }
-  S.view = v;
+  if (v === 'set' && S.view !== 'set' && !S.vlKeepOpen) { const d = $('#s-vl'); if (d) d.open = false; }
+  S.vlKeepOpen = false; S.view = v;
   for (const x of VIEWS) $('#v-' + x).classList.toggle('hide', x !== v);
   const tab = { home:'home', tb:'home', lg:'home', gl:'home', is:'home', bs:'home', mp:'home', dp:'home', db:'home', hr:'home', cs:'home', pr:'home', au:'home', yr:'home', arc:'home', arcy:'home', arcc:'home', cc:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
   for (const t of ['home', 'list', 'an', 'set']) $('#n-' + t).classList.toggle('on', t === tab);
@@ -3832,7 +3833,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.46';
+const VER = '1.47';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -4173,13 +4174,30 @@ function vlStop2() { R2.on = false; cancelAnimationFrame(R2.raf); R2.frames = nu
 async function vlPlayAny(rid, k, paused) { const d = S.vlData && S.vlData[rid]; if (d && d.v.some(x => x.m === 2) && await vlPlay2(rid, k, paused)) return; vlPlay(rid, k, paused); }
 function vlPreview(ref) { const k = ref.lastIndexOf(':'); vlPlayAny(ref.slice(0, k), +ref.slice(k + 1), true); }
 function vlStop() { R.on = false; cancelAnimationFrame(R.raf); $('#vl-prev').classList.add('hide'); $('#vl-dot').classList.add('hide'); document.body.classList.remove('vlp'); }
-function vlPrevEnd() { vlStop(); if (S.stack[S.stack.length - 1] === 'set') S.stack.pop(); go('set'); const d = $('#s-vl'); S.vlSig = ''; if (d) { d.open = true; vlLoad(); } }
+function vlPrevEnd() { vlStop(); if (S.stack[S.stack.length - 1] === 'set') S.stack.pop(); S.vlKeepOpen = true; go('set'); const d = $('#s-vl'); S.vlSig = ''; if (d) { d.open = true; vlLoad(); } }
+const vlOk = id => /^[\w-]+$/.test(id);
+function vlSelUi() { const b = $('#vl-delsel'); if (b) b.textContent = 'مسح المحدد (' + (S.vlSel ? S.vlSel.size : 0) + ')'; }
+function vlDelErr(e) { toast(e.net ? 'مفيش اتصال' : 'تعذر المسح: ' + srvMsg(e.message)); }
+async function vlDelRun(qLog, qFr, msg) {
+  if (!confirm(msg)) return; let n = 0;
+  try { const r = await api('/rest/v1/view_log?' + qLog, { method:'DELETE', headers:{ Prefer:'return=representation' } }); n = r ? r.length : 0; } catch (e) { vlDelErr(e); return; }
+  try { await api('/rest/v1/view_frames?' + qFr, { method:'DELETE' }); } catch (e) {}
+  if (!n) { toast('ما اتمسحش حاجة. لو في جلسات، شغّل ملف SQL بتاع صلاحية المسح'); return; }
+  toast('اتمسح ' + n + ' جلسة'); S.vlSel = new Set(); S.vlSig = ''; vlLoad();
+}
+function vlDelIds(ids) {
+  const now = Date.now(), live = ids.filter(i => S.vlData[i] && now - S.vlData[i].last < 60000); ids = ids.filter(i => vlOk(i) && !live.includes(i));
+  if (live.length) toast('الجلسات الشغالة دلوقتي ما بتتمسحش');
+  if (!ids.length) return; const l = ids.join(',');
+  return vlDelRun('id=in.(' + l + ')', 'session_id=in.(' + l + ')', 'تمسح ' + ids.length + ' جلسة نهائياً (الخطوات واللقطات)؟');
+}
 async function vlLoad() {
   const box = $('#vl-box'); if (!box || S.vlBusy) return; S.vlBusy = true;
   try {
     const [us, rows] = await Promise.all([api('/rest/v1/profiles?role=eq.partner&select=id,email,full_name&order=created_at.asc'), api('/rest/v1/view_log?select=*&order=started_ms.desc&limit=300')]);
     const now = Date.now(); S.vlOpen = S.vlOpen || new Set();
-    S.vlData = {}; for (const r of rows) { const u = us.find(z => z.id === r.user_id); S.vlData[r.id] = { v:r.views || [], who:u ? (u.full_name || u.email) : '' }; }
+    S.vlData = {}; for (const r of rows) { const u = us.find(z => z.id === r.user_id); S.vlData[r.id] = { v:r.views || [], who:u ? (u.full_name || u.email) : '', last:+r.last_ms }; }
+    S.vlSel = S.vlSel || new Set(); for (const id of [...S.vlSel]) if (!S.vlData[id]) S.vlSel.delete(id); vlSelUi();
     if (!us.length) { box.innerHTML = '<div class="note">مفيش شركاء (مشاهدة) لسه.</div>'; return; }
     const anyLive = rows.some(r => now - +r.last_ms < 45000), sig = rows.length + ':' + (rows[0] ? rows[0].last_ms : 0) + ':' + us.length;
     if (!anyLive && sig === S.vlSig) return; S.vlSig = sig;
@@ -4188,7 +4206,8 @@ async function vlLoad() {
       let h = '<div class="box" style="margin-top:8px"><div class="kv"><span>' + esc(u.full_name || u.email) + '</span><span>' + (live ? '🟢 فاتح دلوقتي' : cur ? 'آخر نشاط ' + vlWhen(cur.last_ms) : 'لسه ما دخلش') + '</span></div>';
       if (live) { const v = cur.views || [], l = v[v.length - 1]; h += '<div class="note" style="margin-top:4px"><b>دلوقتي في:</b> ' + esc(l ? l.l : '—') + '</div><div class="note">خطواته في الجلسة دي (الأحدث فوق):</div><button class="btn" data-vpl="' + cur.id + '" style="min-height:0;padding:6px 12px;margin:6px 0">▶ شغّل الجلسة</button>' + vlSteps(v, 15, cur.id); }
       if (L.length) h += '<details class="sec" style="margin-top:8px"' + (S.vlOpen.has(k) ? ' open' : '') + '><summary data-k="' + k + '">الجلسات (' + L.length + ') · إجمالي ' + vlDur(tot) + '</summary><div class="in">' +
-        L.slice(0, 30).map(r => { const kk = 's' + r.id; return '<details class="sec" style="margin-top:6px"' + (S.vlOpen.has(kk) ? ' open' : '') + '><summary data-k="' + kk + '">' + vlWhen(r.started_ms) + ' · ' + vlDur(r.active_s) + '</summary><div class="in"><button class="btn" data-vpl="' + r.id + '" style="min-height:0;padding:6px 12px;margin-bottom:6px">▶ شغّل الجلسة</button>' + (vlSteps(r.views, 60, r.id) || '<div class="note">مفيش صفحات.</div>') + '</div></details>'; }).join('') + '</div></details>';
+        L.slice(0, 30).map(r => { const kk = 's' + r.id; return '<details class="sec" style="margin-top:6px"' + (S.vlOpen.has(kk) ? ' open' : '') + '><summary data-k="' + kk + '">' + vlWhen(r.started_ms) + ' · ' + vlDur(r.active_s) + '</summary><div class="in"><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><label style="display:flex;gap:4px;align-items:center"><input type="checkbox" data-vsel="' + r.id + '"' + (S.vlSel.has(r.id) ? ' checked' : '') + '> تحديد</label><button class="btn" data-vpl="' + r.id + '" style="min-height:0;padding:6px 12px">▶ شغّل</button><button class="btn danger" data-vdel="' + r.id + '" style="min-height:0;padding:6px 12px">🗑 مسح</button></div>' + (vlSteps(r.views, 60, r.id) || '<div class="note">مفيش صفحات.</div>') + '</div></details>'; }).join('') + '</div></details>';
+      if (L.length) h += '<button class="btn danger" data-vdu="' + u.id + '" style="min-height:0;padding:6px 12px;margin-top:8px">🗑 مسح كل جلسات الشريك ده</button>';
       return h + '</div>';
     }).join('');
   } catch (e) { box.innerHTML = '<div class="note">' + (e.net ? 'مفيش اتصال بالسيرفر.' : /view_log|relation|404|PGRST/i.test(String(e.message) + e.status) ? 'لازم تشغّل ملف 05_view_log.sql في Supabase مرة واحدة عشان السجل يشتغل.' : esc(srvMsg(e.message))) + '</div>'; }
@@ -4370,6 +4389,10 @@ async function init() {
   $('#rp-sp').onclick = () => { const a = [1, 2, 4, 8, 16]; R2.speed = a[(a.indexOf(R2.speed) + 1) % a.length]; vlUi2(); };
   $('#rp-rg').oninput = e => { if (R2.on) { R2.drag = true; vlSeek2(+e.target.value / 1000 * R2.total); } };
   $('#rp-rg').onchange = () => { R2.drag = false; };
+  $('#vl-selall').onclick = () => { S.vlSel = S.vlSel || new Set(); const all = Object.keys(S.vlData || {}); if (S.vlSel.size >= all.length) S.vlSel.clear(); else all.forEach(i => S.vlSel.add(i)); S.vlSig = ''; vlLoad(); };
+  $('#vl-delsel').onclick = () => { if (!S.vlSel || !S.vlSel.size) { toast('اختار جلسات الأول (علامة تحديد جوه كل جلسة)'); return; } vlDelIds([...S.vlSel]); };
+  $('#vl-delall').onclick = () => { const c = Date.now() - 60000; vlDelRun('last_ms=lt.' + c, 't_ms=lt.' + c, 'تمسح سجل المشاهدين كله (كل الشركاء، الخطوات واللقطات)؟ الجلسات الشغالة دلوقتي هتفضل.'); };
+  $('#vl-box').addEventListener('change', e => { const c = e.target.closest('[data-vsel]'); if (!c) return; S.vlSel = S.vlSel || new Set(); if (c.checked) S.vlSel.add(c.dataset.vsel); else S.vlSel.delete(c.dataset.vsel); vlSelUi(); });
   $('#vl-clean').onclick = async () => { if (!confirm('تمسح لقطات الجلسات الأقدم من 14 يوم؟ سجل الخطوات هيفضل زي ما هو.')) return; try { await api('/rest/v1/view_frames?t_ms=lt.' + (Date.now() - 14 * 864e5), { method:'DELETE' }); toast('اتمسحت اللقطات القديمة'); } catch (e) { toast(e.net ? 'مفيش اتصال' : 'تعذر المسح: ' + srvMsg(e.message)); } };
   $('#vl-prev-x').onclick = vlPrevEnd;
   $('#vl-pp').onclick = () => { if (!R.on) return; if (!R.play && R.T >= R.b.total - 1) vlSeek(0); R.play = !R.play; R.last = performance.now(); vlUi(); };
@@ -4377,7 +4400,7 @@ async function init() {
   $('#vl-rg').oninput = e => { if (R.on) { R.drag = true; vlSeek(+e.target.value / 1000 * R.b.total); vlUi(); } };
   $('#vl-rg').onchange = () => { R.drag = false; };
   $('#s-vl').ontoggle = () => { clearInterval(S.vlPoll); if ($('#s-vl').open) { S.vlSig = ''; vlLoad(); S.vlPoll = setInterval(() => { if (!document.hidden && $('#s-vl').open && S.view === 'set') vlLoad(); }, 8000); } };
-  $('#vl-box').addEventListener('click', e => { const pl = e.target.closest('[data-vpl]'); if (pl) { vlPlayAny(pl.dataset.vpl); return; } const vp = e.target.closest('[data-vp]'); if (vp) { vlPreview(vp.dataset.vp); return; } const sm = e.target.closest('summary[data-k]'); if (!sm) return; S.vlOpen = S.vlOpen || new Set(); const k = sm.dataset.k; if (S.vlOpen.has(k)) S.vlOpen.delete(k); else S.vlOpen.add(k); });
+  $('#vl-box').addEventListener('click', e => { const pl = e.target.closest('[data-vpl]'); if (pl) { vlPlayAny(pl.dataset.vpl); return; } const dl = e.target.closest('[data-vdel]'); if (dl) { vlDelIds([dl.dataset.vdel]); return; } const du = e.target.closest('[data-vdu]'); if (du && vlOk(du.dataset.vdu)) { const c = Date.now() - 60000; vlDelRun('user_id=eq.' + du.dataset.vdu + '&last_ms=lt.' + c, 'user_id=eq.' + du.dataset.vdu + '&t_ms=lt.' + c, 'تمسح كل جلسات الشريك ده (الخطوات واللقطات)؟'); return; } const vp = e.target.closest('[data-vp]'); if (vp) { vlPreview(vp.dataset.vp); return; } const sm = e.target.closest('summary[data-k]'); if (!sm) return; S.vlOpen = S.vlOpen || new Set(); const k = sm.dataset.k; if (S.vlOpen.has(k)) S.vlOpen.delete(k); else S.vlOpen.add(k); });
   S.session = await kvGet('session');
   if (S.session) await start(); else showLogin('');
 }
