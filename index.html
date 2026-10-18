@@ -396,7 +396,10 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
         <label for="cc-q">كمية الخام (كجم)</label><input id="cc-q" inputmode="decimal" dir="ltr" autocomplete="off">
         <label for="cc-p">سعر شراء الكيلو</label><input id="cc-p" inputmode="decimal" dir="ltr" autocomplete="off">
         <label for="cc-l">نسبة الفاقد % (لو في تشغيل أو تنضيف)</label><input id="cc-l" inputmode="decimal" dir="ltr" autocomplete="off">
-        <label for="cc-x">تكاليف إضافية (إجمالي: تشغيل، عبوات، نقل، عمالة…)</label><input id="cc-x" inputmode="decimal" dir="ltr" autocomplete="off">
+        <label for="cc-o">الناتج الفعلي (كجم) — اختياري، لو سبته فاضي بيتحسب من الفاقد</label><input id="cc-o" inputmode="decimal" dir="ltr" autocomplete="off">
+        <label style="margin-top:14px">بنود التكاليف (اكتب اسم كل بند ومبلغه)</label>
+        <div id="cc-items"></div>
+        <div style="display:flex;gap:8px;margin-top:10px"><button class="btn ghost" id="cc-add" style="flex:1">＋ بند جديد</button><button class="btn ghost" id="cc-clr" style="white-space:nowrap">مسح الكل</button></div>
         <label for="cc-s">سعر بيع كيلو الناتج</label><input id="cc-s" inputmode="decimal" dir="ltr" autocomplete="off">
         <div class="note">حاسبة بس: الأرقام اللي بتكتبها مش بتتسجل ولا بتتحفظ في البيانات.</div>
       </div>
@@ -1005,12 +1008,22 @@ function draw(v) {
   else if (v === 'tb') renderTB(); else if (v === 'lg') renderLG(); else if (v === 'gl') renderGL(); else if (v === 'is') renderIS(); else if (v === 'bs') renderBS(); else if (v === 'mp') renderMP(); else if (v === 'dp') renderDP(); else if (v === 'db') renderDB(); else if (v === 'hr') renderHR(); else if (v === 'cs') renderCS(); else if (v === 'pr') renderPR(); else if (v === 'au') renderAU(); else if (v === 'yr') renderYR(); else if (v === 'arc') renderARC(); else if (v === 'arcy') renderARCY(); else if (v === 'arcc') renderARCC(); else if (v === 'cc') renderCC(); else if (v === 'rp') renderRP();
   requestAnimationFrame(fitGrids);
 }
+const ccDef = () => [{ n:'عبوات', a:'', k:0 }, { n:'عمالة', a:'', k:0 }, { n:'نقل', a:'', k:0 }, { n:'تشغيل', a:'', k:0 }];
+const ccRowH = (r, i) => '<div class="ccr" data-i="' + i + '" style="display:grid;grid-template-columns:1fr 84px auto auto;gap:6px;align-items:center;margin-top:8px"><input class="cc-n" placeholder="اسم البند" value="' + esc(r.n) + '"><input class="cc-a" inputmode="decimal" dir="ltr" placeholder="0" value="' + esc(r.a) + '"><button class="btn ghost cc-k" style="min-height:0;padding:8px;font-size:12px;white-space:nowrap">' + (r.k ? 'للكيلو' : 'إجمالي') + '</button><button class="btn ghost cc-d" aria-label="مسح البند" style="min-height:0;padding:8px 10px">✕</button></div>';
+function ccRows() { $('#cc-items').innerHTML = S.ccL.map(ccRowH).join(''); }
 function renderCC() { /* حاسبة بس: مفيش حفظ ولا قراءة بيانات */
-  const g = id => num($('#cc-' + id).value) || 0, q = g('q'), p = g('p'), l = Math.min(99, Math.max(0, g('l'))) / 100, x = g('x'), s = g('s');
-  const out = q * (1 - l), raw = q * p, tot = raw + x, ck = out > 0 ? tot / out : 0, rev = out * s, pf = rev - tot;
+  if (!S.ccL) S.ccL = ccDef(); if (!S.ccB) { S.ccB = true; ccRows(); }
+  const g = id => num($('#cc-' + id).value) || 0, q = g('q'), p = g('p'), l = Math.min(99, Math.max(0, g('l'))) / 100, ov = g('o'), sp = g('s');
+  const out = ov > 0 ? ov : q * (1 - l), raw = q * p;
+  const its = S.ccL.map(r => { const a = num(r.a) || 0; return { n:(r.n || '').trim() || 'بند بدون اسم', t:r.k ? a * out : a, a }; }).filter(r => r.a);
+  const ex = its.reduce((a, r) => a + r.t, 0), tot = raw + ex, ck = out > 0 ? tot / out : 0, rev = out * sp, pf = rev - tot;
   const met = (lb, v, c, sfx) => '<div class="met row" style="--c:' + c + '"><small>' + lb + '</small><b dir="ltr">' + esc(fmt(v)) + (sfx || '') + '</b></div>';
-  $('#cc-out').innerHTML = q > 0 ? met('الكمية اللي هتطلع (كجم)', out, '#1E6FE8') + met('تكلفة الخام', raw, '#C2410C') + met('إجمالي التكاليف', tot, '#C2410C') + met('تكلفة الكيلو الناتج', ck, '#A63CA0') +
-    (s > 0 ? met('إجمالي البيع', rev, '#2E7D52') + met(pf >= 0 ? 'الربح' : 'الخسارة', pf, pf >= 0 ? '#2E7D52' : '#C0453A') + met('ربح الكيلو', out > 0 ? pf / out : 0, pf >= 0 ? '#2E7D52' : '#C0453A') + met('هامش الربح', rev > 0 ? pf / rev * 100 : 0, '#E8892B', '%') : '<div class="note">اكتب سعر البيع عشان تشوف الربح.</div>') : '';
+  if (!(out > 0)) { $('#cc-out').innerHTML = '<div class="note">اكتب كمية الخام (أو الناتج الفعلي) عشان تظهر الحسبة.</div>'; return; }
+  const td = 'padding:6px 4px;border-top:1px solid var(--line)', row = (n, t) => '<tr><td style="' + td + '">' + esc(n) + '</td><td style="' + td + ';text-align:left" dir="ltr">' + esc(fmt(t)) + '</td><td style="' + td + ';text-align:left" dir="ltr">' + esc(fmt(t / out)) + '</td><td style="' + td + ';text-align:left" dir="ltr">' + (tot > 0 ? esc(String(+(t / tot * 100).toFixed(1))) + '%' : '') + '</td></tr>';
+  const tbl = '<div class="card" style="padding:8px 10px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="color:var(--mute)"><th style="text-align:right;padding:4px">البند</th><th style="text-align:left;padding:4px">الإجمالي</th><th style="text-align:left;padding:4px">للكيلو</th><th style="text-align:left;padding:4px">% من التكلفة</th></tr></thead><tbody>' +
+    (raw > 0 ? row('الخام', raw) : '') + its.map(r => row(r.n, r.t)).join('') + '<tr style="font-weight:700"><td style="' + td + '">الإجمالي</td><td style="' + td + ';text-align:left" dir="ltr">' + esc(fmt(tot)) + '</td><td style="' + td + ';text-align:left" dir="ltr">' + esc(fmt(ck)) + '</td><td style="' + td + '"></td></tr></tbody></table></div>';
+  $('#cc-out').innerHTML = met('الكمية اللي هتطلع (كجم)', out, '#1E6FE8') + met('تكلفة الخام', raw, '#C2410C') + (ex ? met('إجمالي البنود', ex, '#C2410C') : '') + met('إجمالي التكاليف', tot, '#C2410C') + met('تكلفة الكيلو الناتج', ck, '#A63CA0') +
+    (sp > 0 ? met('إجمالي البيع', rev, '#2E7D52') + met(pf >= 0 ? 'الربح' : 'الخسارة', pf, pf >= 0 ? '#2E7D52' : '#C0453A') + met('ربح الكيلو', pf / out, pf >= 0 ? '#2E7D52' : '#C0453A') + met('هامش الربح', rev > 0 ? pf / rev * 100 : 0, '#E8892B', '%') : '<div class="note">اكتب سعر بيع الكيلو عشان تشوف الربح.</div>') + tbl;
 }
 function fitGrids() {
   const nav = document.querySelector('nav'), nh = nav ? nav.offsetHeight : 70;
@@ -3850,7 +3863,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.50';
+const VER = '1.51';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -4480,7 +4493,11 @@ async function init() {
   $('#rp-month').onchange = e => { S.rpMonth = e.target.value; renderRP(); };
   $('#rp-body').onclick = e => { const b = e.target.closest('[data-rpag]'), c = e.target.closest('[data-rpcu]'); if (b) { S.rpAg = b.dataset.rpag; renderRP(); } else if (c) { S.rpCu = c.dataset.rpcu; renderRP(); } };
   $('#rp-body').onchange = e => { const i = e.target.closest('[data-bu]'); if (!i || !canWrite()) return; const l = { ...(budData() || {}) }; l[i.dataset.bu] = num(i.value); docSave('bud', BUD_ID, { v:1, l }); S.rpC = null; renderRP(); toast('اتحفظت الموازنة'); };
-  $('#cc-back').onclick = back; for (const id of ['q', 'p', 'l', 'x', 's']) $('#cc-' + id).oninput = renderCC;
+  $('#cc-back').onclick = back; for (const id of ['q', 'p', 'l', 'o', 's']) $('#cc-' + id).oninput = renderCC;
+  $('#cc-items').oninput = e => { const row = e.target.closest('.ccr'); const r = row && S.ccL[+row.dataset.i]; if (!r) return; if (e.target.classList.contains('cc-n')) r.n = e.target.value; else if (e.target.classList.contains('cc-a')) r.a = e.target.value; renderCC(); };
+  $('#cc-items').onclick = e => { const row = e.target.closest('.ccr'); if (!row) return; const i = +row.dataset.i; if (e.target.closest('.cc-d')) { S.ccL.splice(i, 1); ccRows(); renderCC(); } else if (e.target.closest('.cc-k')) { S.ccL[i].k = S.ccL[i].k ? 0 : 1; ccRows(); renderCC(); } };
+  $('#cc-add').onclick = () => { S.ccL.push({ n:'', a:'', k:0 }); ccRows(); renderCC(); const f = $('#cc-items').querySelectorAll('.cc-n'); if (f.length) f[f.length - 1].focus(); };
+  $('#cc-clr').onclick = () => { if (!confirm('تمسح كل الأرقام والبنود؟')) return; for (const id of ['q', 'p', 'l', 'o', 's']) $('#cc-' + id).value = ''; S.ccL = ccDef(); ccRows(); renderCC(); };
   $('#tiles').onclick = e => {
     const b = e.target.closest('.tile'); if (!b) return; const k = b.dataset.k;
     if (k === 'new') openForm(null); else if (k === 'list') push_('list'); else if (k === 'tb') { S.tbMonth = '*'; push_('tb'); } else if (k === 'gl') push_('gl'); else if (k === 'is') { S.isMonth = '*'; push_('is'); } else if (k === 'bs') { S.bsMonth = '*'; push_('bs'); } else if (k === 'db') { S.dbMonth = '*'; push_('db'); } else if (k === 'hr') { S.hrTab = 'p'; S.hrMonth = ''; push_('hr'); } else if (k === 'cs') { S.csTab = 's'; push_('cs'); } else if (k === 'pr') { S.prTab = 'o'; push_('pr'); } else if (k === 'mp') push_('mp'); else if (k === 'dp') { S.dpMonth = '*'; push_('dp'); } else if (k === 'an') push_('an');
