@@ -1975,8 +1975,17 @@ function csSame(e, old, src) {
   const z = S.ent.get(old.e1);
   return z.date === e.date && Math.abs((+old.outQ || 0) - (+e.qty || 0) * (1 - (+e.disc || 0))) < 1e-6;
 }
+function csKeep(e, lk) { /* تعديل في السعر أو المبلغ أو العميل بس (مش الصنف ولا الكمية ولا التاريخ): التكلفة المتسجلة تفضل زي ما هي */
+  if (!lk || e.deleted) return false;
+  const live1 = id => { const z = id && S.ent.get(id); return !!z && !z.deleted; };
+  if (lk.out) return e.cr === 'مبيعات توريد';
+  if (lk.fg) { const f = /^مبيعات/.test(e.cr || '') ? fgMatch(e.prod) : null, z = lk.e1 && S.ent.get(lk.e1); return !!(f && z && !z.deleted && csKey(f.name) === csKey(lk.key) && z.date === e.date && Math.abs((+lk.units || 0) - (+e.qty || 0)) < 1e-9); }
+  if (e.cr !== 'مبيعات توريد' || !live1(lk.e1) || (lk.op > 0 && !live1(lk.e2))) return false;
+  if (lk.sig) return lk.sig === csSig(e);
+  const z = S.ent.get(lk.e1); return z.date === e.date && csKey(z.prod) === csKey(lk.raw) && Math.abs((+lk.outQ || 0) - (+e.qty || 0) * (1 - (+e.disc || 0))) < 1e-6;
+}
 async function csApplySrc(e, src) {
-  if (src == null) return csGen(e);
+  if (src == null) { const lk = csLink(e.id); if (csKeep(e, lk)) return lk.out ? null : lk; return csGen(e); }
   const t = csTpl(e.prod), old = csLink(e.id) || csAdopt(e);
   if (!t) return csGen(e);
   localStorage.setItem('cs_src:' + csKey(e.prod), src);
@@ -3841,7 +3850,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.48';
+const VER = '1.50';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -4302,10 +4311,11 @@ function rpCat(e, o) {
   if (o === 'العهد.الماليه' || o === 'ارصده.دائنه.اخري' || o === 'ارصدة مدينة اخري') return ['o', 'العهد والأرصدة الأخرى'];
   return ['o', 'أخرى'];
 }
-function cfCalc(M) { /* قائمة تدفقات نقدية مباشرة من القيود اللي فيها خزينة أو بنك */
-  const bom = M === '*' ? '' : M + '-01', eom = M === '*' ? '' : eomOf(M); let open = 0; const G = { o:new Map(), i:new Map(), f:new Map() };
+const rpCashList = cu => cu === false ? RP_CASH : [...RP_CASH, 'العهد.الماليه']; /* العهد بتتحسب نقدية مع الموظفين، فمصروفاتها تظهر في التدفقات */
+function cfCalc(M, cu) { /* قائمة تدفقات نقدية مباشرة من القيود اللي فيها خزينة أو بنك (ومعاهم العهد) */
+  const CA = rpCashList(cu), bom = M === '*' ? '' : M + '-01', eom = M === '*' ? '' : eomOf(M); let open = 0; const G = { o:new Map(), i:new Map(), f:new Map() };
   for (const e of live()) {
-    const dc = RP_CASH.includes(e.dr), cc = RP_CASH.includes(e.cr); if (dc === cc) continue; /* مفيش نقدية أو تحويل بين حسابات نقدية */
+    const dc = CA.includes(e.dr), cc = CA.includes(e.cr); if (dc === cc) continue; /* مفيش نقدية أو تحويل بين حسابات نقدية */
     const amt = dc ? (+e.amtD || 0) : -(+e.amtC || 0), pre = M === '*' ? !!e.opening : (e.opening || e.date < bom);
     if (pre) { open += amt; continue; } if (M !== '*' && e.date > eom) continue;
     const [a, lb] = rpCat(e, dc ? e.cr : e.dr), m = G[a]; m.set(lb, (m.get(lb) || 0) + amt);
@@ -4367,7 +4377,7 @@ function renderRP() {
   $('#rp-mrow').style.display = ['cf', 'be', 'bu'].includes(T) ? '' : 'none';
   sel.innerHTML = '<option value="*">كل الفترة</option>' + ms.map(m => '<option value="' + m + '">شهر ' + m + '</option>').join(''); sel.value = S.rpMonth;
   const M = S.rpMonth, per = M === '*' ? ' - كل الفترة' : ' - شهر ' + M, tb = '<div class="tbw"><table class="stb" id="rp-tb"></table></div>'; let h = '', ttl = '', fn = null;
-  if (T === 'cf') { ttl = 'قائمة التدفقات النقدية' + per; h = tb + '<div class="note" style="padding:8px 14px">من قيود الخزينة والبنك بس. التحويل بين الخزينة والبنك مش محسوب.</div>'; fn = () => stmtTable('#rp-tb', ['البيان', 'المبلغ'], cfCalc(M).R); }
+  if (T === 'cf') { const cu = S.rpCu !== 'n'; ttl = 'قائمة التدفقات النقدية' + per; h = '<div class="mrow" style="padding-top:10px"><div class="seg" style="margin:0"><button class="' + (cu ? 'on' : '') + '" data-rpcu="y">العهد نقدية</button><button class="' + (cu ? '' : 'on') + '" data-rpcu="n">العهد حساب منفصل</button></div></div>' + tb + '<div class="note" style="padding:8px 14px">' + (cu ? 'من قيود الخزينة والبنك والعهد: الفلوس اللي بتتحول للعهد مش محسوبة مصروف، لكن مصروفاتها ومشترياتها المدفوعة منها بتظهر في بنودها.' : 'من قيود الخزينة والبنك بس: الفلوس المحولة للعهد بتظهر كسطر واحد، ومصروفاتها المدفوعة من العهد مش بتظهر هنا.') + ' التحويل بين الحسابات النقدية مش محسوب.</div>'; fn = () => stmtTable('#rp-tb', ['البيان', 'المبلغ'], cfCalc(M, cu).R); }
   else if (T === 'ag') { ttl = 'أعمار الديون'; const cu = S.rpAg !== 's', { rows, tot, to } = agCalc(cu ? 'العملاء' : 'الموردين');
     h = '<div class="mrow" style="padding-top:10px"><div class="seg" style="margin:0"><button class="' + (cu ? 'on' : '') + '" data-rpag="c">العملاء</button><button class="' + (cu ? '' : 'on') + '" data-rpag="s">الموردين</button></div></div>' +
       (rows.length ? csTbl([27, 14, 14, 14, 14, 17], ['الاسم', 'حتى 30', '31-60', '61-90', '+90', 'الإجمالي'], rows.map(r => '<tr><td class="l">' + esc(r.name) + (r.adv > 0.5 ? '<small style="display:block;color:var(--muted)">رصيد مقدم ' + esc(fmt0(r.adv)) + '</small>' : '') + '</td>' + r.b.map((v, i) => '<td class="v' + (i === 3 && v > 0.5 ? ' neg' : '') + '">' + (v > 0.5 ? esc(fmt0(v)) : '') + '</td>').join('') + '<td class="v"><b>' + esc(fmt0(r.total)) + '</b></td></tr>').join('') + '<tr class="t"><td class="l">الإجمالي</td>' + tot.b.map(v => '<td class="v">' + esc(fmt0(v)) + '</td>').join('') + '<td class="v"><b>' + esc(fmt0(tot.total)) + '</b></td></tr>') : '<div class="empty">مفيش أرصدة مستحقة.</div>') +
@@ -4468,7 +4478,7 @@ async function init() {
   $('#rp-back').onclick = back; $('#rp-pdf').onclick = () => doPrint($('#ph-t').textContent);
   for (const [id, k] of [['#rp-t1', 'cf'], ['#rp-t2', 'ag'], ['#rp-t3', 'al'], ['#rp-t4', 'be'], ['#rp-t5', 'bu']]) $(id).onclick = () => { S.rpTab = k; renderRP(); };
   $('#rp-month').onchange = e => { S.rpMonth = e.target.value; renderRP(); };
-  $('#rp-body').onclick = e => { const b = e.target.closest('[data-rpag]'); if (b) { S.rpAg = b.dataset.rpag; renderRP(); } };
+  $('#rp-body').onclick = e => { const b = e.target.closest('[data-rpag]'), c = e.target.closest('[data-rpcu]'); if (b) { S.rpAg = b.dataset.rpag; renderRP(); } else if (c) { S.rpCu = c.dataset.rpcu; renderRP(); } };
   $('#rp-body').onchange = e => { const i = e.target.closest('[data-bu]'); if (!i || !canWrite()) return; const l = { ...(budData() || {}) }; l[i.dataset.bu] = num(i.value); docSave('bud', BUD_ID, { v:1, l }); S.rpC = null; renderRP(); toast('اتحفظت الموازنة'); };
   $('#cc-back').onclick = back; for (const id of ['q', 'p', 'l', 'x', 's']) $('#cc-' + id).oninput = renderCC;
   $('#tiles').onclick = e => {
