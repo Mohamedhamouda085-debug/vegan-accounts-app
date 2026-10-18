@@ -19,6 +19,8 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,"Noto Sans Arabic","Segoe UI",Tahoma,sans-serif}
 .hide{display:none!important}
 html,body{overscroll-behavior-y:none}
+  .al{margin:8px 12px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);border-inline-start:5px solid var(--muted);background:#fff;font-weight:600}
+.al.r{border-inline-start-color:#C0453A}.al.w{border-inline-start-color:#E8892B}.al.i{border-inline-start-color:#1E6FE8}
 #ptr{position:fixed;top:0;left:50%;transform:translate(-50%,-60px);z-index:60;background:#fff;color:var(--green-d);border:1px solid var(--line);box-shadow:var(--sh);border-radius:99px;padding:7px 18px;font-size:13px;font-weight:700;pointer-events:none;transition:transform .18s;white-space:nowrap}
 #ptr.on{transform:translate(-50%,calc(env(safe-area-inset-top) + 12px))}
 button,input,select{font:inherit;color:inherit}
@@ -381,6 +383,12 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
       <div class="sub"><button id="pr-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>الإنتاج</b><button id="pr-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
       <div class="seg"><button id="pr-t1">أوامر الإنتاج</button><button id="pr-t2">خطة الخامات</button><button id="pr-t3">مخزن المنتج التام</button><button id="pr-t4">جرد</button></div>
       <div id="pr-body"></div>
+    </section>
+    <section id="v-rp" class="hide">
+      <div class="sub"><button id="rp-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>التقارير الإدارية</b><button id="rp-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
+      <div class="seg" style="gap:2px"><button id="rp-t1" style="padding:8px 2px;font-size:12px">التدفقات</button><button id="rp-t2" style="padding:8px 2px;font-size:12px">الأعمار</button><button id="rp-t3" style="padding:8px 2px;font-size:12px">التنبيهات</button><button id="rp-t4" style="padding:8px 2px;font-size:12px">التعادل</button><button id="rp-t5" style="padding:8px 2px;font-size:12px">الموازنة</button></div>
+      <div class="mrow" id="rp-mrow" style="padding-top:10px"><select id="rp-month" aria-label="الفترة"></select></div>
+      <div id="rp-body"></div>
     </section>
     <section id="v-cc" class="hide">
       <div class="sub"><button id="cc-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>حاسبة التكاليف</b><span style="width:42px"></span></div>
@@ -949,10 +957,10 @@ const byDate = (a, b) => b.date.localeCompare(a.date) || (b.no || 0) - (a.no || 
 const balTxt = n => (n >= 0 ? 'مدين' : 'دائن');
 
 /* ---------- views ---------- */
-const VIEWS = ['home', 'list', 'an', 'acc', 'stm', 'form', 'set', 'tb', 'lg', 'gl', 'is', 'bs', 'mp', 'dp', 'db', 'hr', 'cs', 'pr', 'au', 'yr', 'arc', 'arcy', 'arcc', 'cc'];
+const VIEWS = ['home', 'list', 'an', 'acc', 'stm', 'form', 'set', 'tb', 'lg', 'gl', 'is', 'bs', 'mp', 'dp', 'db', 'hr', 'cs', 'pr', 'au', 'yr', 'arc', 'arcy', 'arcc', 'cc', 'rp'];
 /* صلاحيات عرض الشريك: المالك يحدد الأقسام اللي بتظهر له، ولحد تاريخ لو حب (الإخفاء في التطبيق نفسه، مش حماية على السيرفر) */
-const PERM_ITEMS = [['home', 'أرقام الرئيسية (الخزينة والعملاء والموردين ومبيعات الشهر)'], ['list', 'القيود'], ['db', 'لوحة المؤشرات'], ['tb', 'ميزان المراجعة'], ['gl', 'دفتر الأستاذ العام'], ['is', 'قائمة الدخل'], ['bs', 'المركز المالي'], ['mp', 'صافي الربح الشهري'], ['dp', 'إهلاك الأصول'], ['hr', 'المرتبات'], ['cs', 'التكاليف وقوائم الأسعار'], ['pr', 'الإنتاج'], ['au', 'المدقق'], ['yr', 'التقرير السنوي'], ['arc', 'الأرشيف'], ['an', 'التحليلات وكشوف الحسابات'], ['exp', 'تصدير إكسيل والنسخة الاحتياطية الكاملة']];
-const PERM_VIEW = { list:'list', form:'list', db:'db', tb:'tb', gl:'gl', lg:'gl', is:'is', bs:'bs', mp:'mp', dp:'dp', hr:'hr', cs:'cs', pr:'pr', au:'au', yr:'yr', arc:'arc', arcy:'arc', arcc:'arc', an:'an', acc:'an', stm:'an' };
+const PERM_ITEMS = [['home', 'أرقام الرئيسية (الخزينة والعملاء والموردين ومبيعات الشهر)'], ['list', 'القيود'], ['db', 'لوحة المؤشرات'], ['tb', 'ميزان المراجعة'], ['gl', 'دفتر الأستاذ العام'], ['is', 'قائمة الدخل'], ['bs', 'المركز المالي'], ['mp', 'صافي الربح الشهري'], ['dp', 'إهلاك الأصول'], ['hr', 'المرتبات'], ['cs', 'التكاليف وقوائم الأسعار'], ['pr', 'الإنتاج'], ['au', 'المدقق'], ['yr', 'التقرير السنوي'], ['arc', 'الأرشيف'], ['an', 'التحليلات وكشوف الحسابات'], ['rp', 'التقارير الإدارية (التدفقات والأعمار والتنبيهات والتعادل والموازنة)'], ['exp', 'تصدير إكسيل والنسخة الاحتياطية الكاملة']];
+const PERM_VIEW = { list:'list', form:'list', db:'db', tb:'tb', gl:'gl', lg:'gl', is:'is', bs:'bs', mp:'mp', dp:'dp', hr:'hr', cs:'cs', pr:'pr', au:'au', yr:'yr', arc:'arc', arcy:'arc', arcc:'arc', an:'an', acc:'an', stm:'an', rp:'rp' };
 function permData(uid) { const d = S.docs.get('perm:' + uid); return d && !d.deleted && d.data && Array.isArray(d.data.allow) ? d.data : null; }
 function canSee(k) {
   if (!S.profile || S.profile.role !== 'partner' || !S.session) return true;
@@ -987,14 +995,14 @@ function go(v) {
   if (v === 'set' && S.view !== 'set' && !S.vlKeepOpen) { const d = $('#s-vl'); if (d) d.open = false; }
   S.vlKeepOpen = false; S.view = v;
   for (const x of VIEWS) $('#v-' + x).classList.toggle('hide', x !== v);
-  const tab = { home:'home', tb:'home', lg:'home', gl:'home', is:'home', bs:'home', mp:'home', dp:'home', db:'home', hr:'home', cs:'home', pr:'home', au:'home', yr:'home', arc:'home', arcy:'home', arcc:'home', cc:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
+  const tab = { home:'home', tb:'home', lg:'home', gl:'home', is:'home', bs:'home', mp:'home', dp:'home', db:'home', hr:'home', cs:'home', pr:'home', au:'home', yr:'home', arc:'home', arcy:'home', arcc:'home', cc:'home', rp:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
   for (const t of ['home', 'list', 'an', 'set']) $('#n-' + t).classList.toggle('on', t === tab);
   draw(v); window.scrollTo(0, 0); resSave(); ulStamp(); vlNav(v);
 }
 function draw(v) {
   if (v === 'home') renderHome(); else if (v === 'list') renderList(); else if (v === 'an') renderAn();
   else if (v === 'acc') renderAcc(); else if (v === 'stm') renderStm(); else if (v === 'set') renderSettings();
-  else if (v === 'tb') renderTB(); else if (v === 'lg') renderLG(); else if (v === 'gl') renderGL(); else if (v === 'is') renderIS(); else if (v === 'bs') renderBS(); else if (v === 'mp') renderMP(); else if (v === 'dp') renderDP(); else if (v === 'db') renderDB(); else if (v === 'hr') renderHR(); else if (v === 'cs') renderCS(); else if (v === 'pr') renderPR(); else if (v === 'au') renderAU(); else if (v === 'yr') renderYR(); else if (v === 'arc') renderARC(); else if (v === 'arcy') renderARCY(); else if (v === 'arcc') renderARCC(); else if (v === 'cc') renderCC();
+  else if (v === 'tb') renderTB(); else if (v === 'lg') renderLG(); else if (v === 'gl') renderGL(); else if (v === 'is') renderIS(); else if (v === 'bs') renderBS(); else if (v === 'mp') renderMP(); else if (v === 'dp') renderDP(); else if (v === 'db') renderDB(); else if (v === 'hr') renderHR(); else if (v === 'cs') renderCS(); else if (v === 'pr') renderPR(); else if (v === 'au') renderAU(); else if (v === 'yr') renderYR(); else if (v === 'arc') renderARC(); else if (v === 'arcy') renderARCY(); else if (v === 'arcc') renderARCC(); else if (v === 'cc') renderCC(); else if (v === 'rp') renderRP();
   requestAnimationFrame(fitGrids);
 }
 function renderCC() { /* حاسبة بس: مفيش حفظ ولا قراءة بيانات */
@@ -1347,7 +1355,7 @@ function auClick(e) {
 function renderHome() {
   if (!S.bkChecked && S.ent.size) { S.bkChecked = 1; bkRemind(); }
   const t = [['new','قيد جديد','plus','#F28C28'], ['list','القيود','list','#1FA38A'], ['db','لوحة المؤشرات','chart','#2E7D52'], ['tb','ميزان المراجعة','scale','#4A3FE0'],
-    ['gl','دفتر الأستاذ العام','book','#7A4DD8'], ['is','قائمة الدخل','chart','#E8892B'], ['bs','المركز المالي','scale','#1E6FE8'], ['mp','صافي الربح الشهري','chart','#1FA38A'], ['dp','إهلاك الأصول','build','#8A5A2B'], ['hr','المرتبات','brief','#4A3FE0'], ['cs','التكاليف','scale','#C2410C'], ['pr','الإنتاج','box','#2F7A4F'], ['au','المدقق' + (auCount() ? ' (' + auCount() + ')' : ''),'tag','#C0453A'], ['yr','التقرير السنوي','book','#7A4DD8'], ['arc','الأرشيف','box','#8A5A2B'], ['an','التحليلات','coin','#A63CA0'], ['cc','حاسبة التكاليف','scale','#0E7490'], ['sync','مزامنة','sync','#2AA7C9']];
+    ['gl','دفتر الأستاذ العام','book','#7A4DD8'], ['is','قائمة الدخل','chart','#E8892B'], ['bs','المركز المالي','scale','#1E6FE8'], ['mp','صافي الربح الشهري','chart','#1FA38A'], ['dp','إهلاك الأصول','build','#8A5A2B'], ['hr','المرتبات','brief','#4A3FE0'], ['cs','التكاليف','scale','#C2410C'], ['pr','الإنتاج','box','#2F7A4F'], ['au','المدقق' + (auCount() ? ' (' + auCount() + ')' : ''),'tag','#C0453A'], ['yr','التقرير السنوي','book','#7A4DD8'], ['arc','الأرشيف','box','#8A5A2B'], ['an','التحليلات','coin','#A63CA0'], ['rp','التقارير الإدارية' + (rpCount() ? ' (' + rpCount() + ')' : ''),'chart','#0F766E'], ['cc','حاسبة التكاليف','scale','#0E7490'], ['sync','مزامنة','sync','#2AA7C9']];
   if (!canWrite()) t.shift(); /* الشريك: مشاهدة بس، من غير قيد جديد */
   const tt = t.filter(x => x[0] === 'new' || x[0] === 'sync' || x[0] === 'cc' || canSee(x[0])); /* الحاسبة مفتوحة للكل: مبتقراش ولا بتكتب بيانات */
   $('#n-list').style.display = canSee('list') ? '' : 'none'; $('#n-an').style.display = canSee('an') ? '' : 'none';
@@ -3833,7 +3841,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.47';
+const VER = '1.48';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -4277,6 +4285,108 @@ function ptrInit() {
   };
   document.addEventListener('touchend', end, { passive:true }); document.addEventListener('touchcancel', reset, { passive:true });
 }
+/* ---------- التقارير الإدارية: تدفقات نقدية، أعمار ديون، تنبيهات، تعادل وربحية، موازنة ---------- */
+const RP_CASH = ['الخزينة', 'خزينة.خاصة', 'البنك'], BUD_ID = 'bud:main';
+const BUD_L = [['sales', 'صافي المبيعات'], ['cogs', 'تكلفة البضاعة'], ['oper', 'المصروفات التشغيلية'], ['sal', 'المرتبات والأجور'], ['admin', 'المصروفات الإدارية'], ['sell', 'مصروفات البيع والتوزيع'], ['fine', 'مصروفات مالية وأخرى وخسائر']];
+const budData = () => { const d = S.docs.get(BUD_ID); return d && !d.deleted && d.data && d.data.l ? d.data.l : null; };
+const rpPred = M => M === '*' ? () => true : e => !e.opening && e.date.startsWith(M);
+const rpMonths = M => M === '*' ? Math.max(1, monthsOf().length) : 1;
+function rpCat(e, o) {
+  if (o === 'العملاء' || /^مبيعات/.test(o) || o === 'مسموحات المبيعات') return ['o', 'متحصلات من العملاء والمبيعات'];
+  if (o === 'الايرادات') return ['o', 'إيرادات أخرى'];
+  if (['الموردين', 'المشتريات', 'المخزون.الخام', 'مخزن منتج تام', 'مخزن فلفل'].includes(o)) return ['o', 'مدفوعات للموردين والمخزون'];
+  if (o === 'المرتبات') return ['o', 'المرتبات والأجور'];
+  if (o === 'المصروفات') { const g = expGroupOf(expItem(e)); return g === 'توزيع الارباح الاستثمارية' ? ['f', 'توزيعات أرباح للمستثمرين'] : ['o', g]; }
+  if (o === 'اصول.ثابتة') return ['i', 'شراء وبيع أصول ثابتة'];
+  if (o === 'جاري.الشركاء' || o === 'رأس.مال') return ['f', 'الشركاء ورأس المال'];
+  if (o === 'العهد.الماليه' || o === 'ارصده.دائنه.اخري' || o === 'ارصدة مدينة اخري') return ['o', 'العهد والأرصدة الأخرى'];
+  return ['o', 'أخرى'];
+}
+function cfCalc(M) { /* قائمة تدفقات نقدية مباشرة من القيود اللي فيها خزينة أو بنك */
+  const bom = M === '*' ? '' : M + '-01', eom = M === '*' ? '' : eomOf(M); let open = 0; const G = { o:new Map(), i:new Map(), f:new Map() };
+  for (const e of live()) {
+    const dc = RP_CASH.includes(e.dr), cc = RP_CASH.includes(e.cr); if (dc === cc) continue; /* مفيش نقدية أو تحويل بين حسابات نقدية */
+    const amt = dc ? (+e.amtD || 0) : -(+e.amtC || 0), pre = M === '*' ? !!e.opening : (e.opening || e.date < bom);
+    if (pre) { open += amt; continue; } if (M !== '*' && e.date > eom) continue;
+    const [a, lb] = rpCat(e, dc ? e.cr : e.dr), m = G[a]; m.set(lb, (m.get(lb) || 0) + amt);
+  }
+  const R = []; let net = 0;
+  for (const [a, ttl] of [['o', 'الأنشطة التشغيلية'], ['i', 'الأنشطة الاستثمارية'], ['f', 'الأنشطة التمويلية']]) {
+    const items = [...G[a].entries()].filter(([, v]) => Math.abs(v) > 0.005).sort((x, y) => Math.abs(y[1]) - Math.abs(x[1])), sub = items.reduce((s, [, v]) => s + v, 0); net += sub;
+    R.push({ l:ttl, c:'h' }); items.forEach(([l, v]) => R.push({ l, a:v })); R.push({ l:'صافي ' + ttl, b:sub, c:'t' });
+  }
+  R.push({ l:'صافي التغير في النقدية', b:net, c:'t' }, { l:'النقدية أول المدة', b:open }, { l:'النقدية آخر المدة', b:open + net, c:'t' });
+  return { R, open, net, close:open + net, G };
+}
+function agCalc(A) { /* أعمار الديون: المدفوعات بتتخصم من أقدم فاتورة */
+  const to = asOfDef(), cust = A === 'العملاء', ch = new Map(), pay = new Map();
+  for (const e of live()) { const s = side(e, A); if (!s) continue; const k = s.party || NONAME, c = cust ? s.d : s.c, p = cust ? s.c : s.d;
+    if (c) { if (!ch.has(k)) ch.set(k, []); ch.get(k).push([e.date, c]); } if (p) pay.set(k, (pay.get(k) || 0) + p); }
+  const names = new Set([...ch.keys(), ...pay.keys()]), rows = [], tot = { b:[0, 0, 0, 0], adv:0, total:0 };
+  for (const k of names) {
+    let rem = pay.get(k) || 0; const b = [0, 0, 0, 0];
+    for (const [d, a] of (ch.get(k) || []).sort((x, y) => x[0] < y[0] ? -1 : 1)) { const tk = Math.min(rem, a); rem -= tk; const left = a - tk; if (left > 0.005) { const age = Math.max(0, (new Date(to) - new Date(d)) / 864e5); b[age <= 30 ? 0 : age <= 60 ? 1 : age <= 90 ? 2 : 3] += left; } }
+    const total = b.reduce((x, y) => x + y, 0), adv = rem; if (total < 0.5 && adv < 0.5) continue;
+    rows.push({ name:k, b, adv, total }); b.forEach((v, i) => { tot.b[i] += v; }); tot.adv += adv; tot.total += total;
+  }
+  rows.sort((x, y) => y.total - x.total); return { rows, tot, to };
+}
+function rpAlerts() {
+  const A = [], D = Date.now();
+  for (const [acc, who] of [['العملاء', 'العميل '], ['الموردين', 'المورد ']]) for (const r of agCalc(acc).rows) { const old = r.b[2] + r.b[3]; if (old > 0.5) A.push({ lv:r.b[3] > 0.5 ? 'r' : 'w', t:who + r.name + ': ' + fmt0(old) + (acc === 'العملاء' ? ' متأخرة' : ' مستحقة') + ' أكتر من 60 يوم' + (r.b[3] > 0.5 ? ' (منها ' + fmt0(r.b[3]) + ' أكتر من 90 يوم)' : '') }); }
+  const P = plCalc(() => true);
+  for (const a of RP_CASH) if (P.n(a) < -0.5) A.push({ lv:'r', t:'رصيد ' + accT(a) + ' بالسالب (' + fmt0(P.n(a)) + '): راجع القيود' });
+  for (const x of csStock().values()) if ((x.def || 0) > 0.0005) A.push({ lv:'w', t:'الصنف ' + x.name + ' الدفاتر بالسالب (عجز ' + fmt(x.def) + ' كجم): اعمل جرد' });
+  const pr = new Map();
+  for (const e of live()) { if (e.dr !== CS_RAW || !e.prod || e.stmt === IV_ST || e.opening) continue; const q = (+e.qty || 0) * (1 - (+e.disc || 0)); if (!(q > 0 && e.amtD > 0)) continue; const k = csKey(e.prod); if (!pr.has(k)) pr.set(k, []); pr.get(k).push([e.date, e.no || 0, e.amtD / q, cl(e.prod)]); }
+  for (const l of pr.values()) { l.sort((x, y) => x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : x[1] - y[1]); if (l.length < 2) continue; const a = l[l.length - 2], b = l[l.length - 1], ch = (b[2] - a[2]) / a[2];
+    if (Math.abs(ch) >= 0.1 && D - new Date(b[0]) < 90 * 864e5) A.push({ lv:ch > 0 ? 'w' : 'i', t:'سعر ' + b[3] + (ch > 0 ? ' زاد ' : ' نقص ') + Math.round(Math.abs(ch) * 100) + '% عن الشراء اللي قبله (من ' + fmt(a[2]) + ' لـ ' + fmt(b[2]) + ' للكيلو)' }); }
+  const ms = monthsOf(), lm = ms[ms.length - 1];
+  if (lm) { const Q = plCalc(rpPred(lm)); if (Q.net > 0 && Q.pre < 0) A.push({ lv:'r', t:'شهر ' + lm + ' خسران: صافي الربح ' + fmt0(Q.pre) }); else if (Q.net > 0 && Q.gross / Q.net < 0.1) A.push({ lv:'w', t:'مجمل الربح في شهر ' + lm + ' أقل من 10% من المبيعات' });
+    const bl = budData(); if (bl) for (const r of buCalc(lm).rows) if (r.k !== 'sales' && r.k !== 'np' && r.bud > 0 && r.act > r.bud * 1.1) A.push({ lv:'w', t:r.l + ' في شهر ' + lm + ' عدّى الموازنة بـ ' + Math.round((r.act / r.bud - 1) * 100) + '%' }); }
+  return A.sort((x, y) => (x.lv === 'r' ? 0 : x.lv === 'w' ? 1 : 2) - (y.lv === 'r' ? 0 : y.lv === 'w' ? 1 : 2));
+}
+function rpCount() { try { if (!S.rpC || Date.now() - S.rpC.t > 60000) S.rpC = { t:Date.now(), v:rpAlerts().filter(a => a.lv !== 'i').length }; return S.rpC.v; } catch (e) { return 0; } }
+function beCalc(M) {
+  const P = plCalc(rpPred(M)), sales = P.net, cogs = P.cogs, cm = sales - cogs, cmr = sales > 0 ? cm / sales : 0, fixed = P.opex + P.machine + P.loss;
+  const be = cmr > 0 ? fixed / cmr : null, prods = new Map();
+  for (const d of docsOf('cl')) { const l = d.data, e = S.ent.get(l.sale); if (!e || e.deleted || e.opening || (M !== '*' && !e.date.startsWith(M))) continue; const k = cl(e.prod) || 'بدون اسم', r = prods.get(k) || { name:k, rev:0, cost:0, q:0 };
+    r.rev += +e.amtC || 0; r.cost += (+l.cost || 0) + (+l.op || 0); r.q += l.fg ? (+l.units || 0) : (+l.outQ || 0); prods.set(k, r); }
+  return { P, sales, cogs, cm, cmr, fixed, be, safety:be != null && sales > 0 ? (sales - be) / sales : null, prods:[...prods.values()].sort((a, b) => (b.rev - b.cost) - (a.rev - a.cost)) };
+}
+function buCalc(M) {
+  const bl = budData() || {}, k = rpMonths(M), P = plCalc(rpPred(M)), act = { sales:P.net, cogs:P.cogs, oper:P.oper, sal:P.sal, admin:P.admin, sell:P.sell, fine:P.fine + P.machine + P.loss };
+  const rows = BUD_L.map(([key, l]) => { const bud = (+bl[key] || 0) * k, a = act[key], diff = a - bud; return { k:key, l, bud, act:a, diff, pct:bud ? diff / bud * 100 : null, bad:key === 'sales' ? diff < -0.5 : diff > 0.5 }; });
+  const pb = rows.reduce((s, r) => s + (r.k === 'sales' ? r.bud : -r.bud), 0), pa = rows.reduce((s, r) => s + (r.k === 'sales' ? r.act : -r.act), 0);
+  rows.push({ k:'np', l:'صافي الربح التشغيلي', bud:pb, act:pa, diff:pa - pb, pct:pb ? (pa - pb) / Math.abs(pb) * 100 : null, bad:pa - pb < -0.5 });
+  return { rows, has:!!budData(), k };
+}
+function renderRP() {
+  const T = S.rpTab || 'cf', ms = monthsOf(), sel = $('#rp-month'); if (S.rpMonth !== '*' && !ms.includes(S.rpMonth)) S.rpMonth = '*';
+  for (const [id, k] of [['#rp-t1', 'cf'], ['#rp-t2', 'ag'], ['#rp-t3', 'al'], ['#rp-t4', 'be'], ['#rp-t5', 'bu']]) $(id).classList.toggle('on', T === k);
+  $('#rp-mrow').style.display = ['cf', 'be', 'bu'].includes(T) ? '' : 'none';
+  sel.innerHTML = '<option value="*">كل الفترة</option>' + ms.map(m => '<option value="' + m + '">شهر ' + m + '</option>').join(''); sel.value = S.rpMonth;
+  const M = S.rpMonth, per = M === '*' ? ' - كل الفترة' : ' - شهر ' + M, tb = '<div class="tbw"><table class="stb" id="rp-tb"></table></div>'; let h = '', ttl = '', fn = null;
+  if (T === 'cf') { ttl = 'قائمة التدفقات النقدية' + per; h = tb + '<div class="note" style="padding:8px 14px">من قيود الخزينة والبنك بس. التحويل بين الخزينة والبنك مش محسوب.</div>'; fn = () => stmtTable('#rp-tb', ['البيان', 'المبلغ'], cfCalc(M).R); }
+  else if (T === 'ag') { ttl = 'أعمار الديون'; const cu = S.rpAg !== 's', { rows, tot, to } = agCalc(cu ? 'العملاء' : 'الموردين');
+    h = '<div class="mrow" style="padding-top:10px"><div class="seg" style="margin:0"><button class="' + (cu ? 'on' : '') + '" data-rpag="c">العملاء</button><button class="' + (cu ? '' : 'on') + '" data-rpag="s">الموردين</button></div></div>' +
+      (rows.length ? csTbl([27, 14, 14, 14, 14, 17], ['الاسم', 'حتى 30', '31-60', '61-90', '+90', 'الإجمالي'], rows.map(r => '<tr><td class="l">' + esc(r.name) + (r.adv > 0.5 ? '<small style="display:block;color:var(--muted)">رصيد مقدم ' + esc(fmt0(r.adv)) + '</small>' : '') + '</td>' + r.b.map((v, i) => '<td class="v' + (i === 3 && v > 0.5 ? ' neg' : '') + '">' + (v > 0.5 ? esc(fmt0(v)) : '') + '</td>').join('') + '<td class="v"><b>' + esc(fmt0(r.total)) + '</b></td></tr>').join('') + '<tr class="t"><td class="l">الإجمالي</td>' + tot.b.map(v => '<td class="v">' + esc(fmt0(v)) + '</td>').join('') + '<td class="v"><b>' + esc(fmt0(tot.total)) + '</b></td></tr>') : '<div class="empty">مفيش أرصدة مستحقة.</div>') +
+      '<div class="note" style="padding:8px 14px">الأعمار لحد ' + esc(to) + ' بالأيام من تاريخ الفاتورة، والمدفوعات بتتخصم من أقدم فاتورة.' + (tot.adv > 0.5 ? ' فيه رصيد مقدم ' + esc(fmt0(tot.adv)) + ' (مش داخل في الأعمار).' : '') + '</div>'; }
+  else if (T === 'al') { ttl = 'التنبيهات'; const A = rpAlerts(); h = A.length ? A.map(a => '<div class="al ' + a.lv + '">' + esc(a.t) + '</div>').join('') : '<div class="empty">مفيش تنبيهات دلوقتي ✓</div>'; h += '<div class="note" style="padding:8px 14px">بتتحسب من القيود: ديون متأخرة أكتر من 60 يوم، أرصدة خزينة بالسالب، أصناف دفاترها بالسالب، تغير سعر الخام 10% أو أكتر، وأداء آخر شهر والموازنة.</div>'; }
+  else if (T === 'be') { ttl = 'التعادل وربحية المنتجات' + per; const B = beCalc(M), pc = v => B.sales ? (v / B.sales * 100).toFixed(1) + '%' : '';
+    const R = [{ l:'صافي المبيعات', b:B.sales }, { l:'تكلفة البضاعة (متغيرة)', b:B.cogs, p:pc(B.cogs) }, { l:'هامش المساهمة', b:B.cm, p:pc(B.cm), c:'t' }, { l:'المصروفات الثابتة (تشغيلية ومرتبات وإدارية وبيع وغيرها)', b:B.fixed, p:pc(B.fixed) }, { l:'الربح التشغيلي', b:B.cm - B.fixed, p:pc(B.cm - B.fixed), c:'t' }];
+    R.push(B.be != null ? { l:'نقطة التعادل (مبيعات)', b:B.be, c:'t' } : { l:'نقطة التعادل: مش محسوبة (هامش المساهمة صفر أو سالب)', c:'m' }); if (B.safety != null) R.push({ l:'هامش الأمان (المبيعات فوق التعادل)', b:B.sales - B.be, p:(B.safety * 100).toFixed(1) + '%' });
+    const un = csUnlinked().filter(e => M === '*' || e.date.startsWith(M)).length;
+    h = tb + '<div class="note" style="padding:8px 14px 2px"><b>ربحية المنتجات</b> (البيعات اللي اتحسبت تكلفتها)</div>' + (B.prods.length ? csTbl([32, 17, 17, 17, 17], ['المنتج', 'المبيعات', 'التكلفة', 'الربح', 'الهامش'], B.prods.map(r => { const pf = r.rev - r.cost; return '<tr><td class="l">' + esc(r.name) + '</td><td class="v">' + esc(fmt0(r.rev)) + '</td><td class="v">' + esc(fmt0(r.cost)) + '</td><td class="v' + (pf < 0 ? ' neg' : '') + '">' + esc(fmt0(pf)) + '</td><td class="v' + (pf < 0 ? ' neg' : '') + '">' + (r.rev ? esc(fmt0(pf / r.rev * 100)) + '%' : '') + '</td></tr>'; }).join('')) : '<div class="empty">مفيش بيعات اتحسبت تكلفتها في الفترة دي.</div>') +
+      (un ? '<div class="note" style="padding:8px 14px">فيه ' + un + ' بيعة لسه متحسبتش تكلفتها وبره التقرير.</div>' : '');
+    fn = () => stmtTable('#rp-tb', ['البيان', 'المبلغ', '', 'النسبة'], R); }
+  else { ttl = 'الموازنة والفعلي' + per; const U = buCalc(M), w = canWrite(), bl = budData() || {};
+    h = (U.has ? csTbl([30, 18, 18, 18, 16], ['البند', 'الموازنة', 'الفعلي', 'الفرق', '%'], U.rows.map(r => '<tr' + (r.k === 'np' ? ' class="t"' : '') + '><td class="l">' + esc(r.l) + '</td><td class="v">' + esc(fmt0(r.bud)) + '</td><td class="v">' + esc(fmt0(r.act)) + '</td><td class="v' + (r.bad ? ' neg' : '') + '">' + esc(fmt0(r.diff)) + '</td><td class="v' + (r.bad ? ' neg' : '') + '">' + (r.pct == null ? '' : esc(fmt0(r.pct)) + '%') + '</td></tr>').join('')) : '<div class="empty">لسه مفيش موازنة. اكتب الأرقام الشهرية تحت.</div>') +
+      '<div class="note" style="padding:8px 14px">الفرق الأحمر = مبيعات أقل من الموازنة أو مصروفات أكتر منها. لو اخترت «كل الفترة» الموازنة بتتضرب في عدد الشهور (' + U.k + ').</div>' +
+      (w ? '<div class="hrow np"><div class="n">الموازنة الشهرية</div>' + BUD_L.map(([k, l]) => '<label for="bu-' + k + '">' + esc(l) + '</label><input id="bu-' + k + '" data-bu="' + k + '" inputmode="decimal" dir="ltr" value="' + esc(bl[k] || '') + '">').join('') + '</div>' : ''); }
+  $('#rp-body').innerHTML = h; $('#ph-t').textContent = ttl; if (fn) fn();
+}
+
 async function init() {
   db = await openDB(); setNav(); ptrInit();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -4355,11 +4465,16 @@ async function init() {
   $('#s-url-save').onclick = () => { const u = $('#s-url').value.trim().replace(/\/+$/, ''); if (!/^https:\/\/[\w.-]+\.[a-z]{2,}$/i.test(u)) { toast('اكتب الرابط كامل زي https://xxxx.supabase.co'); return; } if (u === url()) { toast('نفس الرابط الحالي'); return; } if (!confirm('هتغيّر السيرفر اللي التطبيق بيتصل بيه. متأكد؟')) return; localStorage.setItem('sb_url', u); toast('اتحفظ. بنعيد فتح التطبيق…'); setTimeout(() => location.reload(), 900); };
   $('#lock-pw').onclick = () => { $('#lock').classList.add('hide'); showLogin(''); }; /* بنفتح شاشة كلمة المرور من غير ما نمسح الجلسة، عشان البصمة تفضل شغالة لما تقفل التطبيق وتفتحه */
   $('#l-bio').onclick = loginBio;
+  $('#rp-back').onclick = back; $('#rp-pdf').onclick = () => doPrint($('#ph-t').textContent);
+  for (const [id, k] of [['#rp-t1', 'cf'], ['#rp-t2', 'ag'], ['#rp-t3', 'al'], ['#rp-t4', 'be'], ['#rp-t5', 'bu']]) $(id).onclick = () => { S.rpTab = k; renderRP(); };
+  $('#rp-month').onchange = e => { S.rpMonth = e.target.value; renderRP(); };
+  $('#rp-body').onclick = e => { const b = e.target.closest('[data-rpag]'); if (b) { S.rpAg = b.dataset.rpag; renderRP(); } };
+  $('#rp-body').onchange = e => { const i = e.target.closest('[data-bu]'); if (!i || !canWrite()) return; const l = { ...(budData() || {}) }; l[i.dataset.bu] = num(i.value); docSave('bud', BUD_ID, { v:1, l }); S.rpC = null; renderRP(); toast('اتحفظت الموازنة'); };
   $('#cc-back').onclick = back; for (const id of ['q', 'p', 'l', 'x', 's']) $('#cc-' + id).oninput = renderCC;
   $('#tiles').onclick = e => {
     const b = e.target.closest('.tile'); if (!b) return; const k = b.dataset.k;
     if (k === 'new') openForm(null); else if (k === 'list') push_('list'); else if (k === 'tb') { S.tbMonth = '*'; push_('tb'); } else if (k === 'gl') push_('gl'); else if (k === 'is') { S.isMonth = '*'; push_('is'); } else if (k === 'bs') { S.bsMonth = '*'; push_('bs'); } else if (k === 'db') { S.dbMonth = '*'; push_('db'); } else if (k === 'hr') { S.hrTab = 'p'; S.hrMonth = ''; push_('hr'); } else if (k === 'cs') { S.csTab = 's'; push_('cs'); } else if (k === 'pr') { S.prTab = 'o'; push_('pr'); } else if (k === 'mp') push_('mp'); else if (k === 'dp') { S.dpMonth = '*'; push_('dp'); } else if (k === 'an') push_('an');
-    else if (k === 'au') push_('au'); else if (k === 'yr') push_('yr'); else if (k === 'arc') push_('arc'); else if (k === 'cc') push_('cc'); else if (k === 'sync') { toast('بنزامن…'); sync(); } else openAcc(k);
+    else if (k === 'au') push_('au'); else if (k === 'yr') push_('yr'); else if (k === 'arc') push_('arc'); else if (k === 'cc') push_('cc'); else if (k === 'rp') { S.rpTab = 'cf'; S.rpMonth = '*'; push_('rp'); } else if (k === 'sync') { toast('بنزامن…'); sync(); } else openAcc(k);
   };
   $('#an-list').onclick = e => { const b = e.target.closest('.an'); if (b) openAcc(b.dataset.k); };
     $('#acc-q').oninput = e => { S.accQ = e.target.value; renderAcc(); };
