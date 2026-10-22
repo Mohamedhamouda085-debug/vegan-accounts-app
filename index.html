@@ -61,6 +61,8 @@ main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
 .tile svg{width:29px;height:29px;stroke:#fff}
 .sec{margin:16px 12px 0}
 .sec h3{margin:0 0 8px;font-size:16px;font-weight:800}
+.sec h3.hh{display:flex;align-items:center;justify-content:space-between}
+.eye{border:0;background:none;padding:6px 8px;cursor:pointer;display:grid;place-items:center;min-height:0;color:var(--muted)}.eye svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .sh{display:flex;justify-content:space-between;align-items:center}
 .lnk{border:0;background:none;color:var(--green);font-weight:700;padding:6px 2px}
 .mets{display:grid;gap:10px}
@@ -351,8 +353,8 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
     <div id="ph"><img src="logo.png" alt=""><div><b>Vegan food</b><div>الإدارة المالية</div><div id="ph-t"></div></div></div>
     <section id="v-home">
       <div class="tiles" id="tiles"></div>
-      <div class="sec"><h3>ملخص الحسابات</h3><div class="mets" id="mets"></div></div>
-      <div class="sec"><h3 id="mh">الشهر</h3><div class="mets two" id="mmets"></div></div>
+      <div class="sec"><h3 class="hh"><span>ملخص الحسابات</span><button class="eye" data-eye aria-label="إظهار / إخفاء الأرقام"></button></h3><div class="mets" id="mets"></div></div>
+      <div class="sec"><h3 class="hh"><span id="mh">الشهر</span><button class="eye" data-eye aria-label="إظهار / إخفاء الأرقام"></button></h3><div class="mets two" id="mmets"></div></div>
     </section>
 
     <section id="v-list" class="hide">
@@ -1745,7 +1747,9 @@ function renderHome() {
   $('#mets').parentElement.style.display = $('#mmets').parentElement.style.display = canSee('home') ? '' : 'none';
   $('#tiles').innerHTML = tt.map(x => '<button class="tile" data-k="' + x[0] + '"><span class="i" style="background:' + x[3] + '">' + ico(x[2]) + '</span>' + x[1] + '</button>').join('');
   const cash = agg('الخزينة'), cus = agg('العملاء'), sup = agg('الموردين');
-  const met = (l, v, c) => '<div class="met row" style="--c:' + c + '"><small>' + l + '</small><b dir="ltr">' + fmt0(v) + '</b></div>';
+  const hv = x => S.shw ? x : '****'; /* الأرقام مخفية افتراضياً أول ما البرنامج يفتح */
+  document.querySelectorAll('#v-home [data-eye]').forEach(b => { b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M2.5 12c1-2 4.5-6 9.5-6s8.5 4 9.5 6c-1 2-4.5 6-9.5 6s-8.5-4-9.5-6z"/><circle cx="12" cy="12" r="3"/></svg>'; if (S.shw) b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 6.1A10.7 10.7 0 0 1 12 6c5 0 8.5 4 9.5 6a14 14 0 0 1-2.6 3.4M6.5 7.5A14 14 0 0 0 2.5 12c1 2 4.5 6 9.5 6 1.5 0 2.8-.3 4-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>'; });
+  const met = (l, v, c) => '<div class="met row" style="--c:' + c + '"><small>' + l + '</small><b dir="ltr">' + hv(fmt0(v)) + '</b></div>';
   $('#mets').innerHTML = met('رصيد الخزينة', cash.d - cash.c, '#2E7D52') + met('مستحق من العملاء', cus.d - cus.c, '#A63CA0') + met('مستحق للموردين', sup.c - sup.d, '#1E6FE8');
   const real = live().filter(e => !e.opening);
   const m = real.reduce((a, e) => e.date.slice(0, 7) > a ? e.date.slice(0, 7) : a, '');
@@ -1753,9 +1757,9 @@ function renderHome() {
   if (m) {
     const mf = e => !e.opening && e.date.startsWith(m);
     const sa = agg('مبيعات توريد', mf), ex = agg('المصروفات', mf), cnt = real.filter(mf).length;
-    $('#mmets').innerHTML = '<div class="met" style="--c:#E8892B"><small>مبيعات الشهر</small><b dir="ltr">' + fmt0(sa.c - sa.d) + '</b></div>' +
-      '<div class="met" style="--c:#D4A00F"><small>مصروفات الشهر</small><b dir="ltr">' + fmt0(ex.d - ex.c) + '</b></div>' +
-      '<div class="met" style="--c:#1FA38A;grid-column:1/-1"><small>عدد قيود الشهر</small><b dir="ltr">' + cnt + '</b></div>';
+    $('#mmets').innerHTML = '<div class="met" style="--c:#E8892B"><small>مبيعات الشهر</small><b dir="ltr">' + hv(fmt0(sa.c - sa.d)) + '</b></div>' +
+      '<div class="met" style="--c:#D4A00F"><small>مصروفات الشهر</small><b dir="ltr">' + hv(fmt0(ex.d - ex.c)) + '</b></div>' +
+      '<div class="met" style="--c:#1FA38A;grid-column:1/-1"><small>عدد قيود الشهر</small><b dir="ltr">' + hv(cnt) + '</b></div>';
   } else $('#mmets').innerHTML = '';
 }
 
@@ -4869,6 +4873,7 @@ async function init() {
   $('#cc-add').onclick = () => { S.ccL.push({ n:'', a:'', k:0 }); ccRows(); renderCC(); const f = $('#cc-items').querySelectorAll('.cc-n'); if (f.length) f[f.length - 1].focus(); };
   $('#cc-clr').onclick = () => { if (!confirm('تمسح كل الأرقام والبنود؟')) return; for (const id of ['q', 'p', 'l', 'o', 's']) $('#cc-' + id).value = ''; S.ccL = ccDef(); ccRows(); renderCC(); };
   shxInit();
+  $('#v-home').addEventListener('click', e => { if (e.target.closest('[data-eye]')) { S.shw = !S.shw; renderHome(); } });
   $('#tiles').onclick = e => {
     const b = e.target.closest('.tile'); if (!b) return; const k = b.dataset.k;
     if (k === 'new') openForm(null); else if (k === 'list') push_('list'); else if (k === 'tb') { S.tbMonth = '*'; push_('tb'); } else if (k === 'gl') push_('gl'); else if (k === 'is') { S.isMonth = '*'; push_('is'); } else if (k === 'bs') { S.bsMonth = '*'; push_('bs'); } else if (k === 'db') { S.dbMonth = '*'; push_('db'); } else if (k === 'hr') { S.hrTab = 'p'; S.hrMonth = ''; push_('hr'); } else if (k === 'cs') { S.csTab = 's'; push_('cs'); } else if (k === 'pr') { S.prTab = 'o'; push_('pr'); } else if (k === 'mp') push_('mp'); else if (k === 'dp') { S.dpMonth = '*'; push_('dp'); } else if (k === 'an') push_('an');
