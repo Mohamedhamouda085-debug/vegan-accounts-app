@@ -307,6 +307,11 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
 :where(.sxt) td{box-shadow:inset 0 0 0 1px #ececec;padding:1px 3px;overflow:hidden;white-space:nowrap}
 .sxt td.ed{box-shadow:inset 0 -3px 0 #F28C28}.sxt td.er{color:#B3261E}
 .sxt td.sel{outline:2.5px solid #1E6FE8;outline-offset:-2px;position:relative}
+.shm{border:0;background:#EEF4EC;border-radius:10px;width:40px;height:40px;font-size:20px;font-weight:800;color:var(--green-d);cursor:pointer;flex:none;min-height:0;padding:0}
+.sha{display:flex;gap:8px;flex-wrap:wrap}.sha .btn{flex:1;min-width:110px;min-height:44px;padding:8px 10px;font-size:14px}
+.sxt th{background:#f1f3f4;color:#555;font-weight:600;font-size:11px;box-shadow:inset 0 0 0 1px #d9d9d9;text-align:center;overflow:hidden;padding:0 2px}
+.sxt td.rg{background-image:linear-gradient(rgba(30,111,232,.2),rgba(30,111,232,.2))}
+.shtl button.on{background:#EEF4EC;border-color:var(--green);color:var(--green-d)}
 #shxprint{display:none}
 @media print{body.sx>*:not(#shxprint){display:none!important}body.sx{background:#fff}body.sx #shxprint{display:block!important}#shxprint .shph{font-size:16px;margin:0 0 8px;direction:rtl}#shxprint td{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none!important}#shxprint tr{page-break-inside:avoid}}
 </style>
@@ -561,11 +566,14 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
     <section id="v-shx" class="hide">
       <style id="shx-css"></style>
       <div id="shx-list"></div>
+      <input type="file" id="shx-file" accept=".xlsx,.xlsm,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple style="display:none">
       <div id="shx-sheet" class="hide">
         <div class="sub"><button id="shx-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b id="shx-title"></b><button id="shx-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
         <div class="shtabs" id="shx-tabs"></div>
         <div class="shfx" id="shx-fx"><b id="shx-addr"></b><input id="shx-in" placeholder="اضغط على خلية" autocomplete="off" enterkeyhint="done"><button id="shx-ok" aria-label="حفظ">✓</button><button id="shx-no" aria-label="إلغاء">✕</button></div>
         <div class="shtl"><button data-z="-" aria-label="تصغير">−</button><span id="shx-zl">100%</span><button data-z="+" aria-label="تكبير">+</button><button data-z="fit">ملاءمة</button><button id="shx-rs">الأصل</button></div>
+        <div class="shtl" id="shx-fm" style="display:none"><button data-fm="rg">نطاق</button><button data-fm="b"><b>B</b></button><button data-fm="i"><i>I</i></button><button data-fm="al" aria-label="يمين">⇥</button><button data-fm="ac" aria-label="وسط">↔</button><button data-fm="ar" aria-label="شمال">⇤</button><button data-fm="tc">لون الخط</button><button data-fm="bg">تلوين</button><button data-fm="bd">حدود</button><button data-fm="nf">نوع الرقم</button><button data-fm="w">لف النص</button><button data-fm="mg">دمج</button><button data-fm="cw-">عرض −</button><button data-fm="cw+">عرض +</button></div>
+        <div class="shtl" id="shx-ut" style="display:none"><button data-u="sh+">＋ شيت</button><button data-u="sh">⋯ الشيت</button><button data-u="r+">＋ صفوف</button><button data-u="c+">＋ أعمدة</button><button data-u="f">⋯ الملف</button></div>
         <div class="shw" id="shx-w"><table class="sxt" id="shx-t"></table></div>
       </div>
     </section>
@@ -1085,7 +1093,7 @@ const SHX_ENG = (() => {
       const raw = this.cellRaw(wb, si, r, c); let v;
       if (!raw) v = null;
       else if (raw.f == null) v = raw.v === undefined ? null : raw.v;
-      else { if (this.busy.has(key)) return E('#REF!'); this.busy.add(key); try { v = this.evalF(raw.f, wb, si); } catch (e) { v = E('#VALUE!'); } this.busy.delete(key); if (v === undefined) v = null; }
+      else { if (this.busy.has(key)) return E('#REF!'); this.busy.add(key); try { v = this.evalF(raw.f, wb, si); } catch (e) { v = E('#VALUE!'); } this.busy.delete(key); if (isE(v) && typeof wb === 'string' && wb.startsWith('u_') && raw.v != null && raw.v !== '' && !(typeof raw.v === 'string' && raw.v[0] === '#')) v = raw.v; if (v === undefined) v = null; }
       this.memo.set(key, v); return v;
     }
     evalF(f, wb, si) { const ast = getAst(f); if (!ast) return E('#NAME?'); return this.ev(ast, { wb, si }); }
@@ -1222,13 +1230,8 @@ function shxOv(wb) { const d = S.docs.get('shx:' + wb); return d && !d.deleted &
 const shxEdCount = wb => { const o = shxOv(wb); return o ? Object.keys(o).length : 0; };
 function renderSHX() {
   if (!SHX.D) { $('#shx-list').innerHTML = '<div class="empty" style="padding:30px;text-align:center">بنفتح الملفات…</div>'; $('#shx-list').classList.remove('hide'); $('#shx-sheet').classList.add('hide'); shxLoad().then(ok => { if (ok && S.view === 'shx') renderSHX(); }); return; }
-  if (!SHX.wb) {
-    $('#shx-sheet').classList.add('hide'); const L = $('#shx-list'); L.classList.remove('hide');
-    L.innerHTML = '<div class="sub"><button id="shx-hb" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>ملفات الإكسل</b><span style="width:42px"></span></div><div class="shl">' +
-      Object.keys(SHX.D).map(k => { const w = SHX.D[k], n = shxEdCount(k); return '<div class="shc" data-w="' + k + '"><span class="i">' + SHX_IC + '</span><span style="flex:1"><b>' + esc(w.t) + '</b><small style="display:block;color:var(--muted)">' + w.sh.length + ' شيتات: ' + esc(w.sh.map(s => s.n).join('، ')) + (n ? ' · عدّلت ' + n + ' خلية' : '') + '</small></span></div>'; }).join('') +
-      '<div class="note" style="padding:4px 4px 0">الملفات دي نسخة شغالة بالمعادلات. ملف أحمد وملف هشام بيقروا من الجدول الرئيسي (v7)، فأي تعديل فيه بيظهر عندهم. تعديلاتك بتتحفظ وتتزامن مع باقي البرنامج.</div></div>';
-    return;
-  }
+  shxUserSync(); if (SHX.wb && !SHX.D[SHX.wb]) SHX.wb = null;
+  if (!SHX.wb) { $('#shx-sheet').classList.add('hide'); shxList(); return; }
   $('#shx-list').classList.add('hide'); $('#shx-sheet').classList.remove('hide'); shxDraw(true);
 }
 function shxCss(wb) {
@@ -1243,27 +1246,28 @@ function shxGap(wb, si) { const sh = SHX.D[wb].sh[si]; let best = null, s = 0;
   for (let r = 1; r <= sh.R + 1; r++) { const bl = r <= sh.R && blank(r); if (bl) { if (!s) s = r; } else if (s) { if (r - s >= 10 && (!best || r - s > best[1] - best[0] + 1)) best = [s, r - 1]; s = 0; } }
   return best; }
 function shxTable(wb, si, forPrint, gap) {
-  const sh = SHX.D[wb].sh[si], eng = SHX.eng, ov = shxOv(wb) || {}, st = SHX.D[wb].st, base = eng.smap(wb, si);
+  const sh = SHX.D[wb].sh[si], eng = SHX.eng, ov = shxOv(wb) || {}, st = SHX.D[wb].st, base = eng.smap(wb, si), uf = shxU(wb) && !forPrint;
   const cov = new Set(), anc = new Map();
   for (const m of sh.mg) { const p = m.split(':'), a = /([A-Z]+)(\d+)/.exec(p[0]), b = /([A-Z]+)(\d+)/.exec(p[1] || p[0]); const c1 = SHX_ENG.colN(a[1]), r1 = +a[2], c2 = SHX_ENG.colN(b[1]), r2 = +b[2]; anc.set(r1 * 100000 + c1, [r2 - r1 + 1, c2 - c1 + 1]); for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) if (r !== r1 || c !== c1) cov.add(r * 100000 + c); }
   let R = Math.max(sh.R, ...Object.keys(ov).filter(k => k.startsWith(sh.n + '!')).map(k => +k.slice(sh.n.length + 1).replace(/^[A-Z]+/, '')), 1), C = sh.C;
-  let cg = '', tw = 0; for (let c = 1; c <= C; c++) { const d = sh.cw[c], w = d && d[1] ? 0 : (d ? d[0] : 69); tw += w; cg += '<col style="width:' + w + 'px">'; }
+  let cg = uf ? '<col style="width:34px">' : '', tw = uf ? 34 : 0; for (let c = 1; c <= C; c++) { const d = sh.cw[c], w = d && d[1] ? 0 : (d ? d[0] : 69); tw += w; cg += '<col style="width:' + w + 'px">'; }
   let h = '<colgroup>' + cg + '</colgroup>';
+  if (uf) { h += '<tr style="height:20px"><th data-all="1"></th>'; for (let c = 1; c <= C; c++) { const d = sh.cw[c]; if (d && d[1]) continue; h += '<th data-ch="' + c + '">' + SHX_ENG.colL(c) + '</th>'; } h += '</tr>'; }
   for (let r = 1; r <= R; r++) {
     const rd = sh.rh[r]; if (rd && rd[1]) continue; if (gap && r >= gap[0] && r <= gap[1]) continue;
-    h += '<tr style="height:' + (rd ? rd[0] : 20) + 'px">';
+    h += '<tr style="height:' + (rd ? rd[0] : 20) + 'px">' + (uf ? '<th data-rh="' + r + '">' + r + '</th>' : '');
     for (let c = 1; c <= C; c++) {
       const k = r * 100000 + c; if (cov.has(k)) continue; const cd = sh.cw[c]; if (cd && cd[1]) continue;
       const b = base.get(k), s = b ? b[4] : -1, v = eng.get(wb, si, r, c), stl = st[s], a = anc.get(k), key = sh.n + '!' + shxA(r, c);
-      const txt = SHX_ENG.fmtNum(v, stl ? stl.nf : 'General', stl ? stl.d : 0);
-      h += '<td' + (forPrint ? '' : ' data-r="' + r + '" data-c="' + c + '"') + ' class="' + (s >= 0 ? 'sx' + s : '') + (ov[key] ? ' ed' : '') + (SHX_ENG.isE(v) ? ' er' : '') + '"' + (a ? ' rowspan="' + a[0] + '" colspan="' + a[1] + '"' : '') + '>' + esc(txt) + '</td>';
+      const od = ov[key], txt = SHX_ENG.fmtNum(v, stl ? stl.nf : 'General', (stl && stl.d) || (od && od.d) ? 1 : 0);
+      h += '<td' + (forPrint ? '' : ' data-r="' + r + '" data-c="' + c + '"') + ' class="' + (s >= 0 ? 'sx' + s : '') + (ov[key] && !shxU(wb) ? ' ed' : '') + (uf && SHX.rg && wb === SHX.wb && r >= SHX.rg[0] && r <= SHX.rg[2] && c >= SHX.rg[1] && c <= SHX.rg[3] ? ' rg' : '') + (SHX_ENG.isE(v) ? ' er' : '') + '"' + (a ? ' rowspan="' + a[0] + '" colspan="' + a[1] + '"' : '') + '>' + esc(txt) + '</td>';
     }
     h += '</tr>';
   }
   return { html: h, tw, rtl: sh.rtl };
 }
 function shxDraw(full) {
-  const w = SHX.D[SHX.wb]; $('#shx-title').textContent = w.t;
+  const w = SHX.D[SHX.wb]; if (SHX.si >= w.sh.length) SHX.si = 0; $('#shx-title').textContent = w.t; const uf = shxU(SHX.wb); $('#shx-ut').style.display = $('#shx-fm').style.display = uf && canWrite() ? 'flex' : 'none'; $('#shx-rs').style.display = uf ? 'none' : '';
   if (full) { $('#shx-css').textContent = shxCss(SHX.wb); $('#shx-tabs').innerHTML = w.sh.map((s, i) => '<button data-i="' + i + '" class="' + (i === SHX.si ? 'on' : '') + '">' + esc(s.n) + '</button>').join(''); }
   const t = shxTable(SHX.wb, SHX.si), tb = $('#shx-t'); tb.dir = t.rtl ? 'rtl' : 'ltr'; tb.innerHTML = t.html; tb.style.width = t.tw + 'px'; SHX.tw = t.tw; if (full) SHX.z = Math.max(0.55, Math.min(1, ($('#shx-w').clientWidth - 4) / t.tw)); tb.style.zoom = SHX.z; SHX.selTd = null;
   if (SHX.sel) { const td = tb.querySelector('td[data-r="' + SHX.sel[0] + '"][data-c="' + SHX.sel[1] + '"]'); if (td) { td.classList.add('sel'); SHX.selTd = td; } }
@@ -1273,7 +1277,8 @@ function shxCellText(r, c) {
   const wb = SHX.wb, si = SHX.si, raw = SHX.eng.cellRaw(wb, si, r, c); if (!raw) return '';
   if (raw.f != null) return '=' + raw.f;
   const b = SHX.eng.smap(wb, si).get(r * 100000 + c), stl = b ? SHX.D[wb].st[b[4]] : null, v = raw.v;
-  if (v == null) return ''; if (stl && stl.d && typeof v === 'number') return SHX_ENG.fmtDate(v); return String(v);
+  const od = (shxOv(wb) || {})[SHX.D[wb].sh[si].n + '!' + shxA(r, c)];
+  if (v == null) return ''; if (((stl && stl.d) || (od && od.d)) && typeof v === 'number') return SHX_ENG.fmtDate(v); return String(v);
 }
 function shxSelect(td) {
   if (SHX.selTd) SHX.selTd.classList.remove('sel'); td.classList.add('sel'); SHX.selTd = td;
@@ -1288,7 +1293,7 @@ function shxParse(txt, wb, si, r, c) {
   if (/^-?\d*\.?\d+%$/.test(a)) return { v: +a.slice(0, -1) / 100 };
   let m = /^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/.exec(a), y, mo, d;
   if (m) { d = +m[1]; mo = +m[2]; y = +m[3]; if (y < 100) y += 2000; } else if ((m = /^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/.exec(a))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
-  if (m) { return { v: Math.round((Date.UTC(y, mo - 1, d) - Date.UTC(1899, 11, 30)) / 864e5) }; }
+  if (m) { const dv = Math.round((Date.UTC(y, mo - 1, d) - Date.UTC(1899, 11, 30)) / 864e5); return shxU(wb) ? { v: dv, d: 1 } : { v: dv }; }
   return { v: t };
 }
 function shxCommit() {
@@ -1303,31 +1308,438 @@ function shxRestoreCell() {
   if (!SHX.sel || !canWrite()) return; const [r, c] = SHX.sel, sh = SHX.D[SHX.wb].sh[SHX.si], key = sh.n + '!' + shxA(r, c), d = S.docs.get('shx:' + SHX.wb), cur = d && !d.deleted && d.data && d.data.c ? d.data.c : {};
   if (!cur[key]) { toast('الخلية دي ما اتعدلتش'); return; } const c2 = { ...cur }; delete c2[key]; docSave('shx', 'shx:' + SHX.wb, { c:c2 }); SHX.eng.reset(); shxDraw(false); const i = $('#shx-in'); i.value = SHX.orig = shxCellText(r, c); toast('رجعت الأصل');
 }
-function shxPrint() {
-  const w = SHX.D[SHX.wb], sh = w.sh[SHX.si]; let gp = null; const g = shxGap(SHX.wb, SHX.si); if (g && confirm('في ' + (g[1] - g[0] + 1) + ' صف فاضي في الشيت. أطبع الصفوف المعبّاة بس؟\n(موافق = المعبّاة بس، إلغاء = كل الصفوف)')) gp = [g[0] + 1, g[1]]; const t = shxTable(SHX.wb, SHX.si, true, gp);
+/* ===== ملفاتي: مجلدات + ملفات إكسل (استيراد / فاضي) + طباعة PDF ===== */
+const shxU = wb => typeof wb === 'string' && wb.startsWith('u_');
+function shxFlush() { SHX.eng.maps.clear(); SHX.eng.memo.clear(); }
+function shxUserSync() {
+  if (!SHX.uv) SHX.uv = {}; const seen = new Set();
+  for (const d of docsOf('shxw')) {
+    if (!d.data || !d.data.sh) continue; const k = 'u_' + d.id.slice(5); seen.add(k);
+    if (SHX.uv[k] !== d.updated || !SHX.D[k]) { SHX.D[k] = { t:d.data.t, sh:d.data.sh, st:d.data.st || [], ext:[] }; SHX.uv[k] = d.updated; shxFlush(); }
+  }
+  for (const k of Object.keys(SHX.D)) if (shxU(k) && !seen.has(k)) { delete SHX.D[k]; delete SHX.uv[k]; shxFlush(); }
+}
+const shxFolders = () => docsOf('shxd').map(d => ({ id:d.id, n:(d.data && d.data.n) || 'مجلد' })).sort((a, b) => a.n.localeCompare(b.n, 'ar'));
+function shxPlace(k) { const d = S.docs.get('shxp:' + k), f = d && !d.deleted && d.data ? d.data.f : ''; const fd = f && S.docs.get(f); return fd && !fd.deleted ? f : ''; }
+const SHX_FIC = '<svg viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+function shxMenu(title, items) {
+  const old = document.getElementById('shx-ov'); if (old) old.remove();
+  const o = document.createElement('div'); o.id = 'shx-ov'; o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  const b = document.createElement('div'); b.style.cssText = 'background:var(--paper,#fff);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:14px 14px calc(16px + env(safe-area-inset-bottom));display:grid;gap:8px;max-height:80vh;overflow:auto';
+  const h = document.createElement('b'); h.textContent = title; h.style.cssText = 'font-size:16px'; b.appendChild(h);
+  for (const it of items) { const x = document.createElement('button'); x.className = 'btn ' + (it.d ? 'danger' : 'ghost'); x.textContent = it.l; x.onclick = () => { o.remove(); it.fn(); }; b.appendChild(x); }
+  const c = document.createElement('button'); c.className = 'btn ghost'; c.textContent = 'إلغاء'; c.style.cssText = 'border-color:var(--line);color:var(--muted)'; c.onclick = () => o.remove(); b.appendChild(c);
+  o.appendChild(b); o.onclick = e => { if (e.target === o) o.remove(); }; document.body.appendChild(o);
+}
+function shxList() {
+  const L = $('#shx-list'); L.classList.remove('hide'); const fs = shxFolders(); let cur = SHX.fd || '';
+  if (cur && !fs.find(f => f.id === cur)) cur = SHX.fd = null;
+  const keys = Object.keys(SHX.D), inF = id => keys.filter(k => shxPlace(k) === id), curF = fs.find(f => f.id === cur), cw = canWrite();
+  let h = '<div class="sub"><button id="shx-hb" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>' + esc(curF ? curF.n : 'ملفات الإكسل') + '</b>' + (curF && cw ? '<button class="shm" data-mf="' + curF.id + '" aria-label="خيارات المجلد">⋯</button>' : '<span style="width:42px"></span>') + '</div><div class="shl">';
+  if (cw) h += '<div class="sha">' + (cur ? '' : '<button class="btn ghost" data-a="nf">＋ مجلد</button>') + '<button class="btn ghost" data-a="nw">＋ ملف فاضي</button><button class="btn" data-a="im">استيراد إكسل</button></div>';
+  if (!cur) h += fs.map(f => '<div class="shc" data-fd="' + f.id + '"><span class="i" style="background:#C98A1B">' + SHX_FIC + '</span><span style="flex:1;min-width:0"><b>' + esc(f.n) + '</b><small style="display:block;color:var(--muted)">' + inF(f.id).length + ' ملفات</small></span>' + (cw ? '<button class="shm" data-mf="' + f.id + '" aria-label="خيارات المجلد">⋯</button>' : '') + '</div>').join('');
+  const ks = inF(cur);
+  h += ks.map(k => { const w = SHX.D[k], n = shxU(k) ? 0 : shxEdCount(k); return '<div class="shc" data-w="' + k + '"><span class="i">' + SHX_IC + '</span><span style="flex:1;min-width:0"><b>' + esc(w.t) + '</b><small style="display:block;color:var(--muted)">' + w.sh.length + ' شيتات: ' + esc(w.sh.map(x => x.n).join('، ')) + (n ? ' · عدّلت ' + n + ' خلية' : '') + '</small></span>' + (cw ? '<button class="shm" data-m="' + k + '" aria-label="خيارات الملف">⋯</button>' : '') + '</div>'; }).join('');
+  if (!ks.length && cur) h += '<div class="note" style="text-align:center;padding:14px">المجلد فاضي. اعمل ملف جديد أو استورد ملف إكسل، أو انقل ملف من ⋯ بتاع أي ملف.</div>';
+  if (!cur) h += '<div class="note" style="padding:4px 4px 0">ملف أحمد وملف هشام بيقروا من الجدول الرئيسي (v7)، فأي تعديل فيه بيظهر عندهم. ملفاتك الجديدة (الفاضية والمستوردة) منفصلة تماماً عن بيانات البرنامج ومش بتأثر في أي رقم. تعديلاتك بتتحفظ وتتزامن.</div>';
+  L.innerHTML = h + '</div>';
+}
+function shxOpen(k) { SHX.wb = k; SHX.si = 0; SHX.sel = null; SHX.rg = null; SHX.rm = false; $('#shx-addr').textContent = ''; $('#shx-in').value = ''; renderSHX(); }
+function shxNewFolder() { const n = (prompt('اسم المجلد') || '').trim(); if (!n) return ''; const id = 'shxd:' + uid8(); docSave('shxd', id, { n }); return id; }
+function shxMove(k, f) { docSave('shxp', 'shxp:' + k, { f }); renderSHX(); }
+function shxMoveMenu(k) {
+  const cur = shxPlace(k), it = [{ l:(cur ? '' : '✓ ') + 'الرئيسي (من غير مجلد)', fn:() => shxMove(k, '') }];
+  for (const f of shxFolders()) it.push({ l:(cur === f.id ? '✓ ' : '') + f.n, fn:() => shxMove(k, f.id) });
+  it.push({ l:'＋ مجلد جديد وانقل فيه', fn:() => { const id = shxNewFolder(); if (id) shxMove(k, id); } }); shxMenu('نقل الملف لـ…', it);
+}
+const shxWData = k => { const d = S.docs.get('shxw:' + k.slice(2)); return d && !d.deleted ? JSON.parse(JSON.stringify(d.data)) : null; };
+function shxWSave(k, data) { docSave('shxw', 'shxw:' + k.slice(2), data); shxUserSync(); }
+function shxRenFile(k) { const d = shxWData(k); if (!d) return; const n = (prompt('اسم الملف', d.t) || '').trim(); if (!n) return; d.t = n; shxWSave(k, d); renderSHX(); }
+function shxDelFile(k) {
+  const d = shxWData(k); if (!d || !confirm('تمسح الملف "' + d.t + '" بكل شيتاته؟')) return;
+  docSave('shxw', 'shxw:' + k.slice(2), d, true); if (S.docs.has('shx:' + k)) docSave('shx', 'shx:' + k, {}, true); if (S.docs.has('shxp:' + k)) docSave('shxp', 'shxp:' + k, { f:'' });
+  shxUserSync(); SHX.wb = null; renderSHX(); toast('اتمسح');
+}
+function shxFileMenu(k) { const it = [{ l:'نقل لمجلد', fn:() => shxMoveMenu(k) }, { l:shxU(k) ? 'تصدير كملف إكسل (xlsx)' : 'تصدير كملف إكسل (xlsx) بالقيم', fn:() => shxExport(k) }]; if (shxU(k)) { it.push({ l:'إعادة تسمية الملف', fn:() => shxRenFile(k) }); it.push({ l:'مسح الملف', d:1, fn:() => shxDelFile(k) }); } shxMenu(SHX.D[k].t, it); }
+function shxFolderMenu(id) {
+  const d = S.docs.get(id); if (!d || d.deleted) return;
+  shxMenu(d.data.n, [{ l:'إعادة تسمية المجلد', fn:() => { const n = (prompt('اسم المجلد', d.data.n) || '').trim(); if (n) { docSave('shxd', id, { n }); renderSHX(); } } },
+    { l:'مسح المجلد (الملفات اللي جواه بترجع للرئيسي)', d:1, fn:() => { if (confirm('تمسح المجلد "' + d.data.n + '"؟ الملفات اللي جواه مش هتتمسح.')) { docSave('shxd', id, d.data, true); if (SHX.fd === id) SHX.fd = null; renderSHX(); } } }]);
+}
+const shxBlank = n => ({ n, cells:[], R:50, C:12, cw:{}, rh:{}, mg:[], rtl:true });
+function shxNewFile() {
+  const n = (prompt('اسم الملف الجديد', 'ملف جديد') || '').trim(); if (!n) return; const uid = uid8();
+  docSave('shxw', 'shxw:' + uid, { t:n, sh:[shxBlank('شيت1')], st:[] }); if (SHX.fd) docSave('shxp', 'shxp:u_' + uid, { f:SHX.fd }); shxUserSync(); shxOpen('u_' + uid);
+}
+/* ---- قراءة ملف xlsx (من غير مكتبات خارجية) ---- */
+async function shxZip(buf) {
+  const u = new Uint8Array(buf), dv = new DataView(buf), td = new TextDecoder(); let e = u.length - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw { msg:'الملف ده مش ملف إكسل سليم (xlsx أو xls)' };
+  const n = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true); const ent = {};
+  for (let i = 0; i < n; i++) { if (dv.getUint32(p, true) !== 0x02014b50) break; const m = dv.getUint16(p + 10, true), cs = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), el = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true); ent[td.decode(u.subarray(p + 46, p + 46 + nl))] = { m, cs, off }; p += 46 + nl + el + cl; }
+  return async name => { const x = ent[name]; if (!x) return null; const nl = dv.getUint16(x.off + 26, true), el = dv.getUint16(x.off + 28, true), d = u.subarray(x.off + 30 + nl + el, x.off + 30 + nl + el + x.cs); if (x.m === 0) return td.decode(d); if (typeof DecompressionStream === 'undefined') throw { msg:'المتصفح محتاج تحديث' }; return await new Response(new Blob([d]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text(); };
+}
+function shxShiftF(f, dr, dc) {
+  return f.split('"').map((sg, i) => i % 2 ? sg : sg.split("'").map((s2, j) => j % 2 ? s2 : s2.replace(/(\$?)([A-Z]{1,3})(\$?)(\d+)/g, (m, a, cl, b, rw, off, all) => { const pv = all[off - 1], nx = all[off + m.length]; if ((pv && /[A-Za-z0-9_.]/.test(pv)) || (nx && /[A-Za-z0-9_(]/.test(nx))) return m; return a + (a ? cl : SHX_ENG.colL(SHX_ENG.colN(cl) + dc)) + b + (b ? rw : (+rw + dr)); })).join("'")).join('"');
+}
+async function shxParseXlsx(buf, title) {
+  const get = await shxZip(buf), px = x => new DOMParser().parseFromString(x, 'application/xml'), xt = (el, n) => el.getElementsByTagNameNS('*', n), xa = (el, a) => el.getAttribute(a);
+  const wbx = await get('xl/workbook.xml'); if (!wbx) throw { msg:'الملف ده مش ملف إكسل سليم' };
+  const wbd = px(wbx), rels = {}, rx = await get('xl/_rels/workbook.xml.rels'); if (rx) for (const r of xt(px(rx), 'Relationship')) rels[xa(r, 'Id')] = xa(r, 'Target');
+  const ss = [], sx = await get('xl/sharedStrings.xml');
+  if (sx) for (const si of xt(px(sx), 'si')) { let t = ''; for (const ch of si.children) { if (ch.localName === 't') t += ch.textContent; else if (ch.localName === 'r') for (const x of ch.children) if (x.localName === 't') t += x.textContent; } ss.push(t); }
+  const TH = ['FFFFFF', '000000', 'E7E6E6', '44546A', '4472C4', 'ED7D31', 'A5A5A5', 'FFC000', '5B9BD5', '70AD47'], IDX = ['000000', 'FFFFFF', 'FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF', '00FFFF', '000000', 'FFFFFF', 'FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF', '00FFFF', '800000', '008000', '000080', '808000', '800080', '008080', 'C0C0C0', '808080'];
+  const tint = (h, t) => { const k = +t; if (!k) return h; return [0, 2, 4].map(i => { let v = parseInt(h.substr(i, 2), 16); v = k > 0 ? v + (255 - v) * k : v * (1 + k); return Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0'); }).join('').toUpperCase(); };
+  const col = c => { if (!c) return null; if (c.hasAttribute('rgb')) return xa(c, 'rgb').slice(-6).toUpperCase(); if (c.hasAttribute('theme')) return tint(TH[+xa(c, 'theme')] || '000000', xa(c, 'tint')); if (c.hasAttribute('indexed')) return IDX[+xa(c, 'indexed')] || null; return null; };
+  const BN = { 1:'0', 2:'0.00', 3:'#,##0', 4:'#,##0.00', 9:'0%', 10:'0.00%', 11:'0.00E+00', 14:'dd/mm/yyyy', 15:'d-mmm-yy', 16:'d-mmm', 17:'mmm-yy', 22:'dd/mm/yyyy h:mm', 37:'#,##0 ;(#,##0)', 38:'#,##0 ;[Red](#,##0)', 39:'#,##0.00;(#,##0.00)', 40:'#,##0.00;[Red](#,##0.00)', 49:'@' };
+  const isDt = c => { const x = c.replace(/"[^"]*"|\[[^\]]*\]|\\./g, ''); return /[ymd]/i.test(x) && !/[0#?]/.test(x); };
+  const st = [], stx = await get('xl/styles.xml');
+  if (stx) {
+    const sd = px(stx), nfm = {}; for (const n of xt(sd, 'numFmt')) nfm[xa(n, 'numFmtId')] = xa(n, 'formatCode');
+    const flag = (f, n) => { const e = [...f.children].find(x => x.localName === n); return !!e && xa(e, 'val') !== '0'; };
+    const fonts = [...xt(sd, 'font')].filter(f => f.parentElement.localName === 'fonts').map(f => { const sz = [...f.children].find(x => x.localName === 'sz'), c = [...f.children].find(x => x.localName === 'color'); return { b:flag(f, 'b'), i:flag(f, 'i'), fs:sz ? +xa(sz, 'val') : 0, fc:col(c) }; });
+    const fills = [...xt(sd, 'fill')].filter(f => f.parentElement.localName === 'fills').map(f => { const pf = xt(f, 'patternFill')[0]; if (!pf || xa(pf, 'patternType') !== 'solid') return null; return col(xt(pf, 'fgColor')[0]); });
+    const bords = [...xt(sd, 'border')].filter(f => f.parentElement.localName === 'borders').map(f => { const bd = ['left', 'right', 'top', 'bottom'].map(n => { const e = [...f.children].find(x => x.localName === n); return e && xa(e, 'style') ? [xa(e, 'style'), col(xt(e, 'color')[0]) || '000000'] : null; }); return bd.some(Boolean) ? bd : null; });
+    const cx = xt(sd, 'cellXfs')[0];
+    if (cx) for (const xf of cx.children) {
+      if (xf.localName !== 'xf') continue; const o = {}, ft = fonts[+xa(xf, 'fontId') || 0] || {}, fl = fills[+xa(xf, 'fillId') || 0], bd = bords[+xa(xf, 'borderId') || 0], nid = +xa(xf, 'numFmtId') || 0, code = nfm[nid] || BN[nid] || 'General';
+      if (ft.b) o.b = 1; if (ft.i) o.i = 1; if (ft.fc && ft.fc !== '000000') o.fc = ft.fc; if (ft.fs) o.fs = ft.fs; if (fl) o.bg = fl; if (bd) o.bd = bd; o.nf = code; if ((nid >= 14 && nid <= 17) || nid === 22 || (nid >= 27 && nid <= 36) || (nid >= 50 && nid <= 58) || (nid >= 164 && isDt(code))) o.d = 1;
+      const al = [...xf.children].find(x => x.localName === 'alignment'); if (al) { if (xa(al, 'horizontal')) o.h = xa(al, 'horizontal'); if (xa(al, 'vertical')) o.va = xa(al, 'vertical'); if (xa(al, 'wrapText') === '1') o.w = 1; }
+      st.push(o);
+    }
+  }
+  const sheets = []; for (const sn of xt(wbd, 'sheet')) { const rid = sn.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id') || sn.getAttribute('r:id'); let tg = rels[rid]; if (!tg) continue; tg = tg.startsWith('/') ? tg.slice(1) : 'xl/' + tg; if (/worksheets\//.test(tg)) sheets.push({ n:xa(sn, 'name'), path:tg }); }
+  if (!sheets.length) throw { msg:'مفيش شيتات في الملف ده' };
+  let total = 0; const out = [];
+  for (const shd of sheets) {
+    const xml = await get(shd.path); if (!xml) continue; const d = px(xml), sh = { n:shd.n, cells:[], R:1, C:1, cw:{}, rh:{}, mg:[], rtl:false }, shared = {};
+    const sv = xt(d, 'sheetView')[0]; if (sv && /^(1|true)$/.test(xa(sv, 'rightToLeft') || '')) sh.rtl = true;
+    for (const c of xt(d, 'col')) { const mn = +xa(c, 'min'), mx = Math.min(+xa(c, 'max'), 200), w = c.hasAttribute('width') ? Math.round(+xa(c, 'width') * 7 + 5) : 69, hid = /^(1|true)$/.test(xa(c, 'hidden') || '') ? 1 : 0; for (let i = mn; i <= mx; i++) sh.cw[i] = [w, hid]; }
+    let rr = 0;
+    for (const row of xt(d, 'row')) {
+      rr = row.hasAttribute('r') ? +xa(row, 'r') : rr + 1; const hid = /^(1|true)$/.test(xa(row, 'hidden') || '') ? 1 : 0;
+      if (row.hasAttribute('ht') && (hid || Math.abs(+xa(row, 'ht') - 15) > 0.5)) sh.rh[rr] = [Math.round(+xa(row, 'ht') * 4 / 3), hid]; else if (hid) sh.rh[rr] = [20, 1];
+      for (const c of row.children) {
+        if (c.localName !== 'c') continue; const m = /^([A-Z]+)(\d+)$/.exec(xa(c, 'r') || ''); if (!m) continue; const cc = SHX_ENG.colN(m[1]), r = +m[2], sI = +xa(c, 's') || 0, tp = xa(c, 't');
+        const fe = [...c.children].find(x => x.localName === 'f'), ve = [...c.children].find(x => x.localName === 'v'), ie = [...c.children].find(x => x.localName === 'is');
+        let v = null; if (tp === 's') v = ve ? ss[+ve.textContent] : null; else if (tp === 'inlineStr') v = ie ? [...xt(ie, 't')].map(x => x.textContent).join('') : null; else if (tp === 'str' || tp === 'e') v = ve ? ve.textContent : null; else if (tp === 'b') v = ve ? ve.textContent === '1' : null; else if (ve && ve.textContent !== '') { const nn = parseFloat(ve.textContent); v = isNaN(nn) ? ve.textContent : nn; }
+        let f = null; if (fe) { let ft = fe.textContent; if (xa(fe, 't') === 'shared') { const si = xa(fe, 'si'); if (ft) shared[si] = { f:ft, r, c:cc }; else { const ms = shared[si]; ft = ms ? shxShiftF(ms.f, r - ms.r, cc - ms.c) : ''; } } f = ft || null; }
+        if (f == null && (v == null || v === '') && !sI) continue; if (f == null && v === '' && !sI) continue;
+        sh.cells.push([r, cc, f, v, st[sI] ? sI : -1]); if (r > sh.R) sh.R = r; if (cc > sh.C) sh.C = cc; total++;
+      }
+    }
+    for (const mc of xt(d, 'mergeCell')) { const ref = xa(mc, 'ref'); if (!ref) continue; sh.mg.push(ref); const e = /([A-Z]+)(\d+)$/.exec(ref); if (e) { sh.R = Math.max(sh.R, +e[2]); sh.C = Math.max(sh.C, SHX_ENG.colN(e[1])); } }
+    if (total > 100000) throw { msg:'الملف كبير أوي (أكتر من 100 ألف خلية)' };
+    out.push(sh);
+  }
+  return { t:title || 'ملف مستورد', sh:out, st };
+}
+/* ---- قراءة ملف xls القديم (BIFF8): القيم والتنسيق، والمعادلات بتتقرا كقيم ---- */
+function shxCfb(buf) {
+  const u = new Uint8Array(buf), dv = new DataView(buf), sig = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
+  if (u.length < 512 || sig.some((x, i) => u[i] !== x)) throw { msg:'الملف ده مش ملف إكسل سليم' };
+  const ss = 1 << dv.getUint16(30, true), ms = 1 << dv.getUint16(32, true), dirS = dv.getUint32(48, true), cut = dv.getUint32(56, true), mfS = dv.getUint32(60, true), NO = 0xFFFFFFFA;
+  const dif = []; for (let i = 0; i < 109; i++) { const x = dv.getUint32(76 + i * 4, true); if (x < NO) dif.push(x); }
+  let dn = dv.getUint32(68, true), dc = dv.getUint32(72, true);
+  while (dc-- > 0 && dn < NO) { const o = (dn + 1) * ss; for (let i = 0; i < ss / 4 - 1; i++) { const x = dv.getUint32(o + i * 4, true); if (x < NO) dif.push(x); } dn = dv.getUint32(o + ss - 4, true); }
+  const per = ss / 4, fat = new Uint32Array(dif.length * per); dif.forEach((sec, i) => { const o = (sec + 1) * ss; for (let j = 0; j < per; j++) fat[i * per + j] = dv.getUint32(o + j * 4, true); });
+  const chain = (st, f) => { const out = []; let x = st, g = 0; while (x < NO && x < f.length && g++ < 4e6) { out.push(x); x = f[x]; } return out; };
+  const rd = st => { const ch = chain(st, fat), r = new Uint8Array(ch.length * ss); ch.forEach((sec, i) => { r.set(u.subarray((sec + 1) * ss, (sec + 1) * ss + ss), i * ss); }); return r; };
+  const dir = rd(dirS), dd = new DataView(dir.buffer), ents = [], td = new TextDecoder('utf-16le');
+  for (let o = 0; o + 128 <= dir.length; o += 128) { const nl = dd.getUint16(o + 64, true); ents.push({ name:td.decode(dir.subarray(o, o + Math.max(0, nl - 2))), type:dir[o + 66], st:dd.getUint32(o + 116, true), size:dd.getUint32(o + 120, true) }); }
+  let mini = null, mfat = null;
+  const stream = e => {
+    if (e.size < cut) { if (!mini) { mini = rd(ents[0].st); const m = rd(mfS), mv = new DataView(m.buffer); mfat = new Uint32Array(m.length / 4); for (let i = 0; i < mfat.length; i++) mfat[i] = mv.getUint32(i * 4, true); } const ch = chain(e.st, mfat), r = new Uint8Array(ch.length * ms); ch.forEach((sec, i) => { r.set(mini.subarray(sec * ms, sec * ms + ms), i * ms); }); return r.subarray(0, e.size); }
+    return rd(e.st).subarray(0, e.size);
+  };
+  return { ents, stream };
+}
+async function shxParseXls(buf, title) {
+  const cf = shxCfb(buf), we = cf.ents.find(e => e.type === 2 && (e.name === 'Workbook' || e.name === 'Book'));
+  if (!we) throw { msg:'الملف ده عليه كلمة سر أو مش ملف إكسل عادي' };
+  const u = cf.stream(we), dv = new DataView(u.buffer, u.byteOffset, u.byteLength), u16 = o => dv.getUint16(o, true), u32 = o => dv.getUint32(o, true);
+  const l1 = a => { let t = ''; for (let i = 0; i < a.length; i++) t += String.fromCharCode(a[i]); return t; }, u16s = a => new TextDecoder('utf-16le').decode(a);
+  const ustr = (o, lb) => { const cch = lb === 1 ? u[o] : u16(o), fl = u[o + lb]; let p = o + lb + 1, runs = 0, el = 0; if (fl & 8) { runs = u16(p); p += 2; } if (fl & 4) { el = u32(p); p += 4; } const hi = fl & 1, t = hi ? u16s(u.subarray(p, p + cch * 2)) : l1(u.subarray(p, p + cch)); return t; };
+  const DEF = ['000000', 'FFFFFF', 'FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF', '00FFFF', '800000', '008000', '000080', '808000', '800080', '008080', 'C0C0C0', '808080', '9999FF', '993366', 'FFFFCC', 'CCFFFF', '660066', 'FF8080', '0066CC', 'CCCCFF', '000080', 'FF00FF', 'FFFF00', '00FFFF', '800080', '800000', '008080', '0000FF', '00CCFF', 'CCFFFF', 'CCFFCC', 'FFFF99', '99CCFF', 'FF99CC', 'CC99FF', 'FFCC99', '3366FF', '33CCCC', '99CC00', 'FFCC00', 'FF9900', 'FF6600', '666699', '969696', '003366', '339966', '003300', '333300', '993300', '993366', '333399', '333333'];
+  const pal = {}, col = ci => { if (ci == null || ci >= 64) return null; if (ci < 8) ci += 8; return pal[ci] || DEF[ci - 8] || null; };
+  const BN = { 1:'0', 2:'0.00', 3:'#,##0', 4:'#,##0.00', 9:'0%', 10:'0.00%', 11:'0.00E+00', 14:'dd/mm/yyyy', 15:'d-mmm-yy', 16:'d-mmm', 17:'mmm-yy', 22:'dd/mm/yyyy h:mm', 37:'#,##0 ;(#,##0)', 38:'#,##0 ;[Red](#,##0)', 39:'#,##0.00;(#,##0.00)', 40:'#,##0.00;[Red](#,##0.00)', 41:'#,##0', 42:'#,##0', 43:'#,##0.00', 44:'#,##0.00', 49:'@' };
+  const isDt = c => { const x = c.replace(/"[^"]*"|\[[^\]]*\]|\\./g, ''); return /[ymd]/i.test(x) && !/[0#?]/.test(x); };
+  const LS = [null, 'thin', 'medium', 'dashed', 'dotted', 'thick', 'double', 'hair', 'mediumDashed', 'thin', 'mediumDashed', 'thin', 'mediumDashed', 'mediumDashed'], ERR = { 0:'#NULL!', 7:'#DIV/0!', 15:'#VALUE!', 23:'#REF!', 29:'#NAME?', 36:'#NUM!', 42:'#N/A' };
+  if (u16(0) !== 0x809 || u16(4) !== 0x0600) throw { msg:'الملف ده بصيغة إكسل قديمة جداً (95 أو أقدم). افتحه في إكسل واحفظه xlsx' };
+  const fonts = [], fmts = {}, xfr = [], bounds = []; let sst = [], d1904 = false, pos = 0, depth = 0;
+  while (pos + 4 <= u.length) {
+    const id = u16(pos), len = u16(pos + 2), o = pos + 4; pos = o + len;
+    if (id === 0x809) depth++; else if (id === 0x0A) { depth--; if (depth <= 0) break; }
+    else if (id === 0x2F) throw { msg:'الملف ده عليه كلمة سر' };
+    else if (id === 0x22) d1904 = u16(o) === 1;
+    else if (id === 0x31) fonts.push({ fs:u16(o) / 20, i:!!(u16(o + 2) & 2), c:u16(o + 4), b:u16(o + 6) >= 700 });
+    else if (id === 0x41E) fmts[u16(o)] = ustr(o + 2, 2);
+    else if (id === 0x92) { const n = u16(o); for (let i = 0; i < n; i++) pal[8 + i] = [0, 1, 2].map(j => u[o + 2 + i * 4 + j].toString(16).padStart(2, '0')).join('').toUpperCase(); }
+    else if (id === 0xE0) xfr.push({ ft:u16(o), fm:u16(o + 2), al:u[o + 6], b1:u32(o + 10), b2:u32(o + 14), fl:u16(o + 18) });
+    else if (id === 0x85) bounds.push({ off:u32(o), type:u[o + 5], n:u[o + 7] & 1 ? u16s(u.subarray(o + 8, o + 8 + u[o + 6] * 2)) : l1(u.subarray(o + 8, o + 8 + u[o + 6])) });
+    else if (id === 0xFC) {
+      const ch = [u.subarray(o + 8, o + len)]; while (pos + 4 <= u.length && u16(pos) === 0x3C) { const l2 = u16(pos + 2); ch.push(u.subarray(pos + 4, pos + 4 + l2)); pos += 4 + l2; }
+      let ci = 0, p = 0; const cnt = u32(o + 4), b = () => { while (ci < ch.length && p >= ch[ci].length) { ci++; p = 0; } return ci < ch.length ? ch[ci][p++] : 0; }, skip = n => { while (n > 0 && ci < ch.length) { const k = Math.min(n, ch[ci].length - p); p += k; n -= k; if (p >= ch[ci].length) { ci++; p = 0; } } };
+      sst = [];
+      for (let i = 0; i < cnt && ci < ch.length; i++) {
+        const cch = b() | (b() << 8), fl = b(); let hi = fl & 1, runs = 0, el = 0; if (fl & 8) runs = b() | (b() << 8); if (fl & 4) el = b() | (b() << 8) | (b() << 16) | (b() * 16777216);
+        let t = '', left = cch;
+        while (left > 0 && ci < ch.length) {
+          if (p >= ch[ci].length) { ci++; p = 0; if (ci >= ch.length) break; hi = ch[ci][p++] & 1; continue; }
+          const per = hi ? 2 : 1, k = Math.max(1, Math.min(left, Math.floor((ch[ci].length - p) / per))); t += hi ? u16s(ch[ci].subarray(p, p + k * 2)) : l1(ch[ci].subarray(p, p + k)); p += k * per; left -= k;
+        }
+        skip(runs * 4 + el); sst.push(t);
+      }
+    }
+  }
+  const st = xfr.map(x => {
+    const o = {}, ft = fonts[x.ft < 4 ? x.ft : x.ft - 1] || {}; if (ft.b) o.b = 1; if (ft.i) o.i = 1; if (ft.fs) o.fs = ft.fs; const fc = col(ft.c); if (fc && fc !== '000000') o.fc = fc;
+    if ((x.b2 >>> 26) === 1) { const bg = col(x.fl & 0x7F); if (bg) o.bg = bg; }
+    const bd = [[x.b1 & 15, (x.b1 >>> 16) & 0x7F], [(x.b1 >>> 4) & 15, (x.b1 >>> 23) & 0x7F], [(x.b1 >>> 8) & 15, x.b2 & 0x7F], [(x.b1 >>> 12) & 15, (x.b2 >>> 7) & 0x7F]].map(a => LS[a[0]] ? [LS[a[0]], col(a[1]) || '000000'] : null); if (bd.some(Boolean)) o.bd = bd;
+    const h = ['general', 'left', 'center', 'right', 'fill', 'justify', 'center'][x.al & 7]; if (h && h !== 'general') o.h = h; if (x.al & 8) o.w = 1; const va = (x.al >> 4) & 7; if (va === 0) o.va = 'top'; else if (va === 1) o.va = 'center';
+    const code = fmts[x.fm] || BN[x.fm] || 'General'; o.nf = code; if ((x.fm >= 14 && x.fm <= 17) || x.fm === 22 || (x.fm >= 27 && x.fm <= 36) || (x.fm >= 50 && x.fm <= 58) || (x.fm >= 164 && isDt(code))) o.d = 1;
+    return o;
+  });
+  const out = []; let total = 0;
+  for (const bs of bounds) {
+    if (bs.type !== 0) continue; const sh = { n:bs.n, cells:[], R:1, C:1, cw:{}, rh:{}, mg:[], rtl:false }, cm = new Map(); let pp = bs.off, dp = 0, pend = null, last = 0;
+    const put = (r, c, v, x) => { const sx = st[x] || {}; if ((v == null || v === '') && !sx.bg && !sx.bd) return; if (typeof v === 'number' && sx.d && d1904) v += 1462; cm.set((r + 1) * 100000 + c + 1, [r + 1, c + 1, null, v, st[x] ? x : -1]); };
+    const rk = n => { let v; if (n & 2) v = (n | 0) >> 2; else { const t = new DataView(new ArrayBuffer(8)); t.setUint32(4, (n & 0xFFFFFFFC) >>> 0, true); v = t.getFloat64(0, true); } return n & 1 ? v / 100 : v; };
+    const mgAdd = (o, n) => { for (let i = 0; i < n; i++) { const q = o + i * 8; if (q + 8 > u.length) break; const r1 = u16(q), r2 = u16(q + 2), c1 = u16(q + 4), c2 = u16(q + 6); sh.mg.push(SHX_ENG.colL(c1 + 1) + (r1 + 1) + ':' + SHX_ENG.colL(c2 + 1) + (r2 + 1)); } };
+    while (pp + 4 <= u.length) {
+      const id = u16(pp), len = u16(pp + 2), o = pp + 4; pp = o + len;
+      if (id === 0x809) dp++; else if (id === 0x0A) { dp--; if (dp <= 0) break; }
+      else if (id === 0x2F) throw { msg:'الملف ده عليه كلمة سر' };
+      else if (id === 0x23E) sh.rtl = !!(u16(o) & 0x40);
+      else if (id === 0x7D) { const w = Math.round(u16(o + 4) / 256 * 7 + 5), hid = u16(o + 8) & 1 ? 1 : 0; for (let c = u16(o); c <= Math.min(u16(o + 2), 255); c++) sh.cw[c + 1] = [w, hid]; }
+      else if (id === 0x208) { const r = u16(o) + 1, ht = u16(o + 6), gb = u16(o + 12); if (gb & 0x20) sh.rh[r] = [20, 1]; else if (gb & 0x40) sh.rh[r] = [Math.round((ht & 0x7FFF) / 15), 0]; }
+      else if (id === 0xFD) put(u16(o), u16(o + 2), sst[u32(o + 6)], u16(o + 4));
+      else if (id === 0x204) put(u16(o), u16(o + 2), ustr(o + 6, 2), u16(o + 4));
+      else if (id === 0x203) put(u16(o), u16(o + 2), dv.getFloat64(o + 6, true), u16(o + 4));
+      else if (id === 0x27E) put(u16(o), u16(o + 2), rk(u32(o + 6)), u16(o + 4));
+      else if (id === 0xBD) { const n = (len - 6) / 6; for (let i = 0; i < n; i++) put(u16(o), u16(o + 2) + i, rk(u32(o + 6 + i * 6)), u16(o + 4 + i * 6)); }
+      else if (id === 0x201) put(u16(o), u16(o + 2), null, u16(o + 4));
+      else if (id === 0xBE) { const n = (len - 6) / 2; for (let i = 0; i < n; i++) put(u16(o), u16(o + 2) + i, null, u16(o + 4 + i * 2)); }
+      else if (id === 0x205) { const v = u[o + 6]; put(u16(o), u16(o + 2), u[o + 7] ? (ERR[v] || '#VALUE!') : v !== 0, u16(o + 4)); }
+      else if (id === 0x06) {
+        const r = u16(o), c = u16(o + 2), x = u16(o + 4); pend = null;
+        if (u[o + 12] === 0xFF && u[o + 13] === 0xFF) { const k = u[o + 6]; if (k === 0) pend = [r, c, x]; else if (k === 1) put(r, c, u[o + 8] !== 0, x); else if (k === 2) put(r, c, ERR[u[o + 8]] || '#VALUE!', x); else put(r, c, null, x); }
+        else put(r, c, dv.getFloat64(o + 6, true), x);
+      }
+      else if (id === 0x207) { if (pend) { put(pend[0], pend[1], ustr(o, 2), pend[2]); pend = null; } }
+      else if (id === 0xE5) mgAdd(o + 2, u16(o));
+      else if (id === 0x3C && last === 0xE5) mgAdd(o, Math.floor(len / 8));
+      last = id;
+    }
+    for (const c of cm.values()) { sh.cells.push(c); if (c[0] > sh.R) sh.R = c[0]; if (c[1] > sh.C) sh.C = c[1]; } total += sh.cells.length;
+    for (const ref of sh.mg) { const e = /([A-Z]+)(\d+)$/.exec(ref); if (e) { sh.R = Math.max(sh.R, +e[2]); sh.C = Math.max(sh.C, SHX_ENG.colN(e[1])); } }
+    for (const k of Object.keys(sh.cw)) if (+k > sh.C) delete sh.cw[k];
+    if (total > 100000) throw { msg:'الملف كبير أوي (أكتر من 100 ألف خلية)' }; out.push(sh);
+  }
+  if (!out.length) throw { msg:'مفيش شيتات في الملف ده' };
+  return { t:title || 'ملف مستورد', sh:out, st };
+}
+async function shxParseAny(buf, title) {
+  const h = new Uint8Array(buf, 0, Math.min(8, buf.byteLength));
+  if (h[0] === 0xD0 && h[1] === 0xCF) return shxParseXls(buf, title);
+  if (h[0] === 0x50 && h[1] === 0x4B) return shxParseXlsx(buf, title);
+  throw { msg:'الملف ده مش إكسل حقيقي (ممكن يكون صفحة ويب أو CSV متسمّي xls). افتحه في إكسل واحفظه xlsx' };
+}
+async function shxImport(files) {
+  let n = 0, last = null;
+  for (const f of files) {
+    try { toast('بقرا ' + f.name + '…'); const w = await shxParseAny(await f.arrayBuffer(), f.name.replace(/\.[^.]+$/, '')); const uid = uid8(); docSave('shxw', 'shxw:' + uid, w); if (SHX.fd) docSave('shxp', 'shxp:u_' + uid, { f:SHX.fd }); n++; last = 'u_' + uid; }
+    catch (e) { toast((e && e.msg) || 'مقدرتش أفتح "' + f.name + '". لازم يكون ملف xlsx'); await new Promise(r => setTimeout(r, 1800)); }
+  }
+  shxUserSync(); renderSHX(); if (n) toast(n === 1 ? 'اتفتح الملف' : 'اتستورد ' + n + ' ملفات');
+}
+/* ---- إدارة الشيتات جوه الملف ---- */
+function shxSheetName(d, def, ex) { const n = (prompt('اسم الشيت', def) || '').trim(); if (!n) return ''; if (n.length > 31 || /[\[\]:*?\/\\]/.test(n)) { toast('الاسم مينفعش فيه [ ] : * ? / \\ ولا يزيد عن 31 حرف'); return ''; } if (d.sh.some((x, i) => i !== ex && x.n.toLowerCase() === n.toLowerCase())) { toast('الاسم ده موجود'); return ''; } return n; }
+function shxRenRef(f, o, n) { const q = x => /^[A-Za-z_\u0600-\u06FF][A-Za-z0-9_.\u0600-\u06FF]*$/.test(x) && !/^[A-Za-z]{1,3}\d+$/.test(x) ? x : "'" + x.replace(/'/g, "''") + "'", e2 = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return f.replace(new RegExp("'" + e2(o.replace(/'/g, "''")) + "'!", 'g'), q(n) + '!').replace(new RegExp("(^|[^A-Za-z0-9_.\\u0600-\\u06FF'])" + e2(o) + '!', 'g'), (m, pre) => pre + q(n) + '!'); }
+function shxUAct(a) {
+  const k = SHX.wb; if (!shxU(k) || !canWrite()) return; const d = shxWData(k); if (!d) return; const sh = d.sh[SHX.si], idc = 'shx:' + k;
+  if (a === 'sh+') { const n = shxSheetName(d, 'شيت' + (d.sh.length + 1), -1); if (!n) return; d.sh.push(shxBlank(n)); shxWSave(k, d); SHX.si = d.sh.length - 1; SHX.sel = null; shxDraw(true); return; }
+  if (a === 'r+') { const n = Math.floor(+(prompt('تزود كام صف؟', '20') || 0)); if (!(n > 0)) return; if (sh.R + n > 5000) return toast('الحد الأقصى 5000 صف'); sh.R += n; shxWSave(k, d); shxDraw(false); return; }
+  if (a === 'c+') { const n = Math.floor(+(prompt('تزود كام عمود؟', '5') || 0)); if (!(n > 0)) return; if (sh.C + n > 80) return toast('الحد الأقصى 80 عمود'); sh.C += n; shxWSave(k, d); shxDraw(true); return; }
+  if (a === 'sh') {
+    const it = [{ l:'إعادة تسمية الشيت', fn:() => { const n = shxSheetName(d, sh.n, SHX.si); if (!n || n === sh.n) return; const o = sh.n, od = S.docs.get(idc), cur = od && !od.deleted && od.data && od.data.c ? od.data.c : {}, c2 = {};
+        for (const kk of Object.keys(cur)) { const v = { ...cur[kk] }; if (typeof v.f === 'string') v.f = shxRenRef(v.f, o, n); c2[kk.startsWith(o + '!') ? n + kk.slice(o.length) : kk] = v; }
+        for (const x of d.sh) for (const c of x.cells) if (typeof c[2] === 'string') c[2] = shxRenRef(c[2], o, n);
+        sh.n = n; shxWSave(k, d); if (od) docSave('shx', idc, { c:c2 }); shxFlush(); shxDraw(true); } },
+      { l:sh.rtl ? 'اتجاه الشيت: خليه من الشمال لليمين' : 'اتجاه الشيت: خليه من اليمين للشمال', fn:() => { sh.rtl = !sh.rtl; shxWSave(k, d); shxDraw(true); } }];
+    if (d.sh.length > 1) it.push({ l:'مسح الشيت ده', d:1, fn:() => { if (!confirm('تمسح شيت "' + sh.n + '" بكل اللي فيه؟')) return; const od = S.docs.get(idc); if (od && !od.deleted && od.data && od.data.c) { const c2 = {}; for (const kk of Object.keys(od.data.c)) if (!kk.startsWith(sh.n + '!')) c2[kk] = od.data.c[kk]; docSave('shx', idc, { c:c2 }); } d.sh.splice(SHX.si, 1); shxWSave(k, d); SHX.si = 0; SHX.sel = null; shxFlush(); shxDraw(true); } });
+    shxMenu('الشيت: ' + sh.n, it); return;
+  }
+  if (a === 'f') shxFileMenu(k);
+}
+function shxPrint(all) {
+  const w = SHX.D[SHX.wb], idx = all ? w.sh.map((x, i) => i) : [SHX.si], parts = []; let ask = null;
+  for (const si of idx) {
+    let gp = null; const g = shxGap(SHX.wb, si);
+    if (g) { if (!all) { if (confirm('في ' + (g[1] - g[0] + 1) + ' صف فاضي في الشيت. أطبع الصفوف المعبّاة بس؟\n(موافق = المعبّاة بس، إلغاء = كل الصفوف)')) gp = [g[0] + 1, g[1]]; } else { if (ask === null) ask = confirm('في صفوف فاضية كتير في بعض الشيتات. أطبع الصفوف المعبّاة بس؟\n(موافق = المعبّاة بس، إلغاء = كل الصفوف)'); if (ask) gp = [g[0] + 1, g[1]]; } }
+    parts.push({ sh:w.sh[si], t:shxTable(SHX.wb, si, true, gp) });
+  }
   let el = document.getElementById('shxprint'); if (!el) { el = document.createElement('div'); el.id = 'shxprint'; document.body.appendChild(el); }
-  const port = t.tw <= 720, z = Math.max(0.3, Math.min(1.6, (port ? 730 : 1040) / t.tw));
-  el.innerHTML = '<div class="shph"><b>' + esc(w.t) + ' — ' + esc(sh.n) + '</b></div><table class="sxt" dir="' + (t.rtl ? 'rtl' : 'ltr') + '" style="width:' + t.tw + 'px">' + t.html + '</table>'; document.body.classList.add('sx');
-  document.querySelectorAll('style[data-pf]').forEach(x => x.remove()); const fit = document.createElement('style'); fit.setAttribute('data-pf', '1'); fit.textContent = '@media print{@page{size:A4 ' + (port ? 'portrait' : 'landscape') + ';margin:8mm}#shxprint table{zoom:' + z.toFixed(3) + '}}'; document.head.appendChild(fit);
+  const port = parts.every(x => x.t.tw <= 720);
+  el.innerHTML = parts.map((x, i) => { const z = Math.max(0.3, Math.min(1.6, (port ? 730 : 1040) / x.t.tw)); return '<div' + (i < parts.length - 1 ? ' style="page-break-after:always;break-after:page"' : '') + '><div class="shph"><b>' + esc(w.t) + ' — ' + esc(x.sh.n) + '</b></div><table class="sxt" dir="' + (x.t.rtl ? 'rtl' : 'ltr') + '" style="width:' + x.t.tw + 'px;zoom:' + z.toFixed(3) + '">' + x.t.html + '</table></div>'; }).join(''); document.body.classList.add('sx');
+  document.querySelectorAll('style[data-pf]').forEach(x => x.remove()); const fit = document.createElement('style'); fit.setAttribute('data-pf', '1'); fit.textContent = '@media print{@page{size:A4 ' + (port ? 'portrait' : 'landscape') + ';margin:8mm}}'; document.head.appendChild(fit);
   const done = () => { window.removeEventListener('afterprint', done); document.body.classList.remove('sx'); el.innerHTML = ''; fit.remove(); }; window.addEventListener('afterprint', done); setTimeout(() => window.print(), 150);
+}
+/* ===== تنسيق الخلايا (للملفات الجديدة) ===== */
+const shxRgTxt = g => SHX_ENG.colL(g[1]) + g[0] + (g[0] === g[2] && g[1] === g[3] ? '' : ':' + SHX_ENG.colL(g[3]) + g[2]);
+function shxRgShow() { if (!SHX.rg) return; $('#shx-addr').textContent = shxRgTxt(SHX.rg); $('#shx-in').value = ''; SHX.orig = ''; }
+const shxTR = () => SHX.rg || (SHX.sel ? [SHX.sel[0], SHX.sel[1], SHX.sel[0], SHX.sel[1]] : null);
+function shxColors(title, noneLbl, cb) {
+  const old = document.getElementById('shx-ov'); if (old) old.remove();
+  const o = document.createElement('div'); o.id = 'shx-ov'; o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  const b = document.createElement('div'); b.style.cssText = 'background:var(--paper,#fff);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:14px 14px calc(16px + env(safe-area-inset-bottom));display:grid;gap:10px';
+  const h = document.createElement('b'); h.textContent = title; b.appendChild(h);
+  const g = document.createElement('div'); g.style.cssText = 'display:grid;grid-template-columns:repeat(8,1fr);gap:8px';
+  for (const c of ['000000', 'FFFFFF', 'C0392B', 'E67E22', 'F1C40F', '27AE60', '2980B9', '8E44AD', '7F8C8D', 'FADBD8', 'FDEBD0', 'FCF3CF', 'D5F5E3', 'D6EAF8', 'E8DAEF', 'D5D8DC']) { const x = document.createElement('button'); x.style.cssText = 'height:40px;border-radius:10px;border:1.5px solid #bbb;background:#' + c + ';min-height:0;padding:0'; x.onclick = () => { o.remove(); cb(c); }; g.appendChild(x); }
+  b.appendChild(g);
+  if (noneLbl) { const n = document.createElement('button'); n.className = 'btn ghost'; n.textContent = noneLbl; n.onclick = () => { o.remove(); cb(null); }; b.appendChild(n); }
+  const c = document.createElement('button'); c.className = 'btn ghost'; c.textContent = 'إلغاء'; c.style.cssText = 'border-color:var(--line);color:var(--muted)'; c.onclick = () => o.remove(); b.appendChild(c);
+  o.appendChild(b); o.onclick = e => { if (e.target === o) o.remove(); }; document.body.appendChild(o);
+}
+function shxStyle(fn, rg) {
+  const k = SHX.wb, d = shxWData(k); if (!d) return; const sh = d.sh[SHX.si]; rg = rg || shxTR(); if (!rg) return toast('اختار خلية الأول');
+  const [r1, c1, r2, c2] = rg; if ((r2 - r1 + 1) * (c2 - c1 + 1) > 20000) return toast('النطاق كبير أوي');
+  const idx = {}; d.st.forEach((x, i) => { idx[JSON.stringify(x)] = i; }); const cm = new Map(); for (const c of sh.cells) cm.set(c[0] * 100000 + c[1], c);
+  for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
+    const key = r * 100000 + c; let cell = cm.get(key); const o = JSON.parse(JSON.stringify(cell && cell[4] >= 0 ? d.st[cell[4]] || {} : {})); fn(o, r, c, sh);
+    for (const x of Object.keys(o)) if (o[x] == null || o[x] === false || o[x] === 0) delete o[x]; let si = -1;
+    if (Object.keys(o).length) { const kk = JSON.stringify(o); if (idx[kk] == null) { idx[kk] = d.st.length; d.st.push(o); } si = idx[kk]; }
+    if (cell) cell[4] = si; else if (si >= 0) { cell = [r, c, null, null, si]; sh.cells.push(cell); cm.set(key, cell); }
+  }
+  shxWSave(k, d); SHX.eng && shxDraw(false);
+}
+function shxFm(a) {
+  const k = SHX.wb; if (!shxU(k) || !canWrite()) return;
+  if (a === 'rg') { if (!SHX.sel) return toast('اختار أول خلية في النطاق الأول'); SHX.rm = !SHX.rm; document.querySelector('[data-fm="rg"]').classList.toggle('on', SHX.rm); if (SHX.rm) toast('دوس على آخر خلية في النطاق'); return; }
+  document.querySelector('[data-fm="rg"]').classList.remove('on'); SHX.rm = false;
+  const rg = shxTR(); if (!rg) return toast('اختار خلية الأول');
+  const d0 = shxWData(k), sh0 = d0.sh[SHX.si], tl = (() => { const c = sh0.cells.find(x => x[0] === rg[0] && x[1] === rg[1]); return c && c[4] >= 0 ? d0.st[c[4]] || {} : {}; })();
+  if (a === 'b') { const v = tl.b ? 0 : 1; return shxStyle(o => { o.b = v; }); }
+  if (a === 'i') { const v = tl.i ? 0 : 1; return shxStyle(o => { o.i = v; }); }
+  if (a === 'w') { const v = tl.w ? 0 : 1; return shxStyle(o => { o.w = v; }); }
+  if (a === 'al') return shxStyle(o => { o.h = 'right'; });
+  if (a === 'ac') return shxStyle(o => { o.h = 'center'; });
+  if (a === 'ar') return shxStyle(o => { o.h = 'left'; });
+  if (a === 'tc') return shxColors('لون الخط', 'الأسود (افتراضي)', c => shxStyle(o => { o.fc = c && c !== '000000' ? c : null; }, rg));
+  if (a === 'bg') return shxColors('لون الخلفية', 'بدون لون', c => shxStyle(o => { o.bg = c; }, rg));
+  if (a === 'nf') { const F = (l, nf, dt) => ({ l, fn:() => shxStyle(o => { if (nf === 'General') { delete o.nf; delete o.d; } else { o.nf = nf; if (dt) o.d = 1; else delete o.d; } }, rg) }); return shxMenu('نوع الرقم', [F('عام', 'General'), F('رقم بكسور (1,234.50)', '#,##0.00'), F('رقم صحيح (1,234)', '#,##0'), F('نسبة مئوية (12.5%)', '0.0%'), F('تاريخ (31/12/2026)', 'dd/mm/yyyy', 1)]); }
+  if (a === 'bd') { const L = ['thin', '000000'], ed = (o, r, c, sh) => { const bd = o.bd ? o.bd.slice() : [null, null, null, null], lc = sh.rtl ? rg[3] : rg[1], rc = sh.rtl ? rg[1] : rg[3]; if (c === lc) bd[0] = L; if (c === rc) bd[1] = L; if (r === rg[0]) bd[2] = L; if (r === rg[2]) bd[3] = L; o.bd = bd; };
+    return shxMenu('الحدود', [{ l:'حدود لكل الخلايا', fn:() => shxStyle(o => { o.bd = [L, L, L, L]; }, rg) }, { l:'حدود خارجية بس', fn:() => shxStyle(ed, rg) }, { l:'مسح الحدود', fn:() => shxStyle(o => { delete o.bd; }, rg) }]); }
+  if (a === 'cw-' || a === 'cw+') { const d = d0, sh = sh0; for (let c = rg[1]; c <= rg[3]; c++) { const w = sh.cw[c] ? sh.cw[c][0] : 69; sh.cw[c] = [Math.max(20, Math.min(400, w + (a === 'cw+' ? 14 : -14))), 0]; } shxWSave(k, d); shxDraw(true); return; }
+  if (a === 'mg') {
+    if (rg[0] === rg[2] && rg[1] === rg[3]) return toast('حدد نطاق الأول (زرار نطاق)'); const ref = SHX_ENG.colL(rg[1]) + rg[0] + ':' + SHX_ENG.colL(rg[3]) + rg[2], d = d0, sh = sh0;
+    const hit = sh.mg.filter(m => { const p = m.split(':'), a1 = /([A-Z]+)(\d+)/.exec(p[0]), b1 = /([A-Z]+)(\d+)/.exec(p[1] || p[0]), c1 = SHX_ENG.colN(a1[1]), r1 = +a1[2], c2 = SHX_ENG.colN(b1[1]), r2 = +b1[2]; return !(c2 < rg[1] || c1 > rg[3] || r2 < rg[0] || r1 > rg[2]); });
+    const same = hit.length === 1 && hit[0] === ref; sh.mg = sh.mg.filter(m => !hit.includes(m)); if (!same) sh.mg.push(ref); shxWSave(k, d); SHX.rg = null; shxDraw(false); toast(same ? 'فكّيت الدمج' : 'اتدمجت'); return;
+  }
+}
+/* ===== تصدير xlsx ===== */
+async function shxZipBuild(files) {
+  const te = new TextEncoder(), parts = [], cen = []; let off = 0;
+  const T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc = u => { let c = -1; for (let i = 0; i < u.length; i++) c = T[(c ^ u[i]) & 255] ^ (c >>> 8); return (~c) >>> 0; };
+  for (const f of files) {
+    const nb = te.encode(f.n), raw = te.encode(f.d); let data = raw, meth = 0;
+    if (typeof CompressionStream !== 'undefined') { try { data = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); meth = 8; } catch (e) { data = raw; meth = 0; } }
+    const cr = crc(raw), lh = new Uint8Array(30 + nb.length), dv = new DataView(lh.buffer);
+    dv.setUint32(0, 0x04034b50, true); dv.setUint16(4, 20, true); dv.setUint16(6, 0x0800, true); dv.setUint16(8, meth, true); dv.setUint16(12, 0x21, true); dv.setUint32(14, cr, true); dv.setUint32(18, data.length, true); dv.setUint32(22, raw.length, true); dv.setUint16(26, nb.length, true); lh.set(nb, 30);
+    const ch = new Uint8Array(46 + nb.length), cv = new DataView(ch.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true); cv.setUint16(8, 0x0800, true); cv.setUint16(10, meth, true); cv.setUint16(14, 0x21, true); cv.setUint32(16, cr, true); cv.setUint32(20, data.length, true); cv.setUint32(24, raw.length, true); cv.setUint16(28, nb.length, true); cv.setUint32(42, off, true); ch.set(nb, 46);
+    parts.push(lh, data); cen.push(ch); off += lh.length + data.length;
+  }
+  let cs = 0; for (const c of cen) cs += c.length; const e = new Uint8Array(22), ev = new DataView(e.buffer);
+  ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, files.length, true); ev.setUint16(10, files.length, true); ev.setUint32(12, cs, true); ev.setUint32(16, off, true);
+  return new Blob([...parts, ...cen, e], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+async function shxBuildXlsx(k) {
+  const w = SHX.D[k], eng = SHX.eng, ov = shxOv(k) || {}, vo = !shxU(k), X = x => String(x).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fonts = ['<font><sz val="11"/><name val="Calibri"/></font>'], fills = ['<fill><patternFill patternType="none"/></fill>', '<fill><patternFill patternType="gray125"/></fill>'], bords = ['<border><left/><right/><top/><bottom/><diagonal/></border>'], nfs = [], xfs = ['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'], seen = {};
+  const BI = { 'General':0, '0':1, '0.00':2, '#,##0':3, '#,##0.00':4, '0%':9, '0.00%':10 };
+  const reg = (arr, x) => { let i = arr.indexOf(x); if (i < 0) { i = arr.length; arr.push(x); } return i; };
+  const xf = o => {
+    if (!o || !Object.keys(o).length) return 0; const kk = JSON.stringify(o); if (seen[kk] != null) return seen[kk];
+    const fo = reg(fonts, '<font>' + (o.b ? '<b/>' : '') + (o.i ? '<i/>' : '') + '<sz val="' + (o.fs || 11) + '"/>' + (o.fc ? '<color rgb="FF' + o.fc + '"/>' : '') + '<name val="Calibri"/></font>');
+    const fi = o.bg ? reg(fills, '<fill><patternFill patternType="solid"><fgColor rgb="FF' + o.bg + '"/><bgColor indexed="64"/></patternFill></fill>') : 0;
+    const bo = o.bd ? reg(bords, '<border>' + ['left', 'right', 'top', 'bottom'].map((n, j) => o.bd[j] ? '<' + n + ' style="' + (o.bd[j][0] === 'hair' ? 'hair' : o.bd[j][0]) + '"><color rgb="FF' + (o.bd[j][1] || '000000') + '"/></' + n + '>' : '<' + n + '/>').join('') + '<diagonal/></border>') : 0;
+    let nid = 0; const nf = o.nf || 'General'; if (BI[nf] != null) nid = BI[nf]; else { let i = nfs.indexOf(nf); if (i < 0) { i = nfs.length; nfs.push(nf); } nid = 164 + i; }
+    const al = (o.h && o.h !== 'general' ? ' horizontal="' + o.h + '"' : '') + (o.va ? ' vertical="' + o.va + '"' : '') + (o.w ? ' wrapText="1"' : '');
+    xfs.push('<xf numFmtId="' + nid + '" fontId="' + fo + '" fillId="' + fi + '" borderId="' + bo + '" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"' + (al ? ' applyAlignment="1"><alignment' + al + '/></xf>' : '/>'));
+    return (seen[kk] = xfs.length - 1);
+  };
+  const sheetsXml = [];
+  for (let si = 0; si < w.sh.length; si++) {
+    const sh = w.sh[si], rows = new Map(), add = (r, c) => { if (!rows.has(r)) rows.set(r, new Set()); rows.get(r).add(c); };
+    for (const c of sh.cells) add(c[0], c[1]);
+    for (const kk of Object.keys(ov)) if (kk.startsWith(sh.n + '!')) { const m = /^([A-Z]+)(\d+)$/.exec(kk.slice(sh.n.length + 1)); if (m) add(+m[2], SHX_ENG.colN(m[1])); }
+    for (const r of Object.keys(sh.rh)) if (!rows.has(+r)) rows.set(+r, new Set());
+    const base = eng.smap(k, si); let sd = '';
+    for (const r of [...rows.keys()].sort((a, b) => a - b)) {
+      const rd = sh.rh[r]; sd += '<row r="' + r + '"' + (rd ? ' ht="' + (rd[0] * 3 / 4) + '" customHeight="1"' + (rd[1] ? ' hidden="1"' : '') : '') + '>';
+      for (const c of [...rows.get(r)].sort((a, b) => a - b)) {
+        const b = base.get(r * 100000 + c), stl = b && b[4] >= 0 ? w.st[b[4]] : null, od = ov[sh.n + '!' + SHX_ENG.colL(c) + r], so = stl ? { ...stl } : {}; if (od && od.d && !so.d) { so.nf = 'dd/mm/yyyy'; so.d = 1; }
+        const ref = SHX_ENG.colL(c) + r, raw = eng.cellRaw(k, si, r, c), sid = xf(so), sa = sid ? ' s="' + sid + '"' : '';
+        if (!raw) { if (sid) sd += '<c r="' + ref + '"' + sa + '/>'; continue; }
+        const v = eng.get(k, si, r, c), hasF = raw.f != null && !vo; let t = '', body = '';
+        if (v == null || v === '') { if (hasF) body = ''; else { if (sid) sd += '<c r="' + ref + '"' + sa + '/>'; continue; } }
+        else if (SHX_ENG.isE(v)) { t = ' t="e"'; body = '<v>' + X(v) + '</v>'; }
+        else if (typeof v === 'boolean') { t = ' t="b"'; body = '<v>' + (v ? 1 : 0) + '</v>'; }
+        else if (typeof v === 'number') { body = isFinite(v) ? '<v>' + v + '</v>' : ''; }
+        else if (hasF) { t = ' t="str"'; body = '<v>' + X(v) + '</v>'; }
+        else { t = ' t="inlineStr"'; body = '<is><t xml:space="preserve">' + X(v) + '</t></is>'; }
+        sd += '<c r="' + ref + '"' + sa + t + '>' + (hasF ? '<f>' + X(raw.f) + '</f>' : '') + body + '</c>';
+      }
+      sd += '</row>';
+    }
+    let cols = ''; for (const c of Object.keys(sh.cw).map(Number).sort((a, b) => a - b)) { const d = sh.cw[c]; cols += '<col min="' + c + '" max="' + c + '" width="' + Math.max(1, (d[0] - 5) / 7).toFixed(2) + '" customWidth="1"' + (d[1] ? ' hidden="1"' : '') + '/>'; }
+    sheetsXml.push('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"' + (sh.rtl ? ' rightToLeft="1"' : '') + '/></sheetViews><sheetFormatPr defaultRowHeight="15"/>' + (cols ? '<cols>' + cols + '</cols>' : '') + '<sheetData>' + sd + '</sheetData>' + (sh.mg.length ? '<mergeCells count="' + sh.mg.length + '">' + sh.mg.map(m => '<mergeCell ref="' + X(m) + '"/>').join('') + '</mergeCells>' : '') + '</worksheet>');
+  }
+  const H = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"';
+  const files = [{ n:'[Content_Types].xml', d:H + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' + w.sh.map((x, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') + '</Types>' },
+    { n:'_rels/.rels', d:H + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+    { n:'xl/workbook.xml', d:H + '<workbook ' + NS + ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' + w.sh.map((x, i) => '<sheet name="' + X(x.n) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets></workbook>' },
+    { n:'xl/_rels/workbook.xml.rels', d:H + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + w.sh.map((x, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') + '<Relationship Id="rId' + (w.sh.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' }];
+  files.push({ n:'xl/styles.xml', d:H + '<styleSheet ' + NS + '>' + (nfs.length ? '<numFmts count="' + nfs.length + '">' + nfs.map((f, i) => '<numFmt numFmtId="' + (164 + i) + '" formatCode="' + X(f) + '"/>').join('') + '</numFmts>' : '') + '<fonts count="' + fonts.length + '">' + fonts.join('') + '</fonts><fills count="' + fills.length + '">' + fills.join('') + '</fills><borders count="' + bords.length + '">' + bords.join('') + '</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="' + xfs.length + '">' + xfs.join('') + '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' });
+  sheetsXml.forEach((x, i) => files.push({ n:'xl/worksheets/sheet' + (i + 1) + '.xml', d:x }));
+  return await shxZipBuild(files);
+}
+async function shxExport(k) {
+  try {
+    toast('بجهّز الملف…'); const blob = await shxBuildXlsx(k), name = (SHX.D[k].t.replace(/[\\/:*?"<>|]/g, '_') || 'ملف') + '.xlsx';
+    try { const file = new File([blob], name, { type:blob.type }); if (navigator.canShare && navigator.canShare({ files:[file] })) { await navigator.share({ files:[file] }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  } catch (e) { toast('مقدرتش أجهّز الملف'); }
 }
 function shxInit() {
   $('#v-shx').addEventListener('click', async e => {
     const t = e.target;
-    if (t.closest('#shx-hb')) return back();
-    const card = t.closest('.shc'); if (card) { SHX.wb = card.dataset.w; SHX.si = 0; SHX.sel = null; $('#shx-addr').textContent = ''; $('#shx-in').value = ''; renderSHX(); return; }
-    if (t.closest('#shx-back')) { SHX.wb = null; SHX.sel = null; renderSHX(); return; }
-    const tab = t.closest('#shx-tabs button'); if (tab) { SHX.si = +tab.dataset.i; SHX.sel = null; $('#shx-addr').textContent = ''; $('#shx-in').value = ''; shxDraw(true); $('#shx-w').scrollTop = 0; $('#shx-w').scrollLeft = 0; return; }
-    const td = t.closest('#shx-t td'); if (td) { const same = SHX.selTd === td; shxSelect(td); if (same && canWrite()) $('#shx-in').focus(); return; }
+    if (t.closest('#shx-hb')) { if (SHX.fd) { SHX.fd = null; return renderSHX(); } return back(); }
+    const ac = t.closest('[data-a]'); if (ac) { const k = ac.dataset.a; if (k === 'nf') { shxNewFolder(); renderSHX(); } else if (k === 'nw') shxNewFile(); else if (k === 'im') $('#shx-file').click(); return; }
+    const mf = t.closest('[data-mf]'); if (mf) return shxFolderMenu(mf.dataset.mf);
+    const mm = t.closest('[data-m]'); if (mm) return shxFileMenu(mm.dataset.m);
+    const fdc = t.closest('[data-fd]'); if (fdc) { SHX.fd = fdc.dataset.fd; renderSHX(); window.scrollTo(0, 0); return; }
+    const card = t.closest('.shc'); if (card) return shxOpen(card.dataset.w);
+    if (t.closest('#shx-back')) { SHX.wb = null; SHX.sel = null; SHX.rg = null; SHX.rm = false; renderSHX(); return; }
+    const tab = t.closest('#shx-tabs button'); if (tab) { SHX.si = +tab.dataset.i; SHX.sel = null; SHX.rg = null; SHX.rm = false; $('#shx-addr').textContent = ''; $('#shx-in').value = ''; shxDraw(true); $('#shx-w').scrollTop = 0; $('#shx-w').scrollLeft = 0; return; }
+    const th = t.closest('#shx-t th'); if (th && shxU(SHX.wb)) { const sh = SHX.D[SHX.wb].sh[SHX.si]; if (th.dataset.ch) { const c = +th.dataset.ch; SHX.sel = [1, c]; SHX.rg = [1, c, sh.R, c]; } else if (th.dataset.rh) { const r = +th.dataset.rh; SHX.sel = [r, 1]; SHX.rg = [r, 1, r, sh.C]; } else { SHX.sel = [1, 1]; SHX.rg = [1, 1, sh.R, sh.C]; } SHX.rm = false; shxDraw(false); shxRgShow(); return; }
+    const td = t.closest('#shx-t td'); if (td) {
+      if (SHX.rm && SHX.sel) { const r = +td.dataset.r, c = +td.dataset.c; SHX.rg = [Math.min(r, SHX.sel[0]), Math.min(c, SHX.sel[1]), Math.max(r, SHX.sel[0]), Math.max(c, SHX.sel[1])]; SHX.rm = false; shxDraw(false); shxRgShow(); return; }
+      const same = SHX.selTd === td, had = !!SHX.rg; shxSelect(td); if (had) { SHX.rg = null; shxDraw(false); } else if (same && canWrite()) $('#shx-in').focus(); return; }
     if (t.closest('#shx-ok')) return shxCommit();
     if (t.closest('#shx-no')) { $('#shx-in').value = SHX.orig || ''; $('#shx-in').blur(); return; }
     if (t.closest('#shx-rs')) return shxRestoreCell();
-    if (t.closest('#shx-pdf')) return shxPrint();
+    if (t.closest('#shx-pdf')) { const w = SHX.D[SHX.wb]; if (w.sh.length < 2) return shxPrint(false); return shxMenu('طباعة / PDF', [{ l:'طباعة الشيت ده بس (' + w.sh[SHX.si].n + ')', fn:() => shxPrint(false) }, { l:'طباعة الملف كله (' + w.sh.length + ' شيتات)', fn:() => shxPrint(true) }]); }
+    const ub = t.closest('[data-u]'); if (ub) return shxUAct(ub.dataset.u);
+    const fb = t.closest('[data-fm]'); if (fb) return shxFm(fb.dataset.fm);
     const zb = t.closest('[data-z]'); if (zb) { const k = zb.dataset.z; if (k === 'fit') { const w = $('#shx-w').clientWidth - 4; SHX.z = Math.max(0.25, Math.min(1.5, w / SHX.tw)); } else SHX.z = Math.max(0.3, Math.min(2.5, SHX.z + (k === '+' ? 0.15 : -0.15))); $('#shx-t').style.zoom = SHX.z; $('#shx-zl').textContent = Math.round(SHX.z * 100) + '%'; return; }
   });
   $('#shx-in').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); shxCommit(); } else if (e.key === 'Escape') { $('#shx-in').value = SHX.orig || ''; $('#shx-in').blur(); } });
   $('#shx-in').addEventListener('input', e => { e.target.dir = e.target.value[0] === '=' ? 'ltr' : 'auto'; });
-  $('#shx-in').addEventListener('focus', () => { if (!canWrite() || !SHX.sel) $('#shx-in').blur(); });
+  $('#shx-file').addEventListener('change', async e => { const fl = [...e.target.files]; e.target.value = ''; if (fl.length) await shxImport(fl); });
+  $('#shx-in').addEventListener('focus', () => { if (!canWrite() || !SHX.sel || SHX.rg) $('#shx-in').blur(); });
 }
 
 const VIEWS = ['home', 'list', 'an', 'acc', 'stm', 'form', 'set', 'tb', 'lg', 'gl', 'is', 'bs', 'mp', 'dp', 'db', 'hr', 'cs', 'pr', 'au', 'yr', 'arc', 'arcy', 'arcc', 'cc', 'rp', 'shx'];
