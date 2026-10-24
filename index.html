@@ -312,6 +312,19 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
 .sxt th{background:#f1f3f4;color:#555;font-weight:600;font-size:11px;box-shadow:inset 0 0 0 1px #d9d9d9;text-align:center;overflow:hidden;padding:0 2px}
 .sxt td.rg{background-image:linear-gradient(rgba(30,111,232,.2),rgba(30,111,232,.2))}
 .shtl button.on{background:#EEF4EC;border-color:var(--green);color:var(--green-d)}
+#shx-rb{background:var(--paper);border-bottom:1px solid var(--line)}
+.rbt{display:flex;gap:2px;overflow-x:auto;padding:2px 8px 0;border-bottom:1px solid var(--line)}
+.rbt button{border:0;background:none;padding:8px 12px;font-weight:800;font-size:14px;color:var(--muted);border-bottom:3px solid transparent;min-height:0;flex:none;cursor:pointer;border-radius:0}
+.rbt button.on{color:var(--green-d);border-bottom-color:var(--green)}
+.rbp{display:flex;overflow-x:auto;padding:6px 6px 4px;align-items:stretch;gap:0}
+.rbg{display:flex;flex-direction:column;gap:4px;border-inline-start:1px solid var(--line);padding:0 7px;flex:none}
+.rbg:first-child{border:0}
+.rbg .rr{display:flex;gap:4px;align-items:center}
+button.rb{min-width:34px;height:34px;border:1px solid var(--line);background:#fff;border-radius:8px;font-weight:700;font-size:14px;padding:0 8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap;flex:none;color:var(--ink,#222)}
+button.rb.on{background:#EEF4EC;border-color:var(--green);color:var(--green-d)}
+button.rb.w{min-width:92px}
+button.rb svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.sxt td.fe{outline:2.5px dashed #C0392B;outline-offset:-2px}
 #shxprint{display:none}
 @media print{body.sx>*:not(#shxprint){display:none!important}body.sx{background:#fff}body.sx #shxprint{display:block!important}#shxprint .shph{font-size:16px;margin:0 0 8px;direction:rtl}#shxprint td{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none!important}#shxprint tr{page-break-inside:avoid}}
 </style>
@@ -569,11 +582,10 @@ body.pm #v-cs .stb tr,body.pm #v-pr .stb tr{break-inside:avoid}
       <input type="file" id="shx-file" accept=".xlsx,.xlsm,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple style="display:none">
       <div id="shx-sheet" class="hide">
         <div class="sub"><button id="shx-back" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b id="shx-title"></b><button id="shx-pdf" aria-label="PDF" style="width:auto;padding:0 14px;font-weight:700">PDF</button></div>
+        <div id="shx-rb" style="display:none"><div class="rbt" id="rb-t"></div><div class="rbp" id="rb-p"></div></div>
         <div class="shtabs" id="shx-tabs"></div>
         <div class="shfx" id="shx-fx"><b id="shx-addr"></b><input id="shx-in" placeholder="اضغط على خلية" autocomplete="off" enterkeyhint="done"><button id="shx-ok" aria-label="حفظ">✓</button><button id="shx-no" aria-label="إلغاء">✕</button></div>
         <div class="shtl"><button data-z="-" aria-label="تصغير">−</button><span id="shx-zl">100%</span><button data-z="+" aria-label="تكبير">+</button><button data-z="fit">ملاءمة</button><button id="shx-rs">الأصل</button></div>
-        <div class="shtl" id="shx-fm" style="display:none"><button data-fm="rg">نطاق</button><button data-fm="b"><b>B</b></button><button data-fm="i"><i>I</i></button><button data-fm="al" aria-label="يمين">⇥</button><button data-fm="ac" aria-label="وسط">↔</button><button data-fm="ar" aria-label="شمال">⇤</button><button data-fm="tc">لون الخط</button><button data-fm="bg">تلوين</button><button data-fm="bd">حدود</button><button data-fm="nf">نوع الرقم</button><button data-fm="w">لف النص</button><button data-fm="mg">دمج</button><button data-fm="cw-">عرض −</button><button data-fm="cw+">عرض +</button></div>
-        <div class="shtl" id="shx-ut" style="display:none"><button data-u="sh+">＋ شيت</button><button data-u="sh">⋯ الشيت</button><button data-u="r+">＋ صفوف</button><button data-u="c+">＋ أعمدة</button><button data-u="f">⋯ الملف</button></div>
         <div class="shw" id="shx-w"><table class="sxt" id="shx-t"></table></div>
       </div>
     </section>
@@ -1009,6 +1021,7 @@ const SHX_ENG = (() => {
   const colN = s => { let n = 0; for (const ch of s) n = n * 26 + ch.charCodeAt(0) - 64; return n; };
   const colL = n => { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; } return s; };
   const REF = /(?:(?:\[(\d+)\])?(?:'(?:\[(\d+)\])?((?:[^']|'')+)'|([^\s'!()+\-*\/^&=<>,;:\[\]"%]+))!)?\$?([A-Za-z]{1,3})\$?(\d+)(?::\$?([A-Za-z]{1,3})\$?(\d+))?/y;
+  const WCOL = /(?:(?:'((?:[^']|'')+)'|([^\s'!()+\-*\/^&=<>,;:\[\]"%]+))!)?\$?([A-Za-z]{1,3}):\$?([A-Za-z]{1,3})(?![A-Za-z0-9_(])/y, WROW = /(?:(?:'((?:[^']|'')+)'|([^\s'!()+\-*\/^&=<>,;:\[\]"%]+))!)?\$?(\d+):\$?(\d+)(?![A-Za-z0-9_(.])/y;
   const FUNC = /[A-Za-z_][A-Za-z0-9_.]*(?=\()/y, NUM = /(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/y;
   function tokenize(src) {
     const t = []; let i = 0;
@@ -1016,6 +1029,11 @@ const SHX_ENG = (() => {
       const ch = src[i];
       if (ch === ' ' || ch === '\t' || ch === '\n') { i++; continue; }
       if (ch === '"') { let j = i + 1, s = ''; for (;;) { if (j >= src.length) throw 0; if (src[j] === '"') { if (src[j + 1] === '"') { s += '"'; j += 2; continue; } break; } s += src[j++]; } t.push({ k: 's', v: s }); i = j + 1; continue; }
+      if (ch === '#') { const em = /^#(?:REF!|N\/A|NAME\?|DIV\/0!|VALUE!|NUM!|NULL!)/.exec(src.slice(i, i + 8)); if (em) { t.push({ k: 'e', v: em[0] }); i += em[0].length; continue; } }
+      WCOL.lastIndex = i; let wm = WCOL.exec(src);
+      if (wm) { t.push({ k: 'r', x: 0, sh: wm[1] ? wm[1].replace(/''/g, "'") : (wm[2] || null), c1: colN(wm[3].toUpperCase()), r1: 1, c2: colN(wm[4].toUpperCase()), r2: 1e6, full: 'c' }); i += wm[0].length; continue; }
+      WROW.lastIndex = i; wm = WROW.exec(src);
+      if (wm) { t.push({ k: 'r', x: 0, sh: wm[1] ? wm[1].replace(/''/g, "'") : (wm[2] || null), c1: 1, r1: +wm[3], c2: 1e4, r2: +wm[4], full: 'r' }); i += wm[0].length; continue; }
       FUNC.lastIndex = i; let m = FUNC.exec(src);
       if (m) { t.push({ k: 'f', v: m[0].toUpperCase() }); i += m[0].length; continue; }
       REF.lastIndex = i; m = REF.exec(src);
@@ -1046,6 +1064,7 @@ const SHX_ENG = (() => {
       const k = nx(); if (!k) throw 0;
       if (k.k === 'n') return { t: 'n', v: k.v }; if (k.k === 's') return { t: 's', v: k.v }; if (k.k === 'b') return { t: 'b', v: k.v };
       if (k.k === 'r') return { t: 'r', ...k };
+      if (k.k === 'e') return { t: 'e', v: k.v };
       if (k.k === 'f') { nx(); const args = []; if (isO(')')) { nx(); return { t: 'f', n: k.v, a: args }; } for (;;) { if (isO(',') || isO(';')) args.push({ t: 'blank' }); else args.push(cmp()); if (isO(',') || isO(';')) { nx(); if (isO(')')) { args.push({ t: 'blank' }); nx(); break; } continue; } if (isO(')')) { nx(); break; } throw 0; } return { t: 'f', n: k.v, a: args }; }
       if (k.k === 'o' && k.v === '(') { const e = cmp(); if (!isO(')')) throw 0; nx(); return e; }
       throw 0;
@@ -1093,26 +1112,36 @@ const SHX_ENG = (() => {
       const raw = this.cellRaw(wb, si, r, c); let v;
       if (!raw) v = null;
       else if (raw.f == null) v = raw.v === undefined ? null : raw.v;
-      else { if (this.busy.has(key)) return E('#REF!'); this.busy.add(key); try { v = this.evalF(raw.f, wb, si); } catch (e) { v = E('#VALUE!'); } this.busy.delete(key); if (isE(v) && typeof wb === 'string' && wb.startsWith('u_') && raw.v != null && raw.v !== '' && !(typeof raw.v === 'string' && raw.v[0] === '#')) v = raw.v; if (v === undefined) v = null; }
+      else { if (this.busy.has(key)) return E('#REF!'); this.busy.add(key); try { v = this.evalF(raw.f, wb, si, r, c); if (v && v.arr) v = v.arr[0][0]; else if (v && v.rg) v = this.get(v.wb, v.si, v.r1, v.c1); } catch (e) { v = E('#VALUE!'); } this.busy.delete(key); if (isE(v) && typeof wb === 'string' && wb.startsWith('u_') && raw.v != null && raw.v !== '' && !(typeof raw.v === 'string' && raw.v[0] === '#')) v = raw.v; if (v === undefined) v = null; }
       this.memo.set(key, v); return v;
     }
-    evalF(f, wb, si) { const ast = getAst(f); if (!ast) return E('#NAME?'); return this.ev(ast, { wb, si }); }
+    evalF(f, wb, si, r, c) { const ast = getAst(f); if (!ast) return E('#NAME?'); return this.ev(ast, { wb, si, r, c }); }
     resolve(n, cx) { let wb = cx.wb; if (n.x) { wb = this.D[cx.wb].ext[n.x - 1]; if (!wb || !this.D[wb]) return null; } let si = cx.si; if (n.sh) { si = this.sheetIdx(wb, n.sh); if (si < 0) return null; } return { wb, si }; }
-    rng(n, cx) { const t = this.resolve(n, cx); if (!t) return E('#REF!'); const r2 = n.r2 || n.r1, c2 = n.c2 || n.c1; return { rg: 1, wb: t.wb, si: t.si, r1: Math.min(n.r1, r2), r2: Math.max(n.r1, r2), c1: Math.min(n.c1, c2), c2: Math.max(n.c1, c2), single: !n.r2 }; }
+    rng(n, cx) { const t = this.resolve(n, cx); if (!t) return E('#REF!'); let r2 = n.r2 || n.r1, c2 = n.c2 || n.c1; if (n.full === 'c') r2 = Math.max(1, this.D[t.wb].sh[t.si].R); else if (n.full === 'r') c2 = Math.max(1, this.D[t.wb].sh[t.si].C); return { rg: 1, wb: t.wb, si: t.si, r1: Math.min(n.r1, r2), r2: Math.max(n.r1, r2), c1: Math.min(n.c1, c2), c2: Math.max(n.c1, c2), single: !n.r2 }; }
     cellsOf(g, fn) { for (let r = g.r1; r <= g.r2; r++) for (let c = g.c1; c <= g.c2; c++) fn(this.get(g.wb, g.si, r, c), r, c); }
-    sc(v) { if (v && v.rg) return this.get(v.wb, v.si, v.r1, v.c1); return v; }
+    sc(v) { if (v && v.arr) return v.arr[0][0]; if (v && v.rg) return this.get(v.wb, v.si, v.r1, v.c1); return v; }
+    toArr(v) { if (v && v.arr) return v.arr; if (v && v.rg) { const o = []; for (let r = v.r1; r <= v.r2; r++) { const row = []; for (let c = v.c1; c <= v.c2; c++) row.push(this.get(v.wb, v.si, r, c)); o.push(row); } return o; } return [[v]]; }
+    binop(o, a, b) {
+      if (o === '&') { const x = toStr(a), y = toStr(b); return isE(x) ? x : isE(y) ? y : x + y; }
+      if (['=', '<>', '<', '>', '<=', '>='].includes(o)) return compare(a, b, o);
+      const x = toNum(a), y = toNum(b); if (isE(x)) return x; if (isE(y)) return y;
+      switch (o) { case '+': return x + y; case '-': return x - y; case '*': return x * y; case '/': return y === 0 ? E('#DIV/0!') : x / y; case '^': return Math.pow(x, y); }
+    }
     ev(n, cx) {
       switch (n.t) {
         case 'n': case 's': case 'b': return n.v;
         case 'blank': return null;
         case 'r': { const g = this.rng(n, cx); if (isE(g)) return g; return g.single ? this.get(g.wb, g.si, g.r1, g.c1) : g; }
-        case 'neg': { const a = toNum(this.sc(this.ev(n.a, cx))); return isE(a) ? a : -a; }
+        case 'e': return E(n.v);
+        case 'neg': { const a0 = this.ev(n.a, cx); if (a0 && (a0.rg || a0.arr)) return { arr: this.toArr(a0).map(row => row.map(x => { const k = toNum(x); return isE(k) ? k : -k; })) }; const a = toNum(this.sc(a0)); return isE(a) ? a : -a; }
         case 'bin': {
-          const a = this.sc(this.ev(n.l, cx)), b = this.sc(this.ev(n.r, cx));
-          if (n.o === '&') { const x = toStr(a), y = toStr(b); return isE(x) ? x : isE(y) ? y : x + y; }
-          if (['=', '<>', '<', '>', '<=', '>='].includes(n.o)) return compare(a, b, n.o);
-          const x = toNum(a), y = toNum(b); if (isE(x)) return x; if (isE(y)) return y;
-          switch (n.o) { case '+': return x + y; case '-': return x - y; case '*': return x * y; case '/': return y === 0 ? E('#DIV/0!') : x / y; case '^': return Math.pow(x, y); }
+          const a0 = this.ev(n.l, cx), b0 = this.ev(n.r, cx);
+          if ((a0 && (a0.rg || a0.arr)) || (b0 && (b0.rg || b0.arr))) {
+            const X = this.toArr(a0), Y = this.toArr(b0), R = Math.max(X.length, Y.length), C = Math.max(X[0].length, Y[0].length), out = [];
+            for (let r = 0; r < R; r++) { const row = []; for (let c = 0; c < C; c++) { const x = X[X.length === 1 ? 0 : r], y = Y[Y.length === 1 ? 0 : r]; row.push(this.binop(n.o, x ? x[X[0].length === 1 ? 0 : c] : E('#N/A'), y ? y[Y[0].length === 1 ? 0 : c] : E('#N/A'))); } out.push(row); }
+            return { arr: out };
+          }
+          return this.binop(n.o, a0, b0);
         }
         case 'f': return this.fn(n, cx);
       }
@@ -1120,7 +1149,7 @@ const SHX_ENG = (() => {
     }
     flat(args, cx, direct) { /* returns {nums, all} from args */
       const out = [];
-      for (const a of args) { const v = this.ev(a, cx); if (isE(v)) return v; if (v && v.rg) { let er = null; this.cellsOf(v, x => { if (isE(x)) er = er || x; else out.push({ v: x, inR: true }); }); if (er) return er; } else out.push({ v, inR: false }); }
+      for (const a of args) { const v = this.ev(a, cx); if (isE(v)) return v; if (v && v.rg) { let er = null; this.cellsOf(v, x => { if (isE(x)) er = er || x; else out.push({ v: x, inR: true }); }); if (er) return er; } else if (v && v.arr) { for (const row of v.arr) for (const x of row) { if (isE(x)) return x; out.push({ v: x, inR: true }); } } else out.push({ v, inR: false }); }
       return out;
     }
     fn(n, cx) {
@@ -1171,17 +1200,139 @@ const SHX_ENG = (() => {
         case 'ISNUMBER': return typeof S1(0) === 'number';
         case 'ISERROR': return isE(S1(0));
         case 'TODAY': return Math.floor((Date.now() - new Date(1899, 11, 30).getTime()) / 864e5);
-        case 'SUMPRODUCT': { const gs = A.map(a => this.ev(a, cx)); for (const g of gs) if (!g || !g.rg) return E('#VALUE!'); let tot = 0; const g0 = gs[0]; for (let r = 0; r <= g0.r2 - g0.r1; r++) for (let c = 0; c <= g0.c2 - g0.c1; c++) { let p = 1; for (const g of gs) { const v = this.get(g.wb, g.si, g.r1 + r, g.c1 + c); p *= typeof v === 'number' ? v : 0; } tot += p; } return tot; }
+        case 'SUMPRODUCT': { const gs = A.map(a => this.toArr(this.ev(a, cx))); const R = gs[0].length, C = gs[0][0].length; for (const g of gs) if (g.length !== R || g[0].length !== C) return E('#VALUE!'); let tot = 0; for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) { let p = 1; for (const g of gs) { const v = g[r][c]; if (isE(v)) return v; p *= typeof v === 'number' ? v : 0; } tot += p; } return tot; }
+      }
+      return this.fn2(name, A, cx);
+    }
+    fn2(name0, A, cx) {
+      const AL = { 'STDEV.S':'STDEV', 'STDEV.P':'STDEVP', 'VAR.S':'VAR', 'VAR.P':'VARP', 'MODE.SNGL':'MODE', 'PERCENTILE.INC':'PERCENTILE', 'QUARTILE.INC':'QUARTILE', 'RANK.EQ':'RANK', 'CEILING.MATH':'CEILING', 'FLOOR.MATH':'FLOOR' };
+      let name = name0.replace(/^_XL(?:FN|WS)\./, ''); name = AL[name] || name;
+      const S1 = i => this.sc(this.ev(A[i], cx)), has = i => A[i] && A[i].t !== 'blank', N = i => toNum(S1(i)), T = i => toStr(S1(i)), ER = (...x) => x.find(isE);
+      const numsOf = args => { const l = this.flat(args, cx); if (isE(l)) return l; const ns = []; for (const x of l) { if (typeof x.v === 'number') ns.push(x.v); else if (!x.inR && x.v != null && x.v !== '') { const k = toNum(x.v); if (isE(k)) return k; ns.push(k); } } return ns; };
+      const sj = d => Math.floor(d), SER0 = Date.UTC(1899, 11, 30), dOf = sr => new Date(SER0 + Math.floor(sr) * 864e5), serOf = (y, m, d) => Math.round((Date.UTC(y, m - 1, d) - SER0) / 864e5);
+      const dim = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+      const eqv = (a, b) => typeof a === 'string' && typeof b === 'string' ? a.toLowerCase() === b.toLowerCase() : (a == null && b === '') || (a === '' && b == null) || a === b;
+      const wild = (pat, v) => { if (typeof pat !== 'string' || !/[*?]/.test(pat) || typeof v !== 'string') return eqv(pat, v); return new RegExp('^' + pat.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i').test(v); };
+      const condIdx = pairs => { for (const [g] of pairs) if (!g || !g.rg) return null; const g0 = pairs[0][0], fns = pairs.map(p => critFn(p[1])), out = []; for (let r = 0; r <= g0.r2 - g0.r1; r++) for (let c = 0; c <= g0.c2 - g0.c1; c++) { let ok = true; for (let k = 0; k < pairs.length; k++) { const g = pairs[k][0]; if (!fns[k](this.get(g.wb, g.si, g.r1 + r, g.c1 + c))) { ok = false; break; } } if (ok) out.push([r, c]); } return out; };
+      const stat = (ns, sample) => { const n = ns.length; if (n < (sample ? 2 : 1)) return E('#DIV/0!'); const m = ns.reduce((a, b) => a + b, 0) / n; return ns.reduce((a, b) => a + (b - m) * (b - m), 0) / (sample ? n - 1 : n); };
+      const pct = (ns, k) => { if (!ns.length || k < 0 || k > 1) return E('#NUM!'); const a = ns.slice().sort((x, y) => x - y), p = k * (a.length - 1), lo = Math.floor(p), hi = Math.ceil(p); return a[lo] + (a[hi] - a[lo]) * (p - lo); };
+      const mathFn = f => { const x = N(0); return isE(x) ? x : f(x); };
+      const chk = r => (typeof r === 'number' && !isFinite(r)) ? E('#NUM!') : r;
+      switch (name) {
+        case 'TRUE': return true; case 'FALSE': return false; case 'NA': return E('#N/A'); case 'PI': return Math.PI;
+        case 'SQRT': return mathFn(x => x < 0 ? E('#NUM!') : Math.sqrt(x)); case 'EXP': return mathFn(x => chk(Math.exp(x)));
+        case 'LN': return mathFn(x => x <= 0 ? E('#NUM!') : Math.log(x)); case 'LOG10': return mathFn(x => x <= 0 ? E('#NUM!') : Math.log10(x));
+        case 'LOG': { const x = N(0), b = has(1) ? N(1) : 10; if (ER(x, b)) return ER(x, b); return x <= 0 || b <= 0 || b === 1 ? E('#NUM!') : Math.log(x) / Math.log(b); }
+        case 'SIGN': return mathFn(Math.sign); case 'SIN': return mathFn(Math.sin); case 'COS': return mathFn(Math.cos); case 'TAN': return mathFn(Math.tan);
+        case 'ASIN': return mathFn(x => Math.abs(x) > 1 ? E('#NUM!') : Math.asin(x)); case 'ACOS': return mathFn(x => Math.abs(x) > 1 ? E('#NUM!') : Math.acos(x)); case 'ATAN': return mathFn(Math.atan);
+        case 'ATAN2': { const x = N(0), y = N(1); return ER(x, y) || Math.atan2(y, x); }
+        case 'RADIANS': return mathFn(x => x * Math.PI / 180); case 'DEGREES': return mathFn(x => x * 180 / Math.PI);
+        case 'POWER': { const x = N(0), y = N(1); return ER(x, y) || chk(Math.pow(x, y)); }
+        case 'PRODUCT': { const ns = numsOf(A); return isE(ns) ? ns : ns.reduce((a, b) => a * b, 1); }
+        case 'SUMSQ': { const ns = numsOf(A); return isE(ns) ? ns : ns.reduce((a, b) => a + b * b, 0); }
+        case 'QUOTIENT': { const x = N(0), y = N(1); return ER(x, y) || (y === 0 ? E('#DIV/0!') : Math.trunc(x / y)); }
+        case 'TRUNC': { const x = N(0), d = has(1) ? N(1) : 0; if (ER(x, d)) return ER(x, d); const f = Math.pow(10, d); return Math.trunc(x * f + (x < 0 ? -1e-9 : 1e-9)) / f; }
+        case 'CEILING': case 'FLOOR': case 'MROUND': { const x = N(0), g = has(1) ? N(1) : 1; if (ER(x, g)) return ER(x, g); if (g === 0) return 0; if (name === 'MROUND' && x * g < 0) return E('#NUM!'); const q = x / g, r = (name === 'CEILING' ? Math.ceil(q - 1e-12) : name === 'FLOOR' ? Math.floor(q + 1e-12) : Math.round(q)) * g; return Math.round(r * 1e12) / 1e12; }
+        case 'EVEN': return mathFn(x => Math.sign(x) * Math.ceil(Math.abs(x) / 2) * 2); case 'ODD': return mathFn(x => { const a = Math.ceil(Math.abs(x)); return Math.sign(x || 1) * (a % 2 ? a : a + 1); });
+        case 'FACT': return mathFn(x => { x = Math.floor(x); if (x < 0 || x > 170) return E('#NUM!'); let r = 1; for (let i = 2; i <= x; i++) r *= i; return r; });
+        case 'COMBIN': { const n = N(0), k = N(1); if (ER(n, k)) return ER(n, k); if (k < 0 || k > n) return E('#NUM!'); let r = 1; for (let i = 1; i <= k; i++) r = r * (n - k + i) / i; return Math.round(r); }
+        case 'GCD': case 'LCM': { const ns = numsOf(A); if (isE(ns)) return ns; const g = (a, b) => b ? g(b, a % b) : a; return ns.map(Math.floor).reduce((a, b) => name === 'GCD' ? g(a, b) : (a && b ? a / g(a, b) * b : 0)); }
+        case 'RAND': return Math.random(); case 'RANDBETWEEN': { const a = N(0), b = N(1); return ER(a, b) || Math.floor(Math.random() * (b - a + 1)) + a; }
+        case 'MEDIAN': { const ns = numsOf(A); return isE(ns) ? ns : pct(ns, 0.5); }
+        case 'STDEV': case 'STDEVP': case 'VAR': case 'VARP': { const ns = numsOf(A); if (isE(ns)) return ns; const v = stat(ns, name === 'STDEV' || name === 'VAR'); return isE(v) ? v : (name.startsWith('STD') ? Math.sqrt(v) : v); }
+        case 'LARGE': case 'SMALL': { const ns = numsOf([A[0]]), k = N(1); if (isE(ns)) return ns; if (isE(k)) return k; if (k < 1 || k > ns.length) return E('#NUM!'); ns.sort((a, b) => name === 'LARGE' ? b - a : a - b); return ns[Math.ceil(k) - 1]; }
+        case 'RANK': { const x = N(0), ns = numsOf([A[1]]), od = has(2) ? N(2) : 0; if (ER(x, ns)) return ER(x, ns); if (!ns.includes(x)) return E('#N/A'); return ns.filter(v => od ? v < x : v > x).length + 1; }
+        case 'MODE': { const ns = numsOf(A); if (isE(ns)) return ns; const m = new Map(); for (const v of ns) m.set(v, (m.get(v) || 0) + 1); let best = null, bc = 1; for (const [v, c] of m) if (c > bc) { best = v; bc = c; } return best == null ? E('#N/A') : best; }
+        case 'PERCENTILE': { const ns = numsOf([A[0]]), k = N(1); return ER(ns, k) || pct(ns, k); }
+        case 'QUARTILE': { const ns = numsOf([A[0]]), q = N(1); return ER(ns, q) || (q < 0 || q > 4 ? E('#NUM!') : pct(ns, q / 4)); }
+        case 'COUNTBLANK': { const g = this.ev(A[0], cx); if (!g || !g.rg) return isE(g) ? g : (g == null || g === '' ? 1 : 0); let n = 0; this.cellsOf(g, v => { if (v == null || v === '') n++; }); return n; }
+        case 'AVERAGEIF': case 'AVERAGEIFS': case 'MAXIFS': case 'MINIFS': {
+          let tg, pairs = []; if (name === 'AVERAGEIF') { const g = this.ev(A[0], cx); tg = has(2) ? this.ev(A[2], cx) : g; pairs = [[g, S1(1)]]; } else { tg = this.ev(A[0], cx); for (let i = 1; i + 1 < A.length; i += 2) pairs.push([this.ev(A[i], cx), S1(i + 1)]); }
+          if (!tg || !tg.rg) return isE(tg) ? tg : E('#VALUE!'); const idx = condIdx(pairs); if (!idx) return E('#VALUE!'); const vs = [];
+          for (const [r, c] of idx) { const v = this.get(tg.wb, tg.si, tg.r1 + r, tg.c1 + c); if (isE(v)) return v; if (typeof v === 'number') vs.push(v); }
+          if (name.startsWith('AVERAGE')) return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : E('#DIV/0!'); if (!vs.length) return 0; return name === 'MAXIFS' ? Math.max(...vs) : Math.min(...vs);
+        }
+        case 'SUBTOTAL': { const f = N(0); if (isE(f)) return f; const id = f > 100 ? f - 100 : f, rest = A.slice(1); if (id === 3) { const l = this.flat(rest, cx); return isE(l) ? l : l.filter(x => x.v != null && x.v !== '').length; } const ns = numsOf(rest); if (isE(ns)) return ns; const sm = ns.reduce((a, b) => a + b, 0);
+          switch (id) { case 1: return ns.length ? sm / ns.length : E('#DIV/0!'); case 2: return ns.length; case 4: return ns.length ? Math.max(...ns) : 0; case 5: return ns.length ? Math.min(...ns) : 0; case 6: return ns.reduce((a, b) => a * b, 1); case 7: case 10: { const v = stat(ns, true); return isE(v) ? v : id === 7 ? Math.sqrt(v) : v; } case 8: case 11: { const v = stat(ns, false); return isE(v) ? v : id === 8 ? Math.sqrt(v) : v; } case 9: return sm; } return E('#VALUE!'); }
+        case 'IFS': { for (let i = 0; i + 1 < A.length; i += 2) { const c = toBool(S1(i)); if (isE(c)) return c; if (c) return S1(i + 1); } return E('#N/A'); }
+        case 'SWITCH': { const v = S1(0); if (isE(v)) return v; let i = 1; for (; i + 1 < A.length; i += 2) if (eqv(v, S1(i))) return S1(i + 1); return i < A.length ? S1(i) : E('#N/A'); }
+        case 'IFNA': { const v = S1(0); return isE(v) && v.e === '#N/A' ? S1(1) : v; }
+        case 'ISNA': { const v = S1(0); return isE(v) && v.e === '#N/A'; } case 'ISERR': { const v = S1(0); return isE(v) && v.e !== '#N/A'; }
+        case 'ISTEXT': return typeof S1(0) === 'string'; case 'ISNONTEXT': return typeof S1(0) !== 'string'; case 'ISLOGICAL': return typeof S1(0) === 'boolean';
+        case 'N': { const v = S1(0); return typeof v === 'number' ? v : typeof v === 'boolean' ? +v : 0; } case 'T': { const v = S1(0); return typeof v === 'string' ? v : ''; }
+        case 'MID': { const t = T(0), a = N(1), n = N(2); if (ER(t, a, n)) return ER(t, a, n); if (a < 1 || n < 0) return E('#VALUE!'); return t.substr(a - 1, n); }
+        case 'FIND': case 'SEARCH': { const f = T(0), t = T(1), st = has(2) ? N(2) : 1; if (ER(f, t, st)) return ER(f, t, st); if (st < 1 || st > t.length + 1) return E('#VALUE!'); const i = name === 'FIND' ? t.indexOf(f, st - 1) : (/[*?]/.test(f) ? t.slice(st - 1).search(new RegExp(f.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i')) + (t.slice(st - 1).search(new RegExp(f.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i')) < 0 ? 0 : st - 1) : t.toLowerCase().indexOf(f.toLowerCase(), st - 1)); return i < 0 ? E('#VALUE!') : i + 1; }
+        case 'SUBSTITUTE': { const t = T(0), o = T(1), nw = T(2); if (ER(t, o, nw)) return ER(t, o, nw); if (o === '') return t; if (has(3)) { const k = N(3); if (isE(k)) return k; let i = -1, c = 0; for (;;) { i = t.indexOf(o, i + 1); if (i < 0) return t; if (++c === k) return t.slice(0, i) + nw + t.slice(i + o.length); } } return t.split(o).join(nw); }
+        case 'REPLACE': { const t = T(0), a = N(1), n = N(2), nw = T(3); if (ER(t, a, n, nw)) return ER(t, a, n, nw); return t.slice(0, a - 1) + nw + t.slice(a - 1 + n); }
+        case 'REPT': { const t = T(0), k = N(1); return ER(t, k) || (k < 0 ? E('#VALUE!') : t.repeat(k)); }
+        case 'PROPER': { const t = T(0); return isE(t) ? t : t.toLowerCase().replace(/(^|[^\p{L}])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()); }
+        case 'EXACT': { const a = T(0), b = T(1); return ER(a, b) || a === b; }
+        case 'CHAR': case 'UNICHAR': return mathFn(x => x < 1 || x > 1114111 ? E('#VALUE!') : String.fromCodePoint(Math.floor(x)));
+        case 'CODE': case 'UNICODE': { const t = T(0); return isE(t) ? t : t === '' ? E('#VALUE!') : t.codePointAt(0); }
+        case 'CLEAN': { const t = T(0); return isE(t) ? t : t.replace(/[\u0000-\u001f]/g, ''); }
+        case 'TEXT': { const v = S1(0), f = T(1); if (isE(v)) return v; if (isE(f)) return f; if (typeof v !== 'number') return toStr(v); const x = f.replace(/"[^"]*"/g, ''); if (/[ymdhs]/i.test(x) && !/[0#]/.test(x)) return fmtDT(v, f); return fmtNum(v, f, 0); }
+        case 'TEXTJOIN': { const d = T(0), ig = toBool(S1(1)); if (ER(d, ig)) return ER(d, ig); const l = this.flat(A.slice(2), cx); if (isE(l)) return l; return l.filter(x => !(ig && (x.v == null || x.v === ''))).map(x => toStr(x.v)).join(d); }
+        case 'DATE': { const y = N(0), m = N(1), d = N(2); if (ER(y, m, d)) return ER(y, m, d); return serOf(y < 1900 ? y + 1900 : y, m, d); }
+        case 'YEAR': case 'MONTH': case 'DAY': { const s = N(0); if (isE(s)) return s; const d = dOf(s); return name === 'YEAR' ? d.getUTCFullYear() : name === 'MONTH' ? d.getUTCMonth() + 1 : d.getUTCDate(); }
+        case 'HOUR': case 'MINUTE': case 'SECOND': { const s = N(0); if (isE(s)) return s; const sec = Math.round((s - Math.floor(s)) * 86400); return name === 'HOUR' ? Math.floor(sec / 3600) % 24 : name === 'MINUTE' ? Math.floor(sec / 60) % 60 : sec % 60; }
+        case 'TIME': { const h = N(0), m = N(1), sc = N(2); return ER(h, m, sc) || (h * 3600 + m * 60 + sc) / 86400 % 1; }
+        case 'NOW': { const n = new Date(); return (n.getTime() - n.getTimezoneOffset() * 60000 - SER0) / 864e5; }
+        case 'WEEKDAY': { const s = N(0), t = has(1) ? N(1) : 1; if (ER(s, t)) return ER(s, t); const w = dOf(s).getUTCDay(); return t === 2 ? (w + 6) % 7 + 1 : t === 3 ? (w + 6) % 7 : w + 1; }
+        case 'WEEKNUM': { const s = N(0); if (isE(s)) return s; const d = dOf(s), y = d.getUTCFullYear(), j1 = new Date(Date.UTC(y, 0, 1)), doy = Math.floor((d - j1) / 864e5); return Math.floor((doy + j1.getUTCDay()) / 7) + 1; }
+        case 'EDATE': case 'EOMONTH': { const s = N(0), k = N(1); if (ER(s, k)) return ER(s, k); const d = dOf(s), y = d.getUTCFullYear(), m = d.getUTCMonth() + 1 + Math.trunc(k), yy = y + Math.floor((m - 1) / 12), mm = ((m - 1) % 12 + 12) % 12 + 1; return name === 'EOMONTH' ? serOf(yy, mm, dim(yy, mm)) : serOf(yy, mm, Math.min(d.getUTCDate(), dim(yy, mm))); }
+        case 'DAYS': { const e = N(0), b = N(1); return ER(e, b) || Math.floor(e) - Math.floor(b); }
+        case 'DATEVALUE': { const t = T(0); if (isE(t)) return t; let m = /^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/.exec(t.trim()); if (m) return serOf(+m[3] < 100 ? +m[3] + 2000 : +m[3], +m[2], +m[1]); m = /^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/.exec(t.trim()); return m ? serOf(+m[1], +m[2], +m[3]) : E('#VALUE!'); }
+        case 'DATEDIF': { const a = N(0), b = N(1), u = T(2); if (ER(a, b, u)) return ER(a, b, u); if (a > b) return E('#NUM!'); const d1 = dOf(a), d2 = dOf(b); let y = d2.getUTCFullYear() - d1.getUTCFullYear(), m = d2.getUTCMonth() - d1.getUTCMonth(), d = d2.getUTCDate() - d1.getUTCDate(); if (d < 0) { m--; d += dim(d2.getUTCFullYear(), d2.getUTCMonth()); } if (m < 0) { y--; m += 12; }
+          switch (u.toUpperCase()) { case 'Y': return y; case 'M': return y * 12 + m; case 'D': return Math.floor(b) - Math.floor(a); case 'MD': return d; case 'YM': return m; case 'YD': { let t = serOf(d2.getUTCFullYear(), d1.getUTCMonth() + 1, d1.getUTCDate()); if (t > Math.floor(b)) t = serOf(d2.getUTCFullYear() - 1, d1.getUTCMonth() + 1, d1.getUTCDate()); return Math.floor(b) - t; } } return E('#NUM!'); }
+        case 'NETWORKDAYS': { let a = N(0), b = N(1); if (ER(a, b)) return ER(a, b); const hol = new Set(); if (has(2)) { const l = this.flat([A[2]], cx); if (!isE(l)) for (const x of l) if (typeof x.v === 'number') hol.add(Math.floor(x.v)); } const sg = a <= b ? 1 : -1; let n = 0; for (let d = Math.floor(a); sg > 0 ? d <= Math.floor(b) : d >= Math.floor(b); d += sg) { const w = dOf(d).getUTCDay(); if (w !== 0 && w !== 6 && !hol.has(d)) n++; } return n * sg; }
+        case 'ROW': case 'COLUMN': { if (!A.length) return name === 'ROW' ? cx.r : cx.c; if (A[0].t !== 'r') return E('#VALUE!'); return name === 'ROW' ? A[0].r1 : A[0].c1; }
+        case 'ROWS': case 'COLUMNS': { const g = this.ev(A[0], cx); if (isE(g)) return g; if (g && g.rg) return name === 'ROWS' ? g.r2 - g.r1 + 1 : g.c2 - g.c1 + 1; if (g && g.arr) return name === 'ROWS' ? g.arr.length : g.arr[0].length; return 1; }
+        case 'CHOOSE': { const i = N(0); if (isE(i)) return i; if (i < 1 || i >= A.length) return E('#VALUE!'); return this.ev(A[Math.floor(i)], cx); }
+        case 'OFFSET': { if (A[0].t !== 'r') return E('#VALUE!'); const g = this.rng(A[0], cx); if (isE(g)) return g; const dr = N(1), dc = N(2); if (ER(dr, dc)) return ER(dr, dc); const h = has(3) ? N(3) : g.r2 - g.r1 + 1, w = has(4) ? N(4) : g.c2 - g.c1 + 1, r1 = g.r1 + dr, c1 = g.c1 + dc; if (r1 < 1 || c1 < 1 || h < 1 || w < 1) return E('#REF!'); if (h === 1 && w === 1) return this.get(g.wb, g.si, r1, c1); return { rg: 1, wb: g.wb, si: g.si, r1, r2: r1 + h - 1, c1, c2: c1 + w - 1, single: false }; }
+        case 'INDIRECT': { const t = T(0); if (isE(t)) return t; const ast = getAst(t.trim()); if (!ast || ast.t !== 'r') return E('#REF!'); return this.ev(ast, cx); }
+        case 'INDEX': {
+          const g = this.ev(A[0], cx); if (isE(g)) return g; const r = has(1) ? N(1) : 0, c = has(2) ? N(2) : 0; if (ER(r, c)) return ER(r, c);
+          if (g && g.rg) { const H = g.r2 - g.r1 + 1, W = g.c2 - g.c1 + 1; let rr = r, cc = c; if (!has(2) && H === 1) { cc = r; rr = 1; } if (rr < 0 || cc < 0 || rr > H || cc > W) return E('#REF!'); if (rr === 0 && cc === 0) return g; if (rr === 0) return { rg: 1, wb: g.wb, si: g.si, r1: g.r1, r2: g.r2, c1: g.c1 + cc - 1, c2: g.c1 + cc - 1, single: false }; if (cc === 0) return { rg: 1, wb: g.wb, si: g.si, r1: g.r1 + rr - 1, r2: g.r1 + rr - 1, c1: g.c1, c2: g.c2, single: false }; return this.get(g.wb, g.si, g.r1 + rr - 1, g.c1 + cc - 1); }
+          const ar = this.toArr(g), H = ar.length, W = ar[0].length; let rr = r || 1, cc = c || 1; if (!has(2) && H === 1) { cc = r; rr = 1; } if (rr < 1 || cc < 1 || rr > H || cc > W) return E('#REF!'); return ar[rr - 1][cc - 1];
+        }
+        case 'MATCH': {
+          const v = S1(0), t = has(2) ? N(2) : 1; if (ER(v, t)) return ER(v, t); const ar = this.toArr(this.ev(A[1], cx)), vec = ar.length === 1 ? ar[0] : ar.map(x => x[0]);
+          if (t === 0) { for (let i = 0; i < vec.length; i++) if (wild(v, vec[i])) return i + 1; return E('#N/A'); }
+          let best = -1; for (let i = 0; i < vec.length; i++) { const x = vec[i]; if (x == null || isE(x) || rank(x) !== rank(v)) continue; const cm = compare(x, v, t > 0 ? '<=' : '>='); if (cm === true) { best = i; if (compare(x, v, '=') === true) { if (t > 0) { /* keep scanning for last equal */ } } } else if (t > 0) break; } return best < 0 ? E('#N/A') : best + 1;
+        }
+        case 'VLOOKUP': case 'HLOOKUP': {
+          const v = S1(0), idx = N(2), ap = has(3) ? toBool(S1(3)) : true; if (ER(v, idx, ap)) return ER(v, idx, ap); let ar = this.toArr(this.ev(A[1], cx)); if (name === 'HLOOKUP') ar = ar[0].map((_, c) => ar.map(r => r[c]));
+          if (idx < 1 || idx > ar[0].length) return E('#REF!'); let row = -1;
+          if (!ap) { for (let i = 0; i < ar.length; i++) if (wild(v, ar[i][0])) { row = i; break; } } else { for (let i = 0; i < ar.length; i++) { const x = ar[i][0]; if (x == null || isE(x) || rank(x) !== rank(v)) continue; if (compare(x, v, '<=') === true) row = i; else break; } }
+          return row < 0 ? E('#N/A') : ar[row][idx - 1];
+        }
+        case 'LOOKUP': { const v = S1(0); if (isE(v)) return v; const la = this.toArr(this.ev(A[1], cx)), lv = la.length === 1 ? la[0] : la.map(x => x[0]); let rv = lv; if (has(2)) { const ra = this.toArr(this.ev(A[2], cx)); rv = ra.length === 1 ? ra[0] : ra.map(x => x[0]); } let best = -1; for (let i = 0; i < lv.length; i++) { const x = lv[i]; if (x == null || isE(x) || rank(x) !== rank(v)) continue; if (compare(x, v, '<=') === true) best = i; else break; } return best < 0 ? E('#N/A') : rv[best]; }
+        case 'XLOOKUP': { const v = S1(0); if (isE(v)) return v; const la = this.toArr(this.ev(A[1], cx)), ra = this.toArr(this.ev(A[2], cx)), vert = la[0].length === 1, lv = vert ? la.map(x => x[0]) : la[0]; for (let i = 0; i < lv.length; i++) if (wild(v, lv[i])) return vert ? (ra[i] ? ra[i][0] : E('#REF!')) : ra[0][i]; return has(3) ? S1(3) : E('#N/A'); }
+        case 'PMT': { const r = N(0), n = N(1), pv = N(2), fv = has(3) ? N(3) : 0, ty = has(4) ? N(4) : 0; if (ER(r, n, pv, fv, ty)) return ER(r, n, pv, fv, ty); if (r === 0) return -(pv + fv) / n; const k = Math.pow(1 + r, n); return -(r * (fv + pv * k)) / ((1 + r * ty) * (k - 1)); }
+        case 'FV': { const r = N(0), n = N(1), pm = N(2), pv = has(3) ? N(3) : 0, ty = has(4) ? N(4) : 0; if (ER(r, n, pm, pv, ty)) return ER(r, n, pm, pv, ty); if (r === 0) return -(pv + pm * n); const k = Math.pow(1 + r, n); return -(pv * k + pm * (1 + r * ty) * (k - 1) / r); }
+        case 'PV': { const r = N(0), n = N(1), pm = N(2), fv = has(3) ? N(3) : 0, ty = has(4) ? N(4) : 0; if (ER(r, n, pm, fv, ty)) return ER(r, n, pm, fv, ty); if (r === 0) return -(fv + pm * n); const k = Math.pow(1 + r, n); return -(fv + pm * (1 + r * ty) * (k - 1) / r) / k; }
+        case 'NPV': { const r = N(0), ns = numsOf(A.slice(1)); if (ER(r, ns)) return ER(r, ns); return ns.reduce((a, v, i) => a + v / Math.pow(1 + r, i + 1), 0); }
+        case 'IRR': { const ns = numsOf([A[0]]); if (isE(ns)) return ns; let r = has(1) ? N(1) : 0.1; for (let i = 0; i < 100; i++) { let f = 0, d = 0; ns.forEach((v, t) => { f += v / Math.pow(1 + r, t); d -= t * v / Math.pow(1 + r, t + 1); }); if (!d) break; const nr = r - f / d; if (Math.abs(nr - r) < 1e-10) return nr; r = nr; } return E('#NUM!'); }
       }
       return E('#NAME?');
     }
   }
   /* ---------- number formatting ---------- */
   function fmtDate(sr) { const d = new Date(Date.UTC(1899, 11, 30) + Math.floor(sr) * 864e5); return String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0') + '/' + d.getUTCFullYear(); }
+  function fmtDT(s, f) {
+    const MN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'], DN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const d = new Date(Date.UTC(1899, 11, 30) + Math.floor(s) * 864e5), sec = Math.round((s - Math.floor(s)) * 86400), H = Math.floor(sec / 3600) % 24, Mi = Math.floor(sec / 60) % 60, Se = sec % 60, p2 = n => String(n).padStart(2, '0');
+    const toks = f.match(/"[^"]*"|\\.|yyyy|yy|mmmm|mmm|mm|m|dddd|ddd|dd|d|hh|h|ss|s|AM\/PM|[\s\S]/gi) || [], ap = toks.some(t => /^am\/pm$/i.test(t)), sig = i => toks[i] && /^(h|hh|s|ss)$/i.test(toks[i]);
+    return toks.map((t, i) => { const L = t.toLowerCase(); if (t[0] === '"') return t.slice(1, -1); if (t[0] === '\\') return t[1] || '';
+      switch (L) { case 'yyyy': return d.getUTCFullYear(); case 'yy': return p2(d.getUTCFullYear() % 100); case 'dddd': return DN[d.getUTCDay()]; case 'ddd': return DN[d.getUTCDay()].slice(0, 3); case 'dd': return p2(d.getUTCDate()); case 'd': return d.getUTCDate(); case 'mmmm': return MN[d.getUTCMonth()]; case 'mmm': return MN[d.getUTCMonth()].slice(0, 3);
+        case 'mm': case 'm': { const mn = (sig(i - 1) || (toks[i - 1] === ':' && sig(i - 2))) || (sig(i + 1) || (toks[i + 1] === ':' && sig(i + 2))); const x = mn ? Mi : d.getUTCMonth() + 1; return L === 'mm' ? p2(x) : x; }
+        case 'hh': return p2(ap ? (H % 12 || 12) : H); case 'h': return ap ? (H % 12 || 12) : H; case 'ss': return p2(Se); case 's': return Se; case 'am/pm': return H < 12 ? 'AM' : 'PM'; }
+      return t; }).join('');
+  }
   function fmtNum(v, nf, isDate) {
     if (v == null) return ''; if (isE(v)) return v.e; if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
     if (typeof v === 'string') return v;
-    if (isDate) return fmtDate(v);
+    if (isDate) return nf && nf !== 'General' && /[ymdhs]/i.test(nf.replace(/"[^"]*"|\\./g, '')) ? fmtDT(v, nf.split(';')[0].replace(/\[[^\]]*\]/g, '')) : fmtDate(v);
     if (!nf || nf === 'General') return numFmtG(+v.toPrecision(11));
     let secs = nf.split(';'), sec = secs[0], x = v;
     if (v < 0 && secs.length > 1) { sec = secs[1]; x = -v; } else if (v === 0 && secs.length > 2) sec = secs[2];
@@ -1236,7 +1387,7 @@ function renderSHX() {
 }
 function shxCss(wb) {
   const st = SHX.D[wb].st, bd = b => { if (!b) return ''; const w = { thin:'1px solid', medium:'2px solid', thick:'3px solid', dashed:'1px dashed', dotted:'1px dotted', hair:'1px dotted', double:'3px double', mediumDashed:'2px dashed' }[b[0]] || '1px solid'; return w + ' #' + (b[1] || '000000'); };
-  return st.map((s, i) => '.sx' + i + '{' + (s.b ? 'font-weight:700;' : '') + (s.i ? 'font-style:italic;' : '') + (s.fc ? 'color:#' + s.fc + ';' : '') + (s.fs ? 'font-size:' + Math.round(s.fs * 1.1) + 'px;' : '') + (s.bg ? 'background:#' + s.bg + ';' : '') +
+  return st.map((s, i) => '.sx' + i + '{' + (s.b ? 'font-weight:700;' : '') + (s.i ? 'font-style:italic;' : '') + (s.ff ? "font-family:'" + String(s.ff).replace(/['"\\]/g, '') + "',system-ui,sans-serif;" : '') + (s.u || s.sk ? 'text-decoration:' + [s.u ? 'underline' : '', s.sk ? 'line-through' : ''].filter(Boolean).join(' ') + ';' : '') + (s.fc ? 'color:#' + s.fc + ';' : '') + (s.fs ? 'font-size:' + Math.round(s.fs * 1.1) + 'px;' : '') + (s.bg ? 'background:#' + s.bg + ';' : '') +
     (s.bd ? ['left', 'right', 'top', 'bottom'].map((n, j) => s.bd[j] ? 'border-' + n + ':' + bd(s.bd[j]) + ';' : '').join('') : '') +
     (s.h && s.h !== 'general' ? 'text-align:' + (s.h === 'centerContinuous' ? 'center' : s.h) + ';' : '') + 'vertical-align:' + (s.va === 'center' ? 'middle' : s.va === 'top' ? 'top' : 'bottom') + ';' + (s.w ? 'white-space:pre-wrap;word-break:break-word;' : '') + '}').join('');
 }
@@ -1267,8 +1418,8 @@ function shxTable(wb, si, forPrint, gap) {
   return { html: h, tw, rtl: sh.rtl };
 }
 function shxDraw(full) {
-  const w = SHX.D[SHX.wb]; if (SHX.si >= w.sh.length) SHX.si = 0; $('#shx-title').textContent = w.t; const uf = shxU(SHX.wb); $('#shx-ut').style.display = $('#shx-fm').style.display = uf && canWrite() ? 'flex' : 'none'; $('#shx-rs').style.display = uf ? 'none' : '';
-  if (full) { $('#shx-css').textContent = shxCss(SHX.wb); $('#shx-tabs').innerHTML = w.sh.map((s, i) => '<button data-i="' + i + '" class="' + (i === SHX.si ? 'on' : '') + '">' + esc(s.n) + '</button>').join(''); }
+  const w = SHX.D[SHX.wb]; if (SHX.si >= w.sh.length) SHX.si = 0; $('#shx-title').textContent = w.t; const uf = shxU(SHX.wb); $('#shx-rb').style.display = uf && canWrite() ? 'block' : 'none'; if (uf && canWrite()) shxRbRender(); $('#shx-rs').style.display = uf ? 'none' : '';
+  $('#shx-css').textContent = shxCss(SHX.wb); if (full) { $('#shx-tabs').innerHTML = w.sh.map((s, i) => '<button data-i="' + i + '" class="' + (i === SHX.si ? 'on' : '') + '">' + esc(s.n) + '</button>').join(''); }
   const t = shxTable(SHX.wb, SHX.si), tb = $('#shx-t'); tb.dir = t.rtl ? 'rtl' : 'ltr'; tb.innerHTML = t.html; tb.style.width = t.tw + 'px'; SHX.tw = t.tw; if (full) SHX.z = Math.max(0.55, Math.min(1, ($('#shx-w').clientWidth - 4) / t.tw)); tb.style.zoom = SHX.z; SHX.selTd = null;
   if (SHX.sel) { const td = tb.querySelector('td[data-r="' + SHX.sel[0] + '"][data-c="' + SHX.sel[1] + '"]'); if (td) { td.classList.add('sel'); SHX.selTd = td; } }
   $('#shx-zl').textContent = Math.round(SHX.z * 100) + '%';
@@ -1283,7 +1434,7 @@ function shxCellText(r, c) {
 function shxSelect(td) {
   if (SHX.selTd) SHX.selTd.classList.remove('sel'); td.classList.add('sel'); SHX.selTd = td;
   const r = +td.dataset.r, c = +td.dataset.c; SHX.sel = [r, c]; $('#shx-addr').textContent = shxA(r, c); const i = $('#shx-in'); i.value = shxCellText(r, c); SHX.orig = i.value; i.dir = i.value[0] === '=' ? 'ltr' : 'auto';
-  $('#shx-fx').classList.toggle('ro', !canWrite());
+  $('#shx-fx').classList.toggle('ro', !canWrite()); SHX.fe = false; shxRbSync();
 }
 function shxParse(txt, wb, si, r, c) {
   let t = txt.trim(); if (t === '') return { x:1 };
@@ -1302,6 +1453,7 @@ function shxCommit() {
   const sh = SHX.D[SHX.wb].sh[SHX.si], key = sh.n + '!' + shxA(r, c), id = 'shx:' + SHX.wb, d = S.docs.get(id), cur = d && !d.deleted && d.data && d.data.c ? d.data.c : {}, c2 = { ...cur };
   const b = SHX.eng.smap(SHX.wb, SHX.si).get(r * 100000 + c), same = b ? (p.f != null ? b[2] === p.f : p.x ? (b[2] == null && (b[3] == null || b[3] === '')) : b[2] == null && b[3] === p.v) : !!p.x;
   if (same) delete c2[key]; else c2[key] = p;
+  if (shxU(SHX.wb)) shxSnap(SHX.wb); SHX.fe = false;
   docSave('shx', id, { c:c2 }); SHX.eng.reset(); i.blur(); shxDraw(false); const t = $('#shx-t').querySelector('td.sel'); SHX.orig = shxCellText(r, c); i.value = SHX.orig; toast('اتحفظ');
 }
 function shxRestoreCell() {
@@ -1320,6 +1472,7 @@ function shxUserSync() {
   for (const k of Object.keys(SHX.D)) if (shxU(k) && !seen.has(k)) { delete SHX.D[k]; delete SHX.uv[k]; shxFlush(); }
 }
 const shxFolders = () => docsOf('shxd').map(d => ({ id:d.id, n:(d.data && d.data.n) || 'مجلد' })).sort((a, b) => a.n.localeCompare(b.n, 'ar'));
+const shxHid = k => { const d = S.docs.get('shxp:' + k); return d && !d.deleted && d.data && d.data.h != null ? !!d.data.h : !shxU(k); };
 function shxPlace(k) { const d = S.docs.get('shxp:' + k), f = d && !d.deleted && d.data ? d.data.f : ''; const fd = f && S.docs.get(f); return fd && !fd.deleted ? f : ''; }
 const SHX_FIC = '<svg viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
 function shxMenu(title, items) {
@@ -1334,19 +1487,21 @@ function shxMenu(title, items) {
 function shxList() {
   const L = $('#shx-list'); L.classList.remove('hide'); const fs = shxFolders(); let cur = SHX.fd || '';
   if (cur && !fs.find(f => f.id === cur)) cur = SHX.fd = null;
-  const keys = Object.keys(SHX.D), inF = id => keys.filter(k => shxPlace(k) === id), curF = fs.find(f => f.id === cur), cw = canWrite();
+  const allK = Object.keys(SHX.D), nHid = allK.filter(shxHid).length, keys = allK.filter(k => SHX.sh2 || !shxHid(k)), inF = id => keys.filter(k => shxPlace(k) === id), curF = fs.find(f => f.id === cur), cw = canWrite();
   let h = '<div class="sub"><button id="shx-hb" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>' + esc(curF ? curF.n : 'ملفات الإكسل') + '</b>' + (curF && cw ? '<button class="shm" data-mf="' + curF.id + '" aria-label="خيارات المجلد">⋯</button>' : '<span style="width:42px"></span>') + '</div><div class="shl">';
   if (cw) h += '<div class="sha">' + (cur ? '' : '<button class="btn ghost" data-a="nf">＋ مجلد</button>') + '<button class="btn ghost" data-a="nw">＋ ملف فاضي</button><button class="btn" data-a="im">استيراد إكسل</button></div>';
   if (!cur) h += fs.map(f => '<div class="shc" data-fd="' + f.id + '"><span class="i" style="background:#C98A1B">' + SHX_FIC + '</span><span style="flex:1;min-width:0"><b>' + esc(f.n) + '</b><small style="display:block;color:var(--muted)">' + inF(f.id).length + ' ملفات</small></span>' + (cw ? '<button class="shm" data-mf="' + f.id + '" aria-label="خيارات المجلد">⋯</button>' : '') + '</div>').join('');
   const ks = inF(cur);
   h += ks.map(k => { const w = SHX.D[k], n = shxU(k) ? 0 : shxEdCount(k); return '<div class="shc" data-w="' + k + '"><span class="i">' + SHX_IC + '</span><span style="flex:1;min-width:0"><b>' + esc(w.t) + '</b><small style="display:block;color:var(--muted)">' + w.sh.length + ' شيتات: ' + esc(w.sh.map(x => x.n).join('، ')) + (n ? ' · عدّلت ' + n + ' خلية' : '') + '</small></span>' + (cw ? '<button class="shm" data-m="' + k + '" aria-label="خيارات الملف">⋯</button>' : '') + '</div>'; }).join('');
   if (!ks.length && cur) h += '<div class="note" style="text-align:center;padding:14px">المجلد فاضي. اعمل ملف جديد أو استورد ملف إكسل، أو انقل ملف من ⋯ بتاع أي ملف.</div>';
-  if (!cur) h += '<div class="note" style="padding:4px 4px 0">ملف أحمد وملف هشام بيقروا من الجدول الرئيسي (v7)، فأي تعديل فيه بيظهر عندهم. ملفاتك الجديدة (الفاضية والمستوردة) منفصلة تماماً عن بيانات البرنامج ومش بتأثر في أي رقم. تعديلاتك بتتحفظ وتتزامن.</div>';
+  if (!cur && !ks.length && !fs.length) h += '<div class="note" style="text-align:center;padding:18px">مفيش ملفات لسه. اعمل ملف فاضي أو استورد ملف إكسل (xlsx أو xls) من الزراير اللي فوق.</div>';
+  if (!cur && nHid) h += '<button class="btn ghost" data-a="hid" style="margin-top:8px">' + (SHX.sh2 ? 'إخفاء الملفات القديمة' : 'الملفات المخفية (' + nHid + ')') + '</button>';
   L.innerHTML = h + '</div>';
 }
-function shxOpen(k) { SHX.wb = k; SHX.si = 0; SHX.sel = null; SHX.rg = null; SHX.rm = false; $('#shx-addr').textContent = ''; $('#shx-in').value = ''; renderSHX(); }
+function shxOpen(k) { SHX.wb = k; SHX.si = 0; SHX.sel = null; SHX.rg = null; SHX.rm = false; SHX.us = []; SHX.rs = []; SHX.rt = 'h'; SHX.fe = false; $('#shx-addr').textContent = ''; $('#shx-in').value = ''; renderSHX(); }
 function shxNewFolder() { const n = (prompt('اسم المجلد') || '').trim(); if (!n) return ''; const id = 'shxd:' + uid8(); docSave('shxd', id, { n }); return id; }
-function shxMove(k, f) { docSave('shxp', 'shxp:' + k, { f }); renderSHX(); }
+function shxMove(k, f) { const d = S.docs.get('shxp:' + k), h = d && !d.deleted && d.data && d.data.h != null ? { h:d.data.h } : {}; docSave('shxp', 'shxp:' + k, { ...h, f }); renderSHX(); }
+function shxHide(k, h) { const d = S.docs.get('shxp:' + k); docSave('shxp', 'shxp:' + k, { f:d && !d.deleted && d.data ? d.data.f || '' : '', h:h ? 1 : 0 }); renderSHX(); }
 function shxMoveMenu(k) {
   const cur = shxPlace(k), it = [{ l:(cur ? '' : '✓ ') + 'الرئيسي (من غير مجلد)', fn:() => shxMove(k, '') }];
   for (const f of shxFolders()) it.push({ l:(cur === f.id ? '✓ ' : '') + f.n, fn:() => shxMove(k, f.id) });
@@ -1360,7 +1515,7 @@ function shxDelFile(k) {
   docSave('shxw', 'shxw:' + k.slice(2), d, true); if (S.docs.has('shx:' + k)) docSave('shx', 'shx:' + k, {}, true); if (S.docs.has('shxp:' + k)) docSave('shxp', 'shxp:' + k, { f:'' });
   shxUserSync(); SHX.wb = null; renderSHX(); toast('اتمسح');
 }
-function shxFileMenu(k) { const it = [{ l:'نقل لمجلد', fn:() => shxMoveMenu(k) }, { l:shxU(k) ? 'تصدير كملف إكسل (xlsx)' : 'تصدير كملف إكسل (xlsx) بالقيم', fn:() => shxExport(k) }]; if (shxU(k)) { it.push({ l:'إعادة تسمية الملف', fn:() => shxRenFile(k) }); it.push({ l:'مسح الملف', d:1, fn:() => shxDelFile(k) }); } shxMenu(SHX.D[k].t, it); }
+function shxFileMenu(k) { const it = [{ l:'نقل لمجلد', fn:() => shxMoveMenu(k) }, { l:shxHid(k) ? 'إظهار في القايمة' : 'إخفاء من القايمة', fn:() => shxHide(k, !shxHid(k)) }, { l:shxU(k) ? 'تصدير كملف إكسل (xlsx)' : 'تصدير كملف إكسل (xlsx) بالقيم', fn:() => shxExport(k) }]; if (shxU(k)) { it.push({ l:'إعادة تسمية الملف', fn:() => shxRenFile(k) }); it.push({ l:'مسح الملف', d:1, fn:() => shxDelFile(k) }); } shxMenu(SHX.D[k].t, it); }
 function shxFolderMenu(id) {
   const d = S.docs.get(id); if (!d || d.deleted) return;
   shxMenu(d.data.n, [{ l:'إعادة تسمية المجلد', fn:() => { const n = (prompt('اسم المجلد', d.data.n) || '').trim(); if (n) { docSave('shxd', id, { n }); renderSHX(); } } },
@@ -1397,13 +1552,13 @@ async function shxParseXlsx(buf, title) {
   if (stx) {
     const sd = px(stx), nfm = {}; for (const n of xt(sd, 'numFmt')) nfm[xa(n, 'numFmtId')] = xa(n, 'formatCode');
     const flag = (f, n) => { const e = [...f.children].find(x => x.localName === n); return !!e && xa(e, 'val') !== '0'; };
-    const fonts = [...xt(sd, 'font')].filter(f => f.parentElement.localName === 'fonts').map(f => { const sz = [...f.children].find(x => x.localName === 'sz'), c = [...f.children].find(x => x.localName === 'color'); return { b:flag(f, 'b'), i:flag(f, 'i'), fs:sz ? +xa(sz, 'val') : 0, fc:col(c) }; });
+    const fonts = [...xt(sd, 'font')].filter(f => f.parentElement.localName === 'fonts').map(f => { const sz = [...f.children].find(x => x.localName === 'sz'), c = [...f.children].find(x => x.localName === 'color'); const nm = [...f.children].find(x => x.localName === 'name'), un = [...f.children].find(x => x.localName === 'u'); return { b:flag(f, 'b'), i:flag(f, 'i'), fs:sz ? +xa(sz, 'val') : 0, fc:col(c), ff:nm ? xa(nm, 'val') : '', u:!!un && xa(un, 'val') !== 'none', sk:flag(f, 'strike') }; });
     const fills = [...xt(sd, 'fill')].filter(f => f.parentElement.localName === 'fills').map(f => { const pf = xt(f, 'patternFill')[0]; if (!pf || xa(pf, 'patternType') !== 'solid') return null; return col(xt(pf, 'fgColor')[0]); });
     const bords = [...xt(sd, 'border')].filter(f => f.parentElement.localName === 'borders').map(f => { const bd = ['left', 'right', 'top', 'bottom'].map(n => { const e = [...f.children].find(x => x.localName === n); return e && xa(e, 'style') ? [xa(e, 'style'), col(xt(e, 'color')[0]) || '000000'] : null; }); return bd.some(Boolean) ? bd : null; });
     const cx = xt(sd, 'cellXfs')[0];
     if (cx) for (const xf of cx.children) {
       if (xf.localName !== 'xf') continue; const o = {}, ft = fonts[+xa(xf, 'fontId') || 0] || {}, fl = fills[+xa(xf, 'fillId') || 0], bd = bords[+xa(xf, 'borderId') || 0], nid = +xa(xf, 'numFmtId') || 0, code = nfm[nid] || BN[nid] || 'General';
-      if (ft.b) o.b = 1; if (ft.i) o.i = 1; if (ft.fc && ft.fc !== '000000') o.fc = ft.fc; if (ft.fs) o.fs = ft.fs; if (fl) o.bg = fl; if (bd) o.bd = bd; o.nf = code; if ((nid >= 14 && nid <= 17) || nid === 22 || (nid >= 27 && nid <= 36) || (nid >= 50 && nid <= 58) || (nid >= 164 && isDt(code))) o.d = 1;
+      if (ft.b) o.b = 1; if (ft.i) o.i = 1; if (ft.fc && ft.fc !== '000000') o.fc = ft.fc; if (ft.fs) o.fs = ft.fs; if (ft.ff && ft.ff !== 'Calibri') o.ff = ft.ff; if (ft.u) o.u = 1; if (ft.sk) o.sk = 1; if (fl) o.bg = fl; if (bd) o.bd = bd; o.nf = code; if ((nid >= 14 && nid <= 17) || nid === 22 || (nid >= 27 && nid <= 36) || (nid >= 50 && nid <= 58) || (nid >= 164 && isDt(code))) o.d = 1;
       const al = [...xf.children].find(x => x.localName === 'alignment'); if (al) { if (xa(al, 'horizontal')) o.h = xa(al, 'horizontal'); if (xa(al, 'vertical')) o.va = xa(al, 'vertical'); if (xa(al, 'wrapText') === '1') o.w = 1; }
       st.push(o);
     }
@@ -1454,6 +1609,8 @@ function shxCfb(buf) {
   };
   return { ents, stream };
 }
+const SHX_XLF = { 0:'COUNT', 1:'IF', 2:'ISNA', 3:'ISERROR', 4:'SUM', 5:'AVERAGE', 6:'MIN', 7:'MAX', 8:'ROW', 9:'COLUMN', 10:'NA', 11:'NPV', 12:'STDEV', 13:'DOLLAR', 14:'FIXED', 15:'SIN', 16:'COS', 17:'TAN', 18:'ATAN', 19:'PI', 20:'SQRT', 21:'EXP', 22:'LN', 23:'LOG10', 24:'ABS', 25:'INT', 26:'SIGN', 27:'ROUND', 28:'LOOKUP', 29:'INDEX', 30:'REPT', 31:'MID', 32:'LEN', 33:'VALUE', 34:'TRUE', 35:'FALSE', 36:'AND', 37:'OR', 38:'NOT', 39:'MOD', 46:'VAR', 48:'TEXT', 56:'PV', 57:'FV', 58:'NPER', 59:'PMT', 60:'RATE', 62:'IRR', 63:'RAND', 64:'MATCH', 65:'DATE', 66:'TIME', 67:'DAY', 68:'MONTH', 69:'YEAR', 70:'WEEKDAY', 71:'HOUR', 72:'MINUTE', 73:'SECOND', 74:'NOW', 75:'AREAS', 76:'ROWS', 77:'COLUMNS', 78:'OFFSET', 82:'SEARCH', 83:'TRANSPOSE', 86:'TYPE', 97:'ATAN2', 98:'ASIN', 99:'ACOS', 100:'CHOOSE', 101:'HLOOKUP', 102:'VLOOKUP', 105:'ISREF', 109:'LOG', 111:'CHAR', 112:'LOWER', 113:'UPPER', 114:'PROPER', 115:'LEFT', 116:'RIGHT', 117:'EXACT', 118:'TRIM', 119:'REPLACE', 120:'SUBSTITUTE', 121:'CODE', 124:'FIND', 126:'ISERR', 127:'ISTEXT', 128:'ISNUMBER', 129:'ISBLANK', 130:'T', 131:'N', 140:'DATEVALUE', 141:'TIMEVALUE', 148:'INDIRECT', 162:'CLEAN', 169:'COUNTA', 183:'PRODUCT', 184:'FACT', 190:'ISNONTEXT', 193:'STDEVP', 194:'VARP', 197:'TRUNC', 198:'ISLOGICAL', 212:'ROUNDUP', 213:'ROUNDDOWN', 216:'RANK', 221:'TODAY', 227:'MEDIAN', 228:'SUMPRODUCT', 261:'ERROR.TYPE', 276:'COMBIN', 279:'EVEN', 285:'FLOOR', 288:'CEILING', 298:'ODD', 325:'LARGE', 326:'SMALL', 327:'QUARTILE', 328:'PERCENTILE', 330:'MODE', 336:'CONCATENATE', 337:'POWER', 342:'RADIANS', 343:'DEGREES', 344:'SUBTOTAL', 345:'SUMIF', 346:'COUNTIF', 347:'COUNTBLANK', 351:'DATEDIF', 359:'HYPERLINK' };
+const SHX_XLA = { 2:1, 3:1, 10:0, 15:1, 16:1, 17:1, 18:1, 19:0, 20:1, 21:1, 22:1, 23:1, 24:1, 25:1, 26:1, 27:2, 30:2, 31:3, 32:1, 33:1, 34:0, 35:0, 38:1, 39:2, 48:2, 63:0, 65:3, 66:3, 67:1, 68:1, 69:1, 71:1, 72:1, 73:1, 74:0, 75:1, 76:1, 77:1, 86:1, 97:2, 98:1, 99:1, 105:1, 111:1, 112:1, 113:1, 114:1, 117:2, 118:1, 119:4, 121:1, 126:1, 127:1, 128:1, 129:1, 130:1, 131:1, 140:1, 141:1, 162:1, 184:1, 190:1, 198:1, 212:2, 213:2, 221:0, 261:1, 276:2, 279:1, 285:2, 288:2, 298:1, 337:2, 342:1, 343:1, 346:2, 347:1 };
 async function shxParseXls(buf, title) {
   const cf = shxCfb(buf), we = cf.ents.find(e => e.type === 2 && (e.name === 'Workbook' || e.name === 'Book'));
   if (!we) throw { msg:'الملف ده عليه كلمة سر أو مش ملف إكسل عادي' };
@@ -1466,16 +1623,18 @@ async function shxParseXls(buf, title) {
   const isDt = c => { const x = c.replace(/"[^"]*"|\[[^\]]*\]|\\./g, ''); return /[ymd]/i.test(x) && !/[0#?]/.test(x); };
   const LS = [null, 'thin', 'medium', 'dashed', 'dotted', 'thick', 'double', 'hair', 'mediumDashed', 'thin', 'mediumDashed', 'thin', 'mediumDashed', 'mediumDashed'], ERR = { 0:'#NULL!', 7:'#DIV/0!', 15:'#VALUE!', 23:'#REF!', 29:'#NAME?', 36:'#NUM!', 42:'#N/A' };
   if (u16(0) !== 0x809 || u16(4) !== 0x0600) throw { msg:'الملف ده بصيغة إكسل قديمة جداً (95 أو أقدم). افتحه في إكسل واحفظه xlsx' };
-  const fonts = [], fmts = {}, xfr = [], bounds = []; let sst = [], d1904 = false, pos = 0, depth = 0;
+  const fonts = [], fmts = {}, xfr = [], bounds = [], supb = [], xti = []; let sst = [], d1904 = false, pos = 0, depth = 0;
   while (pos + 4 <= u.length) {
     const id = u16(pos), len = u16(pos + 2), o = pos + 4; pos = o + len;
     if (id === 0x809) depth++; else if (id === 0x0A) { depth--; if (depth <= 0) break; }
     else if (id === 0x2F) throw { msg:'الملف ده عليه كلمة سر' };
     else if (id === 0x22) d1904 = u16(o) === 1;
-    else if (id === 0x31) fonts.push({ fs:u16(o) / 20, i:!!(u16(o + 2) & 2), c:u16(o + 4), b:u16(o + 6) >= 700 });
+    else if (id === 0x31) fonts.push({ fs:u16(o) / 20, i:!!(u16(o + 2) & 2), c:u16(o + 4), b:u16(o + 6) >= 700, u:u[o + 10] !== 0, sk:!!(u16(o + 2) & 8), ff:(() => { const n = u[o + 14]; return u[o + 15] & 1 ? u16s(u.subarray(o + 16, o + 16 + n * 2)) : l1(u.subarray(o + 16, o + 16 + n)); })() });
     else if (id === 0x41E) fmts[u16(o)] = ustr(o + 2, 2);
     else if (id === 0x92) { const n = u16(o); for (let i = 0; i < n; i++) pal[8 + i] = [0, 1, 2].map(j => u[o + 2 + i * 4 + j].toString(16).padStart(2, '0')).join('').toUpperCase(); }
     else if (id === 0xE0) xfr.push({ ft:u16(o), fm:u16(o + 2), al:u[o + 6], b1:u32(o + 10), b2:u32(o + 14), fl:u16(o + 18) });
+    else if (id === 0x1AE) supb.push({ int:u16(o + 2) === 0x0401 });
+    else if (id === 0x17) { const n = u16(o); for (let i = 0; i < n; i++) xti.push({ sb:u16(o + 2 + i * 6), a:u16(o + 4 + i * 6), b:u16(o + 6 + i * 6) }); }
     else if (id === 0x85) bounds.push({ off:u32(o), type:u[o + 5], n:u[o + 7] & 1 ? u16s(u.subarray(o + 8, o + 8 + u[o + 6] * 2)) : l1(u.subarray(o + 8, o + 8 + u[o + 6])) });
     else if (id === 0xFC) {
       const ch = [u.subarray(o + 8, o + len)]; while (pos + 4 <= u.length && u16(pos) === 0x3C) { const l2 = u16(pos + 2); ch.push(u.subarray(pos + 4, pos + 4 + l2)); pos += 4 + l2; }
@@ -1493,17 +1652,55 @@ async function shxParseXls(buf, title) {
     }
   }
   const st = xfr.map(x => {
-    const o = {}, ft = fonts[x.ft < 4 ? x.ft : x.ft - 1] || {}; if (ft.b) o.b = 1; if (ft.i) o.i = 1; if (ft.fs) o.fs = ft.fs; const fc = col(ft.c); if (fc && fc !== '000000') o.fc = fc;
+    const o = {}, ft = fonts[x.ft < 4 ? x.ft : x.ft - 1] || {}; if (ft.b) o.b = 1; if (ft.i) o.i = 1; if (ft.fs) o.fs = ft.fs; if (ft.ff && ft.ff !== 'Calibri') o.ff = ft.ff; if (ft.u) o.u = 1; if (ft.sk) o.sk = 1; const fc = col(ft.c); if (fc && fc !== '000000') o.fc = fc;
     if ((x.b2 >>> 26) === 1) { const bg = col(x.fl & 0x7F); if (bg) o.bg = bg; }
     const bd = [[x.b1 & 15, (x.b1 >>> 16) & 0x7F], [(x.b1 >>> 4) & 15, (x.b1 >>> 23) & 0x7F], [(x.b1 >>> 8) & 15, x.b2 & 0x7F], [(x.b1 >>> 12) & 15, (x.b2 >>> 7) & 0x7F]].map(a => LS[a[0]] ? [LS[a[0]], col(a[1]) || '000000'] : null); if (bd.some(Boolean)) o.bd = bd;
     const h = ['general', 'left', 'center', 'right', 'fill', 'justify', 'center'][x.al & 7]; if (h && h !== 'general') o.h = h; if (x.al & 8) o.w = 1; const va = (x.al >> 4) & 7; if (va === 0) o.va = 'top'; else if (va === 1) o.va = 'center';
     const code = fmts[x.fm] || BN[x.fm] || 'General'; o.nf = code; if ((x.fm >= 14 && x.fm <= 17) || x.fm === 22 || (x.fm >= 27 && x.fm <= 36) || (x.fm >= 50 && x.fm <= 58) || (x.fm >= 164 && isDt(code))) o.d = 1;
     return o;
   });
+  const bsh = bounds;
+  const qs = n => /^[A-Za-z_\u0600-\u06FF][A-Za-z0-9_.\u0600-\u06FF]*$/.test(n) && !/^[A-Za-z]{1,3}\d+$/.test(n) ? n : "'" + n.replace(/'/g, "''") + "'";
+  const shtRef = ix => { const e = xti[ix]; if (!e || !supb[e.sb] || !supb[e.sb].int || e.a !== e.b || !bounds[e.a]) throw 0; return qs(bounds[e.a].n) + '!'; };
+  const dec = (ts, cce, r0, c0) => {
+    const stk = [], end = ts + cce, cl = n => SHX_ENG.colL(n + 1); let p = ts;
+    const rf = (rw, cf, rel) => { let r = rw, c = cf & 0xFF, rr = !!(cf & 0x8000), cr = !!(cf & 0x4000); if (rel) { if (rr) r = (r0 + (rw << 16 >> 16)) & 0xFFFF; if (cr) c = (c0 + ((cf & 0xFF) << 24 >> 24)) & 0xFF; } return (cr ? '' : '$') + cl(c) + (rr ? '' : '$') + (r + 1); };
+    const ar = (r1, r2, c1, c2, rel) => { if (!rel && r1 === 0 && r2 === 65535 && !(c1 & 0x8000) && !(r2 & 0)) { return ((c1 & 0x4000) ? '' : '$') + cl(c1 & 0xFF) + ':' + ((c2 & 0x4000) ? '' : '$') + cl(c2 & 0xFF); } return rf(r1, c1, rel) + ':' + rf(r2, c2, rel); };
+    const bin = { 3:'+', 4:'-', 5:'*', 6:'/', 7:'^', 8:'&', 9:'<', 10:'<=', 11:'=', 12:'>=', 13:'>', 14:'<>' };
+    while (p < end) {
+      const id = u[p++], b = id < 0x20 ? id : (id & 0x1F) | 0x20;
+      if (bin[b]) { const y = stk.pop(), x = stk.pop(); if (x == null || y == null) throw 0; stk.push(x + bin[b] + y); continue; }
+      switch (b) {
+        case 0x15: stk.push('(' + stk.pop() + ')'); break;
+        case 0x12: stk.push('+' + stk.pop()); break; case 0x13: stk.push('-' + stk.pop()); break; case 0x14: stk.push(stk.pop() + '%'); break;
+        case 0x11: { const y = stk.pop(), x = stk.pop(); stk.push(x + ':' + y); break; }
+        case 0x16: stk.push(''); break;
+        case 0x17: { const cch = u[p], hi = u[p + 1] & 1, t = hi ? u16s(u.subarray(p + 2, p + 2 + cch * 2)) : l1(u.subarray(p + 2, p + 2 + cch)); p += 2 + cch * (hi ? 2 : 1); stk.push('"' + t.replace(/"/g, '""') + '"'); break; }
+        case 0x1C: stk.push(ERR[u[p++]] || '#VALUE!'); break;
+        case 0x1D: stk.push(u[p++] ? 'TRUE' : 'FALSE'); break;
+        case 0x1E: stk.push(String(u16(p))); p += 2; break;
+        case 0x1F: stk.push(String(dv.getFloat64(p, true))); p += 8; break;
+        case 0x24: stk.push(rf(u16(p), u16(p + 2), false)); p += 4; break;
+        case 0x25: stk.push(ar(u16(p), u16(p + 2), u16(p + 4), u16(p + 6), false)); p += 8; break;
+        case 0x2C: stk.push(rf(u16(p), u16(p + 2), true)); p += 4; break;
+        case 0x2D: stk.push(ar(u16(p), u16(p + 2), u16(p + 4), u16(p + 6), true)); p += 8; break;
+        case 0x3A: stk.push(shtRef(u16(p)) + rf(u16(p + 2), u16(p + 4), false)); p += 6; break;
+        case 0x3B: stk.push(shtRef(u16(p)) + ar(u16(p + 2), u16(p + 4), u16(p + 6), u16(p + 8), false)); p += 10; break;
+        case 0x2A: p += 4; stk.push('#REF!'); break; case 0x2B: p += 8; stk.push('#REF!'); break; case 0x3C: p += 6; stk.push('#REF!'); break; case 0x3D: p += 10; stk.push('#REF!'); break;
+        case 0x21: { const f = u16(p); p += 2; const n = SHX_XLA[f]; if (n == null || !SHX_XLF[f]) throw 0; const a = []; for (let i = 0; i < n; i++) a.unshift(stk.pop()); stk.push(SHX_XLF[f] + '(' + a.join(',') + ')'); break; }
+        case 0x22: { const n = u[p] & 0x7F, f = u16(p + 1) & 0x7FFF; p += 3; if (!SHX_XLF[f]) throw 0; const a = []; for (let i = 0; i < n; i++) a.unshift(stk.pop()); stk.push(SHX_XLF[f] + '(' + a.join(',') + ')'); break; }
+        case 0x19: { const g = u[p++]; if (g & 0x10) { p += 2; stk.push('SUM(' + stk.pop() + ')'); } else if (g & 0x04) { const n = u16(p); p += 2 + (n + 1) * 2; } else p += 2; break; }
+        case 0x29: case 0x2E: case 0x2F: p += 2; break;
+        case 0x26: case 0x27: case 0x28: p += 6; break;
+        default: throw 0;
+      }
+    }
+    if (stk.length !== 1 || stk[0] == null) throw 0; return stk[0];
+  };
   const out = []; let total = 0;
   for (const bs of bounds) {
-    if (bs.type !== 0) continue; const sh = { n:bs.n, cells:[], R:1, C:1, cw:{}, rh:{}, mg:[], rtl:false }, cm = new Map(); let pp = bs.off, dp = 0, pend = null, last = 0;
-    const put = (r, c, v, x) => { const sx = st[x] || {}; if ((v == null || v === '') && !sx.bg && !sx.bd) return; if (typeof v === 'number' && sx.d && d1904) v += 1462; cm.set((r + 1) * 100000 + c + 1, [r + 1, c + 1, null, v, st[x] ? x : -1]); };
+    if (bs.type !== 0) continue; const sh = { n:bs.n, cells:[], R:1, C:1, cw:{}, rh:{}, mg:[], rtl:false }, cm = new Map(); let pp = bs.off, dp = 0, pend = null, last = 0; const tx = [], shr = new Map();
+    const put = (r, c, v, x, f) => { const sx = st[x] || {}; if ((v == null || v === '') && !f && !sx.bg && !sx.bd) return; if (typeof v === 'number' && sx.d && d1904) v += 1462; cm.set((r + 1) * 100000 + c + 1, [r + 1, c + 1, f || null, v, st[x] ? x : -1]); };
     const rk = n => { let v; if (n & 2) v = (n | 0) >> 2; else { const t = new DataView(new ArrayBuffer(8)); t.setUint32(4, (n & 0xFFFFFFFC) >>> 0, true); v = t.getFloat64(0, true); } return n & 1 ? v / 100 : v; };
     const mgAdd = (o, n) => { for (let i = 0; i < n; i++) { const q = o + i * 8; if (q + 8 > u.length) break; const r1 = u16(q), r2 = u16(q + 2), c1 = u16(q + 4), c2 = u16(q + 6); sh.mg.push(SHX_ENG.colL(c1 + 1) + (r1 + 1) + ':' + SHX_ENG.colL(c2 + 1) + (r2 + 1)); } };
     while (pp + 4 <= u.length) {
@@ -1522,15 +1719,19 @@ async function shxParseXls(buf, title) {
       else if (id === 0xBE) { const n = (len - 6) / 2; for (let i = 0; i < n; i++) put(u16(o), u16(o + 2) + i, null, u16(o + 4 + i * 2)); }
       else if (id === 0x205) { const v = u[o + 6]; put(u16(o), u16(o + 2), u[o + 7] ? (ERR[v] || '#VALUE!') : v !== 0, u16(o + 4)); }
       else if (id === 0x06) {
-        const r = u16(o), c = u16(o + 2), x = u16(o + 4); pend = null;
-        if (u[o + 12] === 0xFF && u[o + 13] === 0xFF) { const k = u[o + 6]; if (k === 0) pend = [r, c, x]; else if (k === 1) put(r, c, u[o + 8] !== 0, x); else if (k === 2) put(r, c, ERR[u[o + 8]] || '#VALUE!', x); else put(r, c, null, x); }
-        else put(r, c, dv.getFloat64(o + 6, true), x);
+        const r = u16(o), c = u16(o + 2), x = u16(o + 4), cce = u16(o + 20), ts = o + 22; pend = null; let f = null;
+        if (cce === 5 && u[ts] === 0x01) tx.push({ r, c, mr:u16(ts + 1), mc:u16(ts + 3) }); else { try { f = dec(ts, cce, r, c); } catch (e) { f = null; } }
+        if (u[o + 12] === 0xFF && u[o + 13] === 0xFF) { const k = u[o + 6]; if (k === 0) pend = [r, c, x, f]; else if (k === 1) put(r, c, u[o + 8] !== 0, x, f); else if (k === 2) put(r, c, ERR[u[o + 8]] || '#VALUE!', x, f); else put(r, c, null, x, f); }
+        else put(r, c, dv.getFloat64(o + 6, true), x, f);
       }
-      else if (id === 0x207) { if (pend) { put(pend[0], pend[1], ustr(o, 2), pend[2]); pend = null; } }
+      else if (id === 0x4BC) shr.set(u16(o) + ',' + u[o + 4], { tok:o + 10, cce:u16(o + 8), t:'s' });
+      else if (id === 0x221) shr.set(u16(o) + ',' + u[o + 4], { tok:o + 14, cce:u16(o + 12), t:'a' });
+      else if (id === 0x207) { if (pend) { put(pend[0], pend[1], ustr(o, 2), pend[2], pend[3]); pend = null; } }
       else if (id === 0xE5) mgAdd(o + 2, u16(o));
       else if (id === 0x3C && last === 0xE5) mgAdd(o, Math.floor(len / 8));
       last = id;
     }
+    for (const t of tx) { const rec = shr.get(t.mr + ',' + t.mc); if (!rec || (rec.t === 'a' && (t.r !== t.mr || t.c !== t.mc))) continue; let f = null; try { f = dec(rec.tok, rec.cce, t.r, t.c); } catch (e) { f = null; } const cc = cm.get((t.r + 1) * 100000 + t.c + 1); if (f && cc) cc[2] = f; }
     for (const c of cm.values()) { sh.cells.push(c); if (c[0] > sh.R) sh.R = c[0]; if (c[1] > sh.C) sh.C = c[1]; } total += sh.cells.length;
     for (const ref of sh.mg) { const e = /([A-Z]+)(\d+)$/.exec(ref); if (e) { sh.R = Math.max(sh.R, +e[2]); sh.C = Math.max(sh.C, SHX_ENG.colN(e[1])); } }
     for (const k of Object.keys(sh.cw)) if (+k > sh.C) delete sh.cw[k];
@@ -1558,16 +1759,17 @@ function shxSheetName(d, def, ex) { const n = (prompt('اسم الشيت', def) 
 function shxRenRef(f, o, n) { const q = x => /^[A-Za-z_\u0600-\u06FF][A-Za-z0-9_.\u0600-\u06FF]*$/.test(x) && !/^[A-Za-z]{1,3}\d+$/.test(x) ? x : "'" + x.replace(/'/g, "''") + "'", e2 = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return f.replace(new RegExp("'" + e2(o.replace(/'/g, "''")) + "'!", 'g'), q(n) + '!').replace(new RegExp("(^|[^A-Za-z0-9_.\\u0600-\\u06FF'])" + e2(o) + '!', 'g'), (m, pre) => pre + q(n) + '!'); }
 function shxUAct(a) {
   const k = SHX.wb; if (!shxU(k) || !canWrite()) return; const d = shxWData(k); if (!d) return; const sh = d.sh[SHX.si], idc = 'shx:' + k;
-  if (a === 'sh+') { const n = shxSheetName(d, 'شيت' + (d.sh.length + 1), -1); if (!n) return; d.sh.push(shxBlank(n)); shxWSave(k, d); SHX.si = d.sh.length - 1; SHX.sel = null; shxDraw(true); return; }
+  if (a === 'sh+') { const n = shxSheetName(d, 'شيت' + (d.sh.length + 1), -1); if (!n) return; shxSnap(k); d.sh.push(shxBlank(n)); shxWSave(k, d); SHX.si = d.sh.length - 1; SHX.sel = null; shxDraw(true); return; }
   if (a === 'r+') { const n = Math.floor(+(prompt('تزود كام صف؟', '20') || 0)); if (!(n > 0)) return; if (sh.R + n > 5000) return toast('الحد الأقصى 5000 صف'); sh.R += n; shxWSave(k, d); shxDraw(false); return; }
   if (a === 'c+') { const n = Math.floor(+(prompt('تزود كام عمود؟', '5') || 0)); if (!(n > 0)) return; if (sh.C + n > 80) return toast('الحد الأقصى 80 عمود'); sh.C += n; shxWSave(k, d); shxDraw(true); return; }
   if (a === 'sh') {
-    const it = [{ l:'إعادة تسمية الشيت', fn:() => { const n = shxSheetName(d, sh.n, SHX.si); if (!n || n === sh.n) return; const o = sh.n, od = S.docs.get(idc), cur = od && !od.deleted && od.data && od.data.c ? od.data.c : {}, c2 = {};
+    const it = [{ k:'ren', l:'إعادة تسمية الشيت', fn:() => { const n = shxSheetName(d, sh.n, SHX.si); if (!n || n === sh.n) return; const o = sh.n, od = S.docs.get(idc), cur = od && !od.deleted && od.data && od.data.c ? od.data.c : {}, c2 = {};
         for (const kk of Object.keys(cur)) { const v = { ...cur[kk] }; if (typeof v.f === 'string') v.f = shxRenRef(v.f, o, n); c2[kk.startsWith(o + '!') ? n + kk.slice(o.length) : kk] = v; }
         for (const x of d.sh) for (const c of x.cells) if (typeof c[2] === 'string') c[2] = shxRenRef(c[2], o, n);
         sh.n = n; shxWSave(k, d); if (od) docSave('shx', idc, { c:c2 }); shxFlush(); shxDraw(true); } },
       { l:sh.rtl ? 'اتجاه الشيت: خليه من الشمال لليمين' : 'اتجاه الشيت: خليه من اليمين للشمال', fn:() => { sh.rtl = !sh.rtl; shxWSave(k, d); shxDraw(true); } }];
-    if (d.sh.length > 1) it.push({ l:'مسح الشيت ده', d:1, fn:() => { if (!confirm('تمسح شيت "' + sh.n + '" بكل اللي فيه؟')) return; const od = S.docs.get(idc); if (od && !od.deleted && od.data && od.data.c) { const c2 = {}; for (const kk of Object.keys(od.data.c)) if (!kk.startsWith(sh.n + '!')) c2[kk] = od.data.c[kk]; docSave('shx', idc, { c:c2 }); } d.sh.splice(SHX.si, 1); shxWSave(k, d); SHX.si = 0; SHX.sel = null; shxFlush(); shxDraw(true); } });
+    if (d.sh.length > 1) it.push({ k:'del', l:'مسح الشيت ده', d:1, fn:() => { if (!confirm('تمسح شيت "' + sh.n + '" بكل اللي فيه؟')) return; const od = S.docs.get(idc); if (od && !od.deleted && od.data && od.data.c) { const c2 = {}; for (const kk of Object.keys(od.data.c)) if (!kk.startsWith(sh.n + '!')) c2[kk] = od.data.c[kk]; docSave('shx', idc, { c:c2 }); } d.sh.splice(SHX.si, 1); shxWSave(k, d); SHX.si = 0; SHX.sel = null; shxFlush(); shxDraw(true); } });
+    if (SHX.pk) { const t = it.find(x => x.k === SHX.pk); SHX.pk = null; if (t) t.fn(); else toast('لازم يفضل شيت واحد على الأقل'); return; }
     shxMenu('الشيت: ' + sh.n, it); return;
   }
   if (a === 'f') shxFileMenu(k);
@@ -1602,7 +1804,7 @@ function shxColors(title, noneLbl, cb) {
   o.appendChild(b); o.onclick = e => { if (e.target === o) o.remove(); }; document.body.appendChild(o);
 }
 function shxStyle(fn, rg) {
-  const k = SHX.wb, d = shxWData(k); if (!d) return; const sh = d.sh[SHX.si]; rg = rg || shxTR(); if (!rg) return toast('اختار خلية الأول');
+  const k = SHX.wb, d = shxWData(k); if (!d) return; shxSnap(k); const sh = d.sh[SHX.si]; rg = rg || shxTR(); if (!rg) return toast('اختار خلية الأول');
   const [r1, c1, r2, c2] = rg; if ((r2 - r1 + 1) * (c2 - c1 + 1) > 20000) return toast('النطاق كبير أوي');
   const idx = {}; d.st.forEach((x, i) => { idx[JSON.stringify(x)] = i; }); const cm = new Map(); for (const c of sh.cells) cm.set(c[0] * 100000 + c[1], c);
   for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
@@ -1613,29 +1815,182 @@ function shxStyle(fn, rg) {
   }
   shxWSave(k, d); SHX.eng && shxDraw(false);
 }
-function shxFm(a) {
+/* ===== الشريط (Ribbon) وعمليات الإكسل ===== */
+const SHX_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 36, 48, 72], SHX_FONTS = ['Calibri', 'Arial', 'Tahoma', 'Times New Roman', 'Courier New', 'Verdana', 'Segoe UI', 'Cairo', 'Amiri', 'Traditional Arabic'];
+function shxStyleAt(r, c) { const k = SHX.wb, b = SHX.eng.smap(k, SHX.si).get(r * 100000 + c); return b && b[4] >= 0 ? SHX.D[k].st[b[4]] || {} : {}; }
+const SHX_AIC = { al:'<svg viewBox="0 0 24 24"><path d="M3 6h18M9 12h12M5 18h16"/></svg>', ac:'<svg viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M5 18h14"/></svg>', ar:'<svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h12M3 18h16"/></svg>', vt:'<svg viewBox="0 0 24 24"><path d="M4 4h16M12 20V9M8 12l4-4 4 4"/></svg>', vm:'<svg viewBox="0 0 24 24"><path d="M4 12h16M12 4v5M9 6l3 3 3-3M12 20v-5M9 18l3-3 3 3"/></svg>', vb:'<svg viewBox="0 0 24 24"><path d="M4 20h16M12 4v11M8 12l4 4 4-4"/></svg>' };
+function shxRbRender() {
+  const T = [['h', 'الرئيسية'], ['i', 'إدراج'], ['f', 'صيغ'], ['d', 'بيانات'], ['v', 'عرض'], ['m', 'الملف']]; SHX.rt = SHX.rt || 'h';
+  $('#rb-t').innerHTML = T.map(x => '<button data-rt="' + x[0] + '" class="' + (x[0] === SHX.rt ? 'on' : '') + '">' + x[1] + '</button>').join('');
+  const B = (a, l, c) => '<button class="rb' + (c ? ' ' + c : '') + '" data-fm="' + a + '">' + l + '</button>', G = (...rows) => '<div class="rbg">' + rows.map(r => '<div class="rr">' + r.join('') + '</div>').join('') + '</div>';
+  const P = {
+    h: [G([B('un', '↶'), B('re', '↷'), B('rg', 'نطاق')], [B('cp', 'نسخ'), B('ct', 'قص'), B('ps', 'لصق')]),
+      G([B('fn', '<span id="rb-fn">Calibri</span> ▾', 'w'), B('fs-', '−'), B('fsz', '<span id="rb-fs">11</span>'), B('fs+', '＋')], [B('b', '<b>B</b>'), B('i', '<i>I</i>'), B('u', '<u>U</u>'), B('sk', '<s>S</s>'), B('tc', '<span style="border-bottom:4px solid #C0392B;line-height:1.1">A</span>'), B('bg', '<span style="border-bottom:4px solid #F1C40F;line-height:1.1">▨</span>'), B('bd', '▦')]),
+      G([B('al', SHX_AIC.al), B('ac', SHX_AIC.ac), B('ar', SHX_AIC.ar), B('vt', SHX_AIC.vt), B('vm', SHX_AIC.vm), B('vb', SHX_AIC.vb)], [B('w', 'لف النص'), B('mg', 'دمج ▾')]),
+      G([B('nf', '<span id="rb-nf">عام</span> ▾', 'w')], [B('cur', 'ج.م'), B('pc', '%'), B('cm', '٫٫٫'), B('nd-', '.0←'), B('nd+', '.00→')]),
+      G([B('cl', 'مسح ▾')])],
+    i: [G([B('ri-', 'صف فوق'), B('ri+', 'صف تحت'), B('ci-', 'عمود قبل'), B('ci+', 'عمود بعد')], [B('rd', 'مسح الصف'), B('cd', 'مسح العمود')]),
+      G([B('sh+', '＋ شيت'), B('shr', 'اسم الشيت')], [B('shd', 'مسح الشيت'), B('shm', 'اتجاه الشيت')]),
+      G([B('rh+', 'ارتفاع ＋'), B('rh-', 'ارتفاع −')], [B('cw+', 'عرض ＋'), B('cw-', 'عرض −'), B('af', 'ملاءمة العرض')])],
+    f: [G([B('fx', '<b>fx</b> دالة', 'w'), B('as', 'Σ جمع تلقائي ▾', 'w')], [B('as:SUM', 'جمع'), B('as:AVERAGE', 'متوسط'), B('as:COUNT', 'عدد'), B('as:MAX', 'أكبر'), B('as:MIN', 'أصغر')])],
+    d: [G([B('sa', 'ترتيب ↑ (أ-ي)'), B('sd', 'ترتيب ↓ (ي-أ)')], [B('rg', 'تحديد نطاق')])],
+    v: [G([B('z-', 'تصغير'), B('z+', 'تكبير'), B('zf', 'ملاءمة')], [B('shm', 'اتجاه الشيت (يمين/شمال)')])],
+    m: [G([B('xp', 'تصدير xlsx'), B('pdf', 'طباعة / PDF')], [B('frn', 'اسم الملف'), B('fmv', 'نقل لمجلد'), B('fdl', 'مسح الملف')])]
+  };
+  $('#rb-p').innerHTML = P[SHX.rt].join(''); shxRbSync();
+}
+function shxRbSync() {
+  const rb = $('#shx-rb'); if (!rb || rb.style.display === 'none' || !shxU(SHX.wb)) return; const rg = shxTR(), st = rg ? shxStyleAt(rg[0], rg[1]) : {}, on = (a, v) => { const b = document.querySelector('#rb-p [data-fm="' + a + '"]'); if (b) b.classList.toggle('on', !!v); };
+  on('b', st.b); on('i', st.i); on('u', st.u); on('sk', st.sk); on('w', st.w); on('al', st.h === 'right'); on('ac', st.h === 'center'); on('ar', st.h === 'left'); on('vt', st.va === 'top'); on('vm', st.va === 'center'); on('vb', !st.va || st.va === 'bottom'); on('rg', SHX.rm);
+  const f = $('#rb-fn'), z = $('#rb-fs'), n = $('#rb-nf'); if (f) f.textContent = st.ff || 'Calibri'; if (z) z.textContent = st.fs || 11;
+  if (n) { const nf = st.nf || 'General'; n.textContent = st.d ? 'تاريخ' : nf === 'General' ? 'عام' : /%/.test(nf) ? 'نسبة' : /ج\.م/.test(nf) ? 'عملة' : /#,##0/.test(nf) ? 'رقم' : 'مخصص'; }
+}
+/* ---- تراجع / إعادة ---- */
+function shxSnap(k) { const d = S.docs.get('shxw:' + k.slice(2)), od = S.docs.get('shx:' + k); if (!d || d.deleted) return; SHX.us = SHX.us || []; SHX.us.push({ k, w:JSON.stringify(d.data), o:od && !od.deleted ? JSON.stringify(od.data) : null }); SHX.rs = []; while (SHX.us.length > 40 || (SHX.us.length > 1 && SHX.us.reduce((a, x) => a + x.w.length, 0) > 30e6)) SHX.us.shift(); }
+function shxUndo(redo) {
+  const from = redo ? SHX.rs : SHX.us, to = redo ? SHX.us : SHX.rs, k = SHX.wb; if (!from || !from.length) return toast(redo ? 'مفيش حاجة تتعاد' : 'مفيش حاجة تتراجع عنها');
+  const sn = from.pop(), d = S.docs.get('shxw:' + k.slice(2)), od = S.docs.get('shx:' + k); if (sn.k !== k) { from.push(sn); return; }
+  to.push({ k, w:JSON.stringify(d.data), o:od && !od.deleted ? JSON.stringify(od.data) : null });
+  docSave('shxw', 'shxw:' + k.slice(2), JSON.parse(sn.w)); docSave('shx', 'shx:' + k, sn.o ? JSON.parse(sn.o) : { c:{} }); shxUserSync(); shxFlush(); SHX.rg = null; shxDraw(true);
+}
+/* ---- دمج التعديلات في الملف نفسه + التنفيذ ---- */
+function shxFlat(k) {
+  const d = shxWData(k); if (!d) return null; const od = S.docs.get('shx:' + k), c = od && !od.deleted && od.data && od.data.c ? od.data.c : {}, idx = {}; d.st.forEach((x, i) => { idx[JSON.stringify(x)] = i; });
+  const maps = d.sh.map(sh => { const m = new Map(); for (const x of sh.cells) m.set(x[0] * 100000 + x[1], x); return m; });
+  for (const key of Object.keys(c)) {
+    const bang = key.lastIndexOf('!'), sn = key.slice(0, bang), m = /^([A-Z]+)(\d+)$/.exec(key.slice(bang + 1)); if (!m) continue; const si = d.sh.findIndex(x => x.n === sn); if (si < 0) continue;
+    const r = +m[2], cc = SHX_ENG.colN(m[1]), o = c[key], mp = maps[si]; let cell = mp.get(r * 100000 + cc); if (!cell) { cell = [r, cc, null, null, -1]; d.sh[si].cells.push(cell); mp.set(r * 100000 + cc, cell); }
+    if (o.x) { cell[2] = null; cell[3] = null; } else if (o.f != null) { cell[2] = o.f; cell[3] = null; } else { cell[2] = null; cell[3] = o.v; }
+    if (o.d) { const so = cell[4] >= 0 ? { ...d.st[cell[4]] } : {}; if (!so.d) { so.d = 1; if (!so.nf || so.nf === 'General') so.nf = 'dd/mm/yyyy'; const kk = JSON.stringify(so); if (idx[kk] == null) { idx[kk] = d.st.length; d.st.push(so); } cell[4] = idx[kk]; } }
+    if (r > d.sh[si].R) d.sh[si].R = r;
+  }
+  return d;
+}
+function shxEdit(fn, keepRg) {
+  const k = SHX.wb; if (!shxU(k) || !canWrite()) return; shxSnap(k); const d = shxFlat(k); if (!d) return; const sh = d.sh[SHX.si], m = new Map(); for (const x of sh.cells) m.set(x[0] * 100000 + x[1], x), 0;
+  const cell = (r, c) => { let x = m.get(r * 100000 + c); if (!x) { x = [r, c, null, null, -1]; sh.cells.push(x); m.set(r * 100000 + c, x); if (r > sh.R) sh.R = r; if (c > sh.C) sh.C = c; } return x; };
+  const res = fn(d, sh, cell, m); if (res === false) { SHX.us.pop(); return; }
+  for (const x of d.sh) x.cells = x.cells.filter(c => c[2] != null || (c[3] != null && c[3] !== '') || c[4] >= 0);
+  shxWSave(k, d); if (S.docs.has('shx:' + k) && !S.docs.get('shx:' + k).deleted) docSave('shx', 'shx:' + k, { c:{} }); shxFlush(); if (!keepRg) SHX.rg = null; shxDraw(false);
+  if (SHX.sel) { const r = SHX.sel[0], c = SHX.sel[1]; $('#shx-in').value = SHX.orig = shxCellText(r, c); }
+}
+/* ---- إدراج / مسح صفوف وأعمدة مع تعديل المعادلات ---- */
+const shxAdjR = (a, b, at, n, del) => { if (!del) return [a >= at ? a + n : a, b >= at ? b + n : b]; const e = at + n - 1, na = a > e ? a - n : (a >= at ? at : a), nb = b > e ? b - n : (b >= at ? at - 1 : b); return nb < na ? null : [na, nb]; };
+function shxAdjF(f, cur, tgt, ax, at, n, del) {
+  const L = tgt.toLowerCase();
+  return f.split('"').map((seg, i) => i % 2 ? seg : seg.replace(/((?:'(?:[^']|'')+'|[A-Za-z0-9_\u0600-\u06FF.]+)!)?(\$?)([A-Z]{1,3})(\$?)(\d+)(?::(\$?)([A-Z]{1,3})(\$?)(\d+))?(?![A-Za-z0-9_(])/g, (m, sp, d1, c1, d2, r1, e1, c2, e2, r2, off, all) => {
+    const pv = all[off - 1]; if (pv && /[A-Za-z0-9_.]/.test(pv)) return m; const sn = sp ? sp.slice(0, -1).replace(/^'|'$/g, '').replace(/''/g, "'") : cur; if (sn.toLowerCase() !== L) return m;
+    const A = SHX_ENG.colN(c1), B = c2 ? SHX_ENG.colN(c2) : A, R1 = +r1, R2 = r2 ? +r2 : R1; let na, nb;
+    if (ax === 'r') { const x = shxAdjR(R1, R2, at, n, del); if (!x) return '#REF!'; [na, nb] = x; return (sp || '') + d1 + c1 + d2 + na + (c2 ? ':' + e1 + c2 + e2 + nb : ''); }
+    const x = shxAdjR(A, B, at, n, del); if (!x) return '#REF!'; [na, nb] = x; return (sp || '') + d1 + SHX_ENG.colL(na) + d2 + r1 + (c2 ? ':' + e1 + SHX_ENG.colL(nb) + e2 + r2 : '');
+  })).join('"');
+}
+function shxStruct(ax, at, n, del) {
+  shxEdit((d, sh) => {
+    const ix = ax === 'r' ? 0 : 1, lim = ax === 'r' ? 5000 : 80; if (!del && (ax === 'r' ? sh.R : sh.C) + n > lim) { toast('الحد الأقصى ' + lim); return false; }
+    for (const w of d.sh) for (const x of w.cells) if (typeof x[2] === 'string') x[2] = shxAdjF(x[2], w.n, sh.n, ax, at, n, del);
+    if (del) sh.cells = sh.cells.filter(x => x[ix] < at || x[ix] > at + n - 1);
+    for (const x of sh.cells) if (x[ix] >= (del ? at + n : at)) x[ix] += del ? -n : n;
+    const mv = o => { const out = {}; for (const key of Object.keys(o)) { const v = +key; if (del && v >= at && v <= at + n - 1) continue; out[v >= (del ? at + n : at) ? v + (del ? -n : n) : v] = o[key]; } return out; };
+    if (ax === 'r') { sh.rh = mv(sh.rh); sh.R = Math.max(1, sh.R + (del ? -n : n)); } else { sh.cw = mv(sh.cw); sh.C = Math.max(1, sh.C + (del ? -n : n)); }
+    sh.mg = sh.mg.map(ref => { const p = ref.split(':'), a = /([A-Z]+)(\d+)/.exec(p[0]), b = /([A-Z]+)(\d+)/.exec(p[1] || p[0]); let r1 = +a[2], r2 = +b[2], c1 = SHX_ENG.colN(a[1]), c2 = SHX_ENG.colN(b[1]); const x = ax === 'r' ? shxAdjR(r1, r2, at, n, del) : shxAdjR(c1, c2, at, n, del); if (!x) return null; if (ax === 'r') [r1, r2] = x; else [c1, c2] = x; return r1 === r2 && c1 === c2 ? null : SHX_ENG.colL(c1) + r1 + ':' + SHX_ENG.colL(c2) + r2; }).filter(Boolean);
+  });
+}
+/* ---- نسخ / قص / لصق ---- */
+function shxCopy(cut) {
+  const rg = shxTR(); if (!rg) return toast('اختار خلية أو نطاق الأول'); const k = SHX.wb, si = SHX.si, eng = SHX.eng, w = SHX.D[k], sh = w.sh[si], ov = shxOv(k) || {}, rows = [], tsv = [];
+  for (let r = rg[0]; r <= rg[2]; r++) { const row = [], tr = []; for (let c = rg[1]; c <= rg[3]; c++) { const raw = eng.cellRaw(k, si, r, c), stl = shxStyleAt(r, c), od = ov[sh.n + '!' + shxA(r, c)], v = eng.get(k, si, r, c); row.push({ f:raw ? raw.f : null, v:raw && raw.f == null ? raw.v : null, st:Object.keys(stl).length ? { ...stl } : null, d:od && od.d ? 1 : 0 }); tr.push(SHX_ENG.fmtNum(v, stl.nf, stl.d || (od && od.d) ? 1 : 0)); } rows.push(row); tsv.push(tr.join('\t')); }
+  SHX.clip = { k, si, r1:rg[0], c1:rg[1], rows, cut:!!cut }; try { navigator.clipboard && navigator.clipboard.writeText(tsv.join('\n')); } catch (e) {} toast(cut ? 'اتقص — روح للمكان ودوس لصق' : 'اتنسخ');
+}
+function shxPasteCells(items, r0, c0, clip) {
+  shxEdit((d, sh, cell) => {
+    const idx = {}; d.st.forEach((x, i) => { idx[JSON.stringify(x)] = i; }); const sidx = o => { if (!o || !Object.keys(o).length) return -1; const kk = JSON.stringify(o); if (idx[kk] == null) { idx[kk] = d.st.length; d.st.push(o); } return idx[kk]; };
+    if (clip && clip.cut && clip.k === SHX.wb) { const ssh = d.sh[clip.si]; if (ssh) for (const x of ssh.cells) if (x[0] >= clip.r1 && x[0] < clip.r1 + items.length && x[1] >= clip.c1 && x[1] < clip.c1 + items[0].length) { x[2] = null; x[3] = null; x[4] = -1; } }
+    const dr = clip ? r0 - clip.r1 : 0, dc = clip ? c0 - clip.c1 : 0;
+    items.forEach((row, i) => row.forEach((it, j) => { const r = r0 + i, c = c0 + j; if (r > 5000 || c > 80) return; const x = cell(r, c); x[2] = it.f != null ? (clip ? shxShiftF(it.f, dr, dc) : it.f) : null; x[3] = it.f != null ? null : it.v; let so = it.st ? { ...it.st } : {}; if (it.d && !so.d) { so.d = 1; if (!so.nf || so.nf === 'General') so.nf = 'dd/mm/yyyy'; } x[4] = clip ? sidx(so) : (it.d ? sidx(so) : x[4]); }));
+  }, true);
+  if (clip && clip.cut) SHX.clip = null;
+}
+function shxPaste() {
+  const t = shxTR(); if (!t) return toast('اختار الخلية اللي هتلصق فيها'); const c = SHX.clip;
+  if (c) return shxPasteCells(c.rows, t[0], t[1], c);
+  if (!navigator.clipboard || !navigator.clipboard.readText) return toast('انسخ خلايا الأول');
+  navigator.clipboard.readText().then(txt => { if (!txt) return toast('الحافظة فاضية'); const rows = txt.replace(/\r/g, '').replace(/\n$/, '').split('\n').map(l => l.split('\t').map(x => { const p = shxParse(x, SHX.wb, SHX.si, t[0], t[1]) || { v:x }; return p.x ? { f:null, v:null, st:null, d:0 } : p.f != null ? { f:p.f, v:null, st:null, d:0 } : { f:null, v:p.v, st:null, d:p.d ? 1 : 0 }; })); shxPasteCells(rows, t[0], t[1], null); }).catch(() => toast('المتصفح منع قراءة الحافظة. انسخ خلايا من هنا الأول'));
+}
+/* ---- ترتيب ---- */
+function shxSort(desc) {
+  const g = shxTR(); if (!g) return toast('اختار عمود أو خلية جوه البيانات'); const k = SHX.wb, si = SHX.si, eng = SHX.eng, sh = SHX.D[k].sh[si]; let [r1, c1, r2, c2] = g; const ne = (r, c) => { const v = eng.get(k, si, r, c); return v != null && v !== ''; };
+  if (r1 === r2 && c1 === c2) { const rowHas = (r, a, b) => { for (let c = a; c <= b; c++) if (ne(r, c)) return true; return false; }, colHas = (c, a, b) => { for (let r = a; r <= b; r++) if (ne(r, c)) return true; return false; }; let ch = true; while (ch) { ch = false; if (r1 > 1 && rowHas(r1 - 1, c1, c2)) { r1--; ch = true; } if (r2 < sh.R && rowHas(r2 + 1, c1, c2)) { r2++; ch = true; } if (c1 > 1 && colHas(c1 - 1, r1, r2)) { c1--; ch = true; } if (c2 < sh.C && colHas(c2 + 1, r1, r2)) { c2++; ch = true; } } }
+  const kc = SHX.sel && SHX.sel[1] >= c1 && SHX.sel[1] <= c2 ? SHX.sel[1] : c1; let top = r1;
+  const isT = (r) => { let any = false; for (let c = c1; c <= c2; c++) { const v = eng.get(k, si, r, c); if (v != null && v !== '') { if (typeof v !== 'string') return false; any = true; } } return any; };
+  if (r2 > r1 && isT(r1) && typeof eng.get(k, si, r1 + 1, kc) === 'number') top = r1 + 1; if (r2 <= top) return toast('مفيش بيانات كفاية للترتيب');
+  const keys = []; for (let r = top; r <= r2; r++) keys.push({ r, v:eng.get(k, si, r, kc) });
+  const rk = v => v == null || v === '' ? 3 : typeof v === 'number' ? 0 : typeof v === 'boolean' ? 2 : 1;
+  keys.sort((a, b) => { const x = rk(a.v), y = rk(b.v); if (x === 3 || y === 3) return x === y ? a.r - b.r : x === 3 ? 1 : -1; if (x !== y) return x - y; const c = x === 1 ? String(a.v).localeCompare(String(b.v), 'ar') : (a.v < b.v ? -1 : a.v > b.v ? 1 : 0); return (desc ? -c : c) || a.r - b.r; });
+  const to = new Map(keys.map((x, i) => [x.r, top + i]));
+  shxEdit((d, s2) => { for (const x of s2.cells) if (x[0] >= top && x[0] <= r2 && x[1] >= c1 && x[1] <= c2) { const nr = to.get(x[0]); if (nr !== x[0]) { if (typeof x[2] === 'string') x[2] = shxShiftF(x[2], nr - x[0], 0); x[0] = nr; } } }, true); toast('اتم الترتيب');
+}
+/* ---- جمع تلقائي + مكتبة الدوال ---- */
+function shxAutoSum(fn) {
+  const g = shxTR(); if (!g) return toast('اختار خلية الأول'); const k = SHX.wb, si = SHX.si, eng = SHX.eng, L = SHX_ENG.colL, list = [], isN = (r, c) => typeof eng.get(k, si, r, c) === 'number';
+  if (g[0] !== g[2] || g[1] !== g[3]) { for (let c = g[1]; c <= g[3]; c++) list.push([g[2] + 1, c, fn + '(' + L(c) + g[0] + ':' + L(c) + g[2] + ')']); }
+  else { const r = g[0], c = g[1]; let r0 = r - 1; while (r0 >= 1 && isN(r0, c)) r0--; r0++; if (r0 < r) list.push([r, c, fn + '(' + L(c) + r0 + ':' + L(c) + (r - 1) + ')']); else { let c0 = c - 1; while (c0 >= 1 && isN(r, c0)) c0--; c0++; list.push([r, c, c0 < c ? fn + '(' + L(c0) + r + ':' + L(c - 1) + r + ')' : fn + '()']); } }
+  shxEdit((d, sh, cell) => { for (const [r, c, f] of list) { const x = cell(r, c); x[2] = f; x[3] = null; } }, true);
+}
+const SHX_FX = { 'الرياضيات':[['SUM', 'جمع'], ['SUMIF', 'جمع بشرط'], ['SUMIFS', 'جمع بعدة شروط'], ['SUMPRODUCT', 'مجموع حاصل الضرب'], ['PRODUCT', 'ضرب'], ['ROUND', 'تقريب'], ['ROUNDUP', 'تقريب لأعلى'], ['ROUNDDOWN', 'تقريب لأسفل'], ['INT', 'الجزء الصحيح'], ['MOD', 'باقي القسمة'], ['ABS', 'القيمة المطلقة'], ['SQRT', 'جذر تربيعي'], ['POWER', 'أس'], ['CEILING', 'تقريب لمضاعف أعلى'], ['FLOOR', 'تقريب لمضاعف أدنى'], ['TRUNC', 'قص الكسور'], ['RAND', 'رقم عشوائي'], ['RANDBETWEEN', 'عشوائي بين رقمين'], ['FACT', 'مضروب']],
+  'الإحصاء':[['AVERAGE', 'متوسط'], ['AVERAGEIF', 'متوسط بشرط'], ['COUNT', 'عدد الأرقام'], ['COUNTA', 'عدد الخلايا المليانة'], ['COUNTBLANK', 'عدد الفاضي'], ['COUNTIF', 'عد بشرط'], ['COUNTIFS', 'عد بعدة شروط'], ['MAX', 'أكبر قيمة'], ['MIN', 'أصغر قيمة'], ['MAXIFS', 'أكبر بشرط'], ['MINIFS', 'أصغر بشرط'], ['MEDIAN', 'الوسيط'], ['MODE', 'المنوال'], ['STDEV', 'انحراف معياري'], ['LARGE', 'الأكبر رقم k'], ['SMALL', 'الأصغر رقم k'], ['RANK', 'الترتيب'], ['PERCENTILE', 'المئين'], ['SUBTOTAL', 'مجموع فرعي']],
+  'المنطق':[['IF', 'لو'], ['IFS', 'لو متعددة'], ['IFERROR', 'لو خطأ'], ['IFNA', 'لو N/A'], ['AND', 'و'], ['OR', 'أو'], ['NOT', 'عكس'], ['SWITCH', 'اختيار حسب القيمة'], ['ISBLANK', 'هل فاضية'], ['ISNUMBER', 'هل رقم'], ['ISTEXT', 'هل نص'], ['ISERROR', 'هل خطأ']],
+  'النصوص':[['LEFT', 'من اليسار'], ['RIGHT', 'من اليمين'], ['MID', 'من المنتصف'], ['LEN', 'الطول'], ['FIND', 'إيجاد (حساس للحروف)'], ['SEARCH', 'بحث'], ['SUBSTITUTE', 'استبدال نص'], ['REPLACE', 'استبدال بالموضع'], ['REPT', 'تكرار'], ['TRIM', 'شيل المسافات الزايدة'], ['UPPER', 'حروف كبيرة'], ['LOWER', 'حروف صغيرة'], ['PROPER', 'أول حرف كبير'], ['CONCATENATE', 'دمج نصوص'], ['TEXTJOIN', 'دمج بفاصل'], ['TEXT', 'تحويل لنص بتنسيق'], ['VALUE', 'نص لرقم'], ['EXACT', 'تطابق تام']],
+  'التاريخ والوقت':[['TODAY', 'تاريخ النهارده'], ['NOW', 'الآن'], ['DATE', 'تاريخ من سنة/شهر/يوم'], ['YEAR', 'السنة'], ['MONTH', 'الشهر'], ['DAY', 'اليوم'], ['WEEKDAY', 'يوم الأسبوع'], ['EDATE', 'تاريخ بعد شهور'], ['EOMONTH', 'آخر الشهر'], ['DATEDIF', 'الفرق بين تاريخين'], ['DAYS', 'عدد الأيام'], ['NETWORKDAYS', 'أيام العمل'], ['DATEVALUE', 'نص لتاريخ'], ['HOUR', 'الساعة'], ['MINUTE', 'الدقيقة'], ['TIME', 'وقت']],
+  'البحث والمراجع':[['VLOOKUP', 'بحث رأسي'], ['HLOOKUP', 'بحث أفقي'], ['XLOOKUP', 'بحث متقدم'], ['LOOKUP', 'بحث'], ['INDEX', 'قيمة من جدول'], ['MATCH', 'موضع قيمة'], ['CHOOSE', 'اختيار من قايمة'], ['OFFSET', 'إزاحة مرجع'], ['INDIRECT', 'مرجع من نص'], ['ROW', 'رقم الصف'], ['COLUMN', 'رقم العمود'], ['ROWS', 'عدد الصفوف'], ['COLUMNS', 'عدد الأعمدة']],
+  'المالية':[['PMT', 'القسط'], ['FV', 'القيمة المستقبلية'], ['PV', 'القيمة الحالية'], ['NPV', 'صافي القيمة الحالية'], ['IRR', 'معدل العائد الداخلي']] };
+function shxFxMenu() {
+  shxMenu('اختار نوع الدوال', Object.keys(SHX_FX).map(cat => ({ l:cat, fn:() => shxMenu(cat, SHX_FX[cat].map(x => ({ l:x[0] + ' — ' + x[1], fn:() => shxFxInsert(x[0]) }))) })));
+}
+function shxFxInsert(name) {
+  if (!SHX.sel) return toast('اختار الخلية الأول'); if (SHX.rg) { SHX.rg = null; shxDraw(false); } const i = $('#shx-in'); let v = i.value; if (v[0] !== '=') v = '='; i.value = v + name + '('; i.dir = 'ltr'; SHX.fe = true; i.focus();
+}
+/* ---- مُوزّع أوامر الشريط ---- */
+function shxAct(a) {
   const k = SHX.wb; if (!shxU(k) || !canWrite()) return;
-  if (a === 'rg') { if (!SHX.sel) return toast('اختار أول خلية في النطاق الأول'); SHX.rm = !SHX.rm; document.querySelector('[data-fm="rg"]').classList.toggle('on', SHX.rm); if (SHX.rm) toast('دوس على آخر خلية في النطاق'); return; }
-  document.querySelector('[data-fm="rg"]').classList.remove('on'); SHX.rm = false;
+  if (a === 'un') return shxUndo(false); if (a === 're') return shxUndo(true);
+  if (a === 'rg') { if (!SHX.sel) return toast('اختار أول خلية في النطاق الأول'); SHX.rm = !SHX.rm; if (SHX.rm) toast('دوس على آخر خلية في النطاق'); return shxRbSync(); }
+  SHX.rm = false;
+  if (a === 'cp') return shxCopy(false); if (a === 'ct') return shxCopy(true); if (a === 'ps') return shxPaste();
+  if (a === 'z-' || a === 'z+' || a === 'zf') return document.querySelector('[data-z="' + (a === 'z-' ? '-' : a === 'z+' ? '+' : 'fit') + '"]').click();
+  if (a === 'sh+' || a === 'shr' || a === 'shd' || a === 'shm') { if (a === 'sh+') return shxUAct('sh+'); const d = shxWData(k), sh = d.sh[SHX.si]; if (a === 'shm') { shxSnap(k); sh.rtl = !sh.rtl; shxWSave(k, d); return shxDraw(true); } SHX.pk = a === 'shr' ? 'ren' : 'del'; return shxUAct('sh'); }
+  if (a === 'pdf') { const w = SHX.D[k]; if (w.sh.length < 2) return shxPrint(false); return shxMenu('طباعة / PDF', [{ l:'طباعة الشيت ده بس (' + w.sh[SHX.si].n + ')', fn:() => shxPrint(false) }, { l:'طباعة الملف كله (' + w.sh.length + ' شيتات)', fn:() => shxPrint(true) }]); }
+  if (a === 'xp') return shxExport(k); if (a === 'frn') return shxRenFile(k); if (a === 'fmv') return shxMoveMenu(k); if (a === 'fdl') return shxDelFile(k);
+  if (a === 'fx') return shxFxMenu();
+  if (a === 'as') return shxMenu('جمع تلقائي', [['SUM', 'جمع'], ['AVERAGE', 'متوسط'], ['COUNT', 'عدد'], ['MAX', 'أكبر قيمة'], ['MIN', 'أصغر قيمة']].map(x => ({ l:x[1], fn:() => shxAutoSum(x[0]) })));
+  if (a.startsWith('as:')) return shxAutoSum(a.slice(3));
+  if (a === 'sa') return shxSort(false); if (a === 'sd') return shxSort(true);
   const rg = shxTR(); if (!rg) return toast('اختار خلية الأول');
-  const d0 = shxWData(k), sh0 = d0.sh[SHX.si], tl = (() => { const c = sh0.cells.find(x => x[0] === rg[0] && x[1] === rg[1]); return c && c[4] >= 0 ? d0.st[c[4]] || {} : {}; })();
-  if (a === 'b') { const v = tl.b ? 0 : 1; return shxStyle(o => { o.b = v; }); }
-  if (a === 'i') { const v = tl.i ? 0 : 1; return shxStyle(o => { o.i = v; }); }
-  if (a === 'w') { const v = tl.w ? 0 : 1; return shxStyle(o => { o.w = v; }); }
-  if (a === 'al') return shxStyle(o => { o.h = 'right'; });
-  if (a === 'ac') return shxStyle(o => { o.h = 'center'; });
-  if (a === 'ar') return shxStyle(o => { o.h = 'left'; });
+  const n = rg[2] - rg[0] + 1, m = rg[3] - rg[1] + 1;
+  if (a === 'ri-') return shxStruct('r', rg[0], n, false); if (a === 'ri+') return shxStruct('r', rg[2] + 1, n, false); if (a === 'rd') return shxStruct('r', rg[0], n, true);
+  if (a === 'ci-') return shxStruct('c', rg[1], m, false); if (a === 'ci+') return shxStruct('c', rg[3] + 1, m, false); if (a === 'cd') return shxStruct('c', rg[1], m, true);
+  if (a === 'rh+' || a === 'rh-') return shxEdit((d, sh) => { for (let r = rg[0]; r <= rg[2]; r++) { const h = sh.rh[r] ? sh.rh[r][0] : 20; sh.rh[r] = [Math.max(10, Math.min(300, h + (a === 'rh+' ? 6 : -6))), 0]; } }, true);
+  if (a === 'cw+' || a === 'cw-') return shxEdit((d, sh) => { for (let c = rg[1]; c <= rg[3]; c++) { const w = sh.cw[c] ? sh.cw[c][0] : 69; sh.cw[c] = [Math.max(20, Math.min(400, w + (a === 'cw+' ? 14 : -14))), 0]; } }, true);
+  if (a === 'af') { const eng = SHX.eng, sh = SHX.D[k].sh[SHX.si]; return shxEdit((d, s2) => { for (let c = rg[1]; c <= rg[3]; c++) { let mx = 3; for (let r = 1; r <= s2.R; r++) { const v = eng.get(k, SHX.si, r, c); if (v == null) continue; const stl = shxStyleAt(r, c), t = String(SHX_ENG.fmtNum(v, stl.nf, stl.d ? 1 : 0)); mx = Math.max(mx, t.length * ((stl.fs || 11) / 11) * (stl.b ? 1.1 : 1)); } s2.cw[c] = [Math.max(30, Math.min(400, Math.round(mx * 7.5 + 12))), 0]; } }, true); }
+  const d0 = shxWData(k), sh0 = d0.sh[SHX.si], tl = shxStyleAt(rg[0], rg[1]);
+  if (a === 'b') { const v = tl.b ? 0 : 1; return shxStyle(o => { o.b = v; }); } if (a === 'i') { const v = tl.i ? 0 : 1; return shxStyle(o => { o.i = v; }); }
+  if (a === 'u') { const v = tl.u ? 0 : 1; return shxStyle(o => { o.u = v; }); } if (a === 'sk') { const v = tl.sk ? 0 : 1; return shxStyle(o => { o.sk = v; }); } if (a === 'w') { const v = tl.w ? 0 : 1; return shxStyle(o => { o.w = v; }); }
+  if (a === 'al') return shxStyle(o => { o.h = 'right'; }); if (a === 'ac') return shxStyle(o => { o.h = 'center'; }); if (a === 'ar') return shxStyle(o => { o.h = 'left'; });
+  if (a === 'vt') return shxStyle(o => { o.va = 'top'; }); if (a === 'vm') return shxStyle(o => { o.va = 'center'; }); if (a === 'vb') return shxStyle(o => { delete o.va; });
+  if (a === 'fs+' || a === 'fs-') { const cur = tl.fs || 11; let nx = cur; if (a === 'fs+') nx = SHX_SIZES.find(x => x > cur) || cur; else nx = [...SHX_SIZES].reverse().find(x => x < cur) || cur; return shxStyle(o => { o.fs = nx; }); }
+  if (a === 'fsz') return shxMenu('حجم الخط', SHX_SIZES.map(x => ({ l:(x === (tl.fs || 11) ? '✓ ' : '') + x, fn:() => shxStyle(o => { o.fs = x; }, rg) })));
+  if (a === 'fn') return shxMenu('نوع الخط', SHX_FONTS.map(f => ({ l:(f === (tl.ff || 'Calibri') ? '✓ ' : '') + f, fn:() => shxStyle(o => { if (f === 'Calibri') delete o.ff; else o.ff = f; }, rg) })));
   if (a === 'tc') return shxColors('لون الخط', 'الأسود (افتراضي)', c => shxStyle(o => { o.fc = c && c !== '000000' ? c : null; }, rg));
   if (a === 'bg') return shxColors('لون الخلفية', 'بدون لون', c => shxStyle(o => { o.bg = c; }, rg));
-  if (a === 'nf') { const F = (l, nf, dt) => ({ l, fn:() => shxStyle(o => { if (nf === 'General') { delete o.nf; delete o.d; } else { o.nf = nf; if (dt) o.d = 1; else delete o.d; } }, rg) }); return shxMenu('نوع الرقم', [F('عام', 'General'), F('رقم بكسور (1,234.50)', '#,##0.00'), F('رقم صحيح (1,234)', '#,##0'), F('نسبة مئوية (12.5%)', '0.0%'), F('تاريخ (31/12/2026)', 'dd/mm/yyyy', 1)]); }
-  if (a === 'bd') { const L = ['thin', '000000'], ed = (o, r, c, sh) => { const bd = o.bd ? o.bd.slice() : [null, null, null, null], lc = sh.rtl ? rg[3] : rg[1], rc = sh.rtl ? rg[1] : rg[3]; if (c === lc) bd[0] = L; if (c === rc) bd[1] = L; if (r === rg[0]) bd[2] = L; if (r === rg[2]) bd[3] = L; o.bd = bd; };
-    return shxMenu('الحدود', [{ l:'حدود لكل الخلايا', fn:() => shxStyle(o => { o.bd = [L, L, L, L]; }, rg) }, { l:'حدود خارجية بس', fn:() => shxStyle(ed, rg) }, { l:'مسح الحدود', fn:() => shxStyle(o => { delete o.bd; }, rg) }]); }
-  if (a === 'cw-' || a === 'cw+') { const d = d0, sh = sh0; for (let c = rg[1]; c <= rg[3]; c++) { const w = sh.cw[c] ? sh.cw[c][0] : 69; sh.cw[c] = [Math.max(20, Math.min(400, w + (a === 'cw+' ? 14 : -14))), 0]; } shxWSave(k, d); shxDraw(true); return; }
-  if (a === 'mg') {
-    if (rg[0] === rg[2] && rg[1] === rg[3]) return toast('حدد نطاق الأول (زرار نطاق)'); const ref = SHX_ENG.colL(rg[1]) + rg[0] + ':' + SHX_ENG.colL(rg[3]) + rg[2], d = d0, sh = sh0;
-    const hit = sh.mg.filter(m => { const p = m.split(':'), a1 = /([A-Z]+)(\d+)/.exec(p[0]), b1 = /([A-Z]+)(\d+)/.exec(p[1] || p[0]), c1 = SHX_ENG.colN(a1[1]), r1 = +a1[2], c2 = SHX_ENG.colN(b1[1]), r2 = +b1[2]; return !(c2 < rg[1] || c1 > rg[3] || r2 < rg[0] || r1 > rg[2]); });
-    const same = hit.length === 1 && hit[0] === ref; sh.mg = sh.mg.filter(m => !hit.includes(m)); if (!same) sh.mg.push(ref); shxWSave(k, d); SHX.rg = null; shxDraw(false); toast(same ? 'فكّيت الدمج' : 'اتدمجت'); return;
-  }
+  if (a === 'nf') { const F = (l, nf, dt) => ({ l, fn:() => shxStyle(o => { if (nf === 'General') { delete o.nf; delete o.d; } else { o.nf = nf; if (dt) o.d = 1; else delete o.d; } }, rg) }); return shxMenu('نوع الرقم', [F('عام', 'General'), F('رقم (1234.50)', '0.00'), F('رقم بفاصل آلاف (1,234.50)', '#,##0.00'), F('رقم صحيح (1,234)', '#,##0'), F('عملة (1,234.50 ج.م)', '#,##0.00 "ج.م"'), F('محاسبة', '#,##0.00_);(#,##0.00)'), F('نسبة مئوية (12.5%)', '0.0%'), F('نسبة صحيحة (13%)', '0%'), F('تاريخ قصير (31/12/2026)', 'dd/mm/yyyy', 1), F('تاريخ طويل (31 December 2026)', 'd mmmm yyyy', 1), F('وقت (14:30)', 'h:mm', 1), F('تاريخ ووقت', 'dd/mm/yyyy h:mm', 1)]); }
+  if (a === 'cur') return shxStyle(o => { o.nf = '#,##0.00 "ج.م"'; delete o.d; }); if (a === 'pc') return shxStyle(o => { o.nf = '0%'; delete o.d; }); if (a === 'cm') return shxStyle(o => { o.nf = '#,##0'; delete o.d; });
+  if (a === 'nd+' || a === 'nd-') { const dl = a === 'nd+' ? 1 : -1; return shxStyle(o => { let nf = o.nf || 'General'; if (nf === 'General') nf = '0'; const mt = /0(?:\.(0+))?/.exec(nf); if (!mt) return; const cnt = Math.max(0, (mt[1] ? mt[1].length : 0) + dl); o.nf = nf.replace(/0(?:\.0+)?/, '0' + (cnt ? '.' + '0'.repeat(cnt) : '')); delete o.d; }); }
+  if (a === 'bd') { const T1 = ['thin', '000000'], T2 = ['thick', '000000'], DB = ['double', '000000'], rtl = sh0.rtl, lc = rtl ? rg[3] : rg[1], rc = rtl ? rg[1] : rg[3];
+    const edge = (L, sides) => (o, r, c) => { const bd = o.bd ? o.bd.slice() : [null, null, null, null]; if (sides.includes('l') && c === lc) bd[0] = L; if (sides.includes('r') && c === rc) bd[1] = L; if (sides.includes('t') && r === rg[0]) bd[2] = L; if (sides.includes('b') && r === rg[2]) bd[3] = L; o.bd = bd; };
+    return shxMenu('الحدود', [{ l:'كل الحدود', fn:() => shxStyle(o => { o.bd = [T1, T1, T1, T1]; }, rg) }, { l:'حدود خارجية', fn:() => shxStyle(edge(T1, 'lrtb'), rg) }, { l:'حدود خارجية سميكة', fn:() => shxStyle(edge(T2, 'lrtb'), rg) }, { l:'حد سفلي', fn:() => shxStyle(edge(T1, 'b'), rg) }, { l:'حد سفلي مزدوج', fn:() => shxStyle(edge(DB, 'b'), rg) }, { l:'حد علوي', fn:() => shxStyle(edge(T1, 't'), rg) }, { l:'حد أيمن', fn:() => shxStyle(edge(T1, rtl ? 'l' : 'r'), rg) }, { l:'حد أيسر', fn:() => shxStyle(edge(T1, rtl ? 'r' : 'l'), rg) }, { l:'مسح الحدود', fn:() => shxStyle(o => { delete o.bd; }, rg) }]); }
+  if (a === 'cl') return shxMenu('مسح', [{ l:'مسح المحتوى بس', fn:() => shxEdit((d, sh, cell, m) => { for (let r = rg[0]; r <= rg[2]; r++) for (let c = rg[1]; c <= rg[3]; c++) { const x = m.get(r * 100000 + c); if (x) { x[2] = null; x[3] = null; } } }, true) }, { l:'مسح التنسيق بس', fn:() => shxStyle(o => { for (const q of Object.keys(o)) delete o[q]; }, rg) }, { l:'مسح الكل', d:1, fn:() => shxEdit((d, sh, cell, m) => { for (let r = rg[0]; r <= rg[2]; r++) for (let c = rg[1]; c <= rg[3]; c++) { const x = m.get(r * 100000 + c); if (x) { x[2] = null; x[3] = null; x[4] = -1; } } }, true) }]);
+  if (a === 'mg') { const ref = SHX_ENG.colL(rg[1]) + rg[0] + ':' + SHX_ENG.colL(rg[3]) + rg[2]; const doMg = ctr => { if (n === 1 && m === 1) return toast('حدد نطاق الأول (زرار نطاق)'); shxEdit((d, sh) => { const hit = sh.mg.filter(q => { const p = q.split(':'), a1 = /([A-Z]+)(\d+)/.exec(p[0]), b1 = /([A-Z]+)(\d+)/.exec(p[1] || p[0]), c1 = SHX_ENG.colN(a1[1]), r1 = +a1[2], c2 = SHX_ENG.colN(b1[1]), r2 = +b1[2]; return !(c2 < rg[1] || c1 > rg[3] || r2 < rg[0] || r1 > rg[2]); }); sh.mg = sh.mg.filter(q => !hit.includes(q)); sh.mg.push(ref); }, true); if (ctr) shxStyle(o => { o.h = 'center'; o.va = 'center'; }, rg); };
+    return shxMenu('دمج الخلايا', [{ l:'دمج', fn:() => doMg(false) }, { l:'دمج وتوسيط', fn:() => doMg(true) }, { l:'فك الدمج', fn:() => shxEdit((d, sh) => { sh.mg = sh.mg.filter(q => { const p = q.split(':'), a1 = /([A-Z]+)(\d+)/.exec(p[0]), b1 = /([A-Z]+)(\d+)/.exec(p[1] || p[0]), c1 = SHX_ENG.colN(a1[1]), r1 = +a1[2], c2 = SHX_ENG.colN(b1[1]), r2 = +b1[2]; return c2 < rg[1] || c1 > rg[3] || r2 < rg[0] || r1 > rg[2]; }); }, true) }]); }
 }
 /* ===== تصدير xlsx ===== */
 async function shxZipBuild(files) {
@@ -1662,7 +2017,7 @@ async function shxBuildXlsx(k) {
   const reg = (arr, x) => { let i = arr.indexOf(x); if (i < 0) { i = arr.length; arr.push(x); } return i; };
   const xf = o => {
     if (!o || !Object.keys(o).length) return 0; const kk = JSON.stringify(o); if (seen[kk] != null) return seen[kk];
-    const fo = reg(fonts, '<font>' + (o.b ? '<b/>' : '') + (o.i ? '<i/>' : '') + '<sz val="' + (o.fs || 11) + '"/>' + (o.fc ? '<color rgb="FF' + o.fc + '"/>' : '') + '<name val="Calibri"/></font>');
+    const fo = reg(fonts, '<font>' + (o.b ? '<b/>' : '') + (o.i ? '<i/>' : '') + (o.sk ? '<strike/>' : '') + (o.u ? '<u/>' : '') + '<sz val="' + (o.fs || 11) + '"/>' + (o.fc ? '<color rgb="FF' + o.fc + '"/>' : '') + '<name val="' + X(o.ff || 'Calibri') + '"/></font>');
     const fi = o.bg ? reg(fills, '<fill><patternFill patternType="solid"><fgColor rgb="FF' + o.bg + '"/><bgColor indexed="64"/></patternFill></fill>') : 0;
     const bo = o.bd ? reg(bords, '<border>' + ['left', 'right', 'top', 'bottom'].map((n, j) => o.bd[j] ? '<' + n + ' style="' + (o.bd[j][0] === 'hair' ? 'hair' : o.bd[j][0]) + '"><color rgb="FF' + (o.bd[j][1] || '000000') + '"/></' + n + '>' : '<' + n + '/>').join('') + '<diagonal/></border>') : 0;
     let nid = 0; const nf = o.nf || 'General'; if (BI[nf] != null) nid = BI[nf]; else { let i = nfs.indexOf(nf); if (i < 0) { i = nfs.length; nfs.push(nf); } nid = 164 + i; }
@@ -1717,7 +2072,7 @@ function shxInit() {
   $('#v-shx').addEventListener('click', async e => {
     const t = e.target;
     if (t.closest('#shx-hb')) { if (SHX.fd) { SHX.fd = null; return renderSHX(); } return back(); }
-    const ac = t.closest('[data-a]'); if (ac) { const k = ac.dataset.a; if (k === 'nf') { shxNewFolder(); renderSHX(); } else if (k === 'nw') shxNewFile(); else if (k === 'im') $('#shx-file').click(); return; }
+    const ac = t.closest('[data-a]'); if (ac) { const k = ac.dataset.a; if (k === 'nf') { shxNewFolder(); renderSHX(); } else if (k === 'nw') shxNewFile(); else if (k === 'im') $('#shx-file').click(); else if (k === 'hid') { SHX.sh2 = !SHX.sh2; renderSHX(); } return; }
     const mf = t.closest('[data-mf]'); if (mf) return shxFolderMenu(mf.dataset.mf);
     const mm = t.closest('[data-m]'); if (mm) return shxFileMenu(mm.dataset.m);
     const fdc = t.closest('[data-fd]'); if (fdc) { SHX.fd = fdc.dataset.fd; renderSHX(); window.scrollTo(0, 0); return; }
@@ -1727,19 +2082,20 @@ function shxInit() {
     const th = t.closest('#shx-t th'); if (th && shxU(SHX.wb)) { const sh = SHX.D[SHX.wb].sh[SHX.si]; if (th.dataset.ch) { const c = +th.dataset.ch; SHX.sel = [1, c]; SHX.rg = [1, c, sh.R, c]; } else if (th.dataset.rh) { const r = +th.dataset.rh; SHX.sel = [r, 1]; SHX.rg = [r, 1, r, sh.C]; } else { SHX.sel = [1, 1]; SHX.rg = [1, 1, sh.R, sh.C]; } SHX.rm = false; shxDraw(false); shxRgShow(); return; }
     const td = t.closest('#shx-t td'); if (td) {
       if (SHX.rm && SHX.sel) { const r = +td.dataset.r, c = +td.dataset.c; SHX.rg = [Math.min(r, SHX.sel[0]), Math.min(c, SHX.sel[1]), Math.max(r, SHX.sel[0]), Math.max(c, SHX.sel[1])]; SHX.rm = false; shxDraw(false); shxRgShow(); return; }
+      if (SHX.fe && SHX.sel) { const i = $('#shx-in'), ref = shxA(+td.dataset.r, +td.dataset.c); let v = i.value; if (/[=+\-*\/^&(,;:<>]$/.test(v)) v += ref; else v = v.replace(/\$?[A-Z]{1,3}\$?\d+$/, ref); i.value = v; i.dir = 'ltr'; i.focus(); return; }
       const same = SHX.selTd === td, had = !!SHX.rg; shxSelect(td); if (had) { SHX.rg = null; shxDraw(false); } else if (same && canWrite()) $('#shx-in').focus(); return; }
     if (t.closest('#shx-ok')) return shxCommit();
-    if (t.closest('#shx-no')) { $('#shx-in').value = SHX.orig || ''; $('#shx-in').blur(); return; }
+    if (t.closest('#shx-no')) { SHX.fe = false; $('#shx-in').value = SHX.orig || ''; $('#shx-in').blur(); return; }
     if (t.closest('#shx-rs')) return shxRestoreCell();
     if (t.closest('#shx-pdf')) { const w = SHX.D[SHX.wb]; if (w.sh.length < 2) return shxPrint(false); return shxMenu('طباعة / PDF', [{ l:'طباعة الشيت ده بس (' + w.sh[SHX.si].n + ')', fn:() => shxPrint(false) }, { l:'طباعة الملف كله (' + w.sh.length + ' شيتات)', fn:() => shxPrint(true) }]); }
-    const ub = t.closest('[data-u]'); if (ub) return shxUAct(ub.dataset.u);
-    const fb = t.closest('[data-fm]'); if (fb) return shxFm(fb.dataset.fm);
+    const rt = t.closest('[data-rt]'); if (rt) { SHX.rt = rt.dataset.rt; shxRbRender(); return; }
+    const fb = t.closest('[data-fm]'); if (fb) return shxAct(fb.dataset.fm);
     const zb = t.closest('[data-z]'); if (zb) { const k = zb.dataset.z; if (k === 'fit') { const w = $('#shx-w').clientWidth - 4; SHX.z = Math.max(0.25, Math.min(1.5, w / SHX.tw)); } else SHX.z = Math.max(0.3, Math.min(2.5, SHX.z + (k === '+' ? 0.15 : -0.15))); $('#shx-t').style.zoom = SHX.z; $('#shx-zl').textContent = Math.round(SHX.z * 100) + '%'; return; }
   });
   $('#shx-in').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); shxCommit(); } else if (e.key === 'Escape') { $('#shx-in').value = SHX.orig || ''; $('#shx-in').blur(); } });
-  $('#shx-in').addEventListener('input', e => { e.target.dir = e.target.value[0] === '=' ? 'ltr' : 'auto'; });
+  $('#shx-in').addEventListener('input', e => { e.target.dir = e.target.value[0] === '=' ? 'ltr' : 'auto'; SHX.fe = e.target.value[0] === '=' && shxU(SHX.wb); });
   $('#shx-file').addEventListener('change', async e => { const fl = [...e.target.files]; e.target.value = ''; if (fl.length) await shxImport(fl); });
-  $('#shx-in').addEventListener('focus', () => { if (!canWrite() || !SHX.sel || SHX.rg) $('#shx-in').blur(); });
+  $('#shx-in').addEventListener('focus', () => { if (!canWrite() || !SHX.sel || SHX.rg) $('#shx-in').blur(); else SHX.fe = $('#shx-in').value[0] === '=' && shxU(SHX.wb); });
 }
 
 const VIEWS = ['home', 'list', 'an', 'acc', 'stm', 'form', 'set', 'tb', 'lg', 'gl', 'is', 'bs', 'mp', 'dp', 'db', 'hr', 'cs', 'pr', 'au', 'yr', 'arc', 'arcy', 'arcc', 'cc', 'rp', 'shx'];
