@@ -325,6 +325,11 @@ button.rb.on{background:#EEF4EC;border-color:var(--green);color:var(--green-d)}
 button.rb.w{min-width:92px}
 button.rb svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .sxt td.fe{outline:2.5px dashed #C0392B;outline-offset:-2px}
+.sxt td.fzc{background-color:#fff}
+.sxt.ng td{box-shadow:none}
+.sxt td.fh::after{content:' ▾';font-size:10px;color:#1E6FE8;float:inline-end}.sxt td.fa::after{color:#C0392B;content:' ▾●'}
+.shsb{padding:3px 12px;font-size:12px;color:var(--muted);background:var(--paper);border-bottom:1px solid var(--line);min-height:0;display:none}
+.chc{background:#fff;border:1px solid var(--line);border-radius:12px;margin:8px 12px;padding:6px;cursor:pointer}.chc b{display:block;text-align:center;font-size:13px;margin-bottom:2px}
 #shxprint{display:none}
 @media print{body.sx>*:not(#shxprint){display:none!important}body.sx{background:#fff}body.sx #shxprint{display:block!important}#shxprint .shph{font-size:16px;margin:0 0 8px;direction:rtl}#shxprint td{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none!important}#shxprint tr{page-break-inside:avoid}}
 </style>
@@ -586,7 +591,9 @@ button.rb svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:
         <div class="shtabs" id="shx-tabs"></div>
         <div class="shfx" id="shx-fx"><b id="shx-addr"></b><input id="shx-in" placeholder="اضغط على خلية" autocomplete="off" enterkeyhint="done"><button id="shx-ok" aria-label="حفظ">✓</button><button id="shx-no" aria-label="إلغاء">✕</button></div>
         <div class="shtl"><button data-z="-" aria-label="تصغير">−</button><span id="shx-zl">100%</span><button data-z="+" aria-label="تكبير">+</button><button data-z="fit">ملاءمة</button><button id="shx-rs">الأصل</button></div>
+        <div class="shsb" id="shx-sb"></div>
         <div class="shw" id="shx-w"><table class="sxt" id="shx-t"></table></div>
+        <div id="shx-ch"></div>
       </div>
     </section>
 
@@ -1396,31 +1403,58 @@ function shxGap(wb, si) { const sh = SHX.D[wb].sh[si]; let best = null, s = 0;
   const blank = r => { for (let c = 2; c <= sh.C; c++) { const v = SHX.eng.get(wb, si, r, c); if (v != null && v !== '' && v !== 0 && !(typeof v === 'string' && !v.trim())) return false; } return true; };
   for (let r = 1; r <= sh.R + 1; r++) { const bl = r <= sh.R && blank(r); if (bl) { if (!s) s = r; } else if (s) { if (r - s >= 10 && (!best || r - s > best[1] - best[0] + 1)) best = [s, r - 1]; s = 0; } }
   return best; }
+const shxDT = (wb, si, r, c) => { const w = SHX.D[wb], sh = w.sh[si], b = SHX.eng.smap(wb, si).get(r * 100000 + c), stl = b && b[4] >= 0 ? w.st[b[4]] : null, od = (shxOv(wb) || {})[sh.n + '!' + shxA(r, c)], v = SHX.eng.get(wb, si, r, c); return SHX_ENG.fmtNum(v, stl ? stl.nf : 'General', (stl && stl.d) || (od && od.d) ? 1 : 0); };
+function shxCfPrep(wb, si, ru) {
+  const eng = SHX.eng, [r1, c1, r2, c2] = ru.rg, nums = [], all = [];
+  if (['dp', 'up', 'tp', 'bp', 'ab', 'be', 'cs'].includes(ru.t)) for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) { const v = eng.get(wb, si, r, c); if (v != null && v !== '' && !SHX_ENG.isE(v)) { all.push(v); if (typeof v === 'number') nums.push(v); } }
+  const cnt = new Map(); if (ru.t === 'dp' || ru.t === 'up') for (const v of all) { const k = String(v).toLowerCase(); cnt.set(k, (cnt.get(k) || 0) + 1); }
+  const so = nums.slice().sort((a, b) => a - b), mn = so[0], mx = so[so.length - 1], avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0, hex = h => [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)), mix = (a, b, t) => a.map((x, i) => Math.round(x + (b[i] - x) * t).toString(16).padStart(2, '0')).join('').toUpperCase(), st = { bg:ru.bg, fc:ru.fc, b:ru.bo };
+  return (r, c, v) => {
+    if (r < r1 || r > r2 || c < c1 || c > c2 || v == null || v === '' || SHX_ENG.isE(v)) return null; const n = typeof v === 'number', a = ru.a, nA = +a;
+    switch (ru.t) {
+      case 'gt': return n && v > nA ? st : null; case 'lt': return n && v < nA ? st : null; case 'ge': return n && v >= nA ? st : null; case 'le': return n && v <= nA ? st : null;
+      case 'eq': return (n && v === nA) || (!n && String(v).toLowerCase() === String(a).toLowerCase()) ? st : null; case 'ne': return !((n && v === nA) || (!n && String(v).toLowerCase() === String(a).toLowerCase())) ? st : null;
+      case 'bt': return n && v >= Math.min(nA, +ru.b) && v <= Math.max(nA, +ru.b) ? st : null; case 'ct': return String(v).toLowerCase().includes(String(a).toLowerCase()) ? st : null; case 'nct': return !String(v).toLowerCase().includes(String(a).toLowerCase()) ? st : null;
+      case 'dp': return cnt.get(String(v).toLowerCase()) > 1 ? st : null; case 'up': return cnt.get(String(v).toLowerCase()) === 1 ? st : null;
+      case 'tp': return n && so.length && v >= so[Math.max(0, so.length - nA)] ? st : null; case 'bp': return n && so.length && v <= so[Math.min(so.length - 1, nA - 1)] ? st : null;
+      case 'ab': return n && v > avg ? st : null; case 'be': return n && v < avg ? st : null;
+      case 'cs': { if (!n || mx == null) return null; const t = mx === mn ? 0.5 : (v - mn) / (mx - mn), cl = ru.cols; if (cl.length === 2) return { bg:mix(hex(cl[0]), hex(cl[1]), t) }; return { bg:t < 0.5 ? mix(hex(cl[0]), hex(cl[1]), t * 2) : mix(hex(cl[1]), hex(cl[2]), (t - 0.5) * 2) }; }
+    }
+    return null;
+  };
+}
 function shxTable(wb, si, forPrint, gap) {
   const sh = SHX.D[wb].sh[si], eng = SHX.eng, ov = shxOv(wb) || {}, st = SHX.D[wb].st, base = eng.smap(wb, si), uf = shxU(wb) && !forPrint;
   const cov = new Set(), anc = new Map();
   for (const m of sh.mg) { const p = m.split(':'), a = /([A-Z]+)(\d+)/.exec(p[0]), b = /([A-Z]+)(\d+)/.exec(p[1] || p[0]); const c1 = SHX_ENG.colN(a[1]), r1 = +a[2], c2 = SHX_ENG.colN(b[1]), r2 = +b[2]; anc.set(r1 * 100000 + c1, [r2 - r1 + 1, c2 - c1 + 1]); for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) if (r !== r1 || c !== c1) cov.add(r * 100000 + c); }
   let R = Math.max(sh.R, ...Object.keys(ov).filter(k => k.startsWith(sh.n + '!')).map(k => +k.slice(sh.n.length + 1).replace(/^[A-Z]+/, '')), 1), C = sh.C;
-  let cg = uf ? '<col style="width:34px">' : '', tw = uf ? 34 : 0; for (let c = 1; c <= C; c++) { const d = sh.cw[c], w = d && d[1] ? 0 : (d ? d[0] : 69); tw += w; cg += '<col style="width:' + w + 'px">'; }
+  const fz = uf && sh.fz ? sh.fz : [0, 0], colW = [], leftOf = []; let cg = uf ? '<col style="width:34px">' : '', tw = uf ? 34 : 0, lx = uf ? 34 : 0;
+  for (let c = 1; c <= C; c++) { const d = sh.cw[c], w = d && d[1] ? 0 : (d ? d[0] : 69); colW[c] = w; leftOf[c] = lx; lx += w; tw += w; cg += '<col style="width:' + w + 'px">'; }
   let h = '<colgroup>' + cg + '</colgroup>';
-  if (uf) { h += '<tr style="height:20px"><th data-all="1"></th>'; for (let c = 1; c <= C; c++) { const d = sh.cw[c]; if (d && d[1]) continue; h += '<th data-ch="' + c + '">' + SHX_ENG.colL(c) + '</th>'; } h += '</tr>'; }
+  if (uf) { h += '<tr style="height:20px"><th data-all="1" style="position:sticky;top:0;inset-inline-start:0;z-index:6"></th>'; for (let c = 1; c <= C; c++) { const d = sh.cw[c]; if (d && d[1]) continue; h += '<th data-ch="' + c + '" style="position:sticky;top:0;z-index:' + (c <= fz[1] ? 5 : 4) + (c <= fz[1] ? ';inset-inline-start:' + leftOf[c] + 'px' : '') + '">' + SHX_ENG.colL(c) + '</th>'; } h += '</tr>'; }
+  const flt = sh.flt && Object.keys(sh.flt).length ? sh.flt : null, fr = sh.fr || 0, dcache = new Map(), dt = (r, c) => { const k = r * 100000 + c; let t = dcache.get(k); if (t === undefined) { t = shxDT(wb, si, r, c); dcache.set(k, t); } return t; };
+  const cfs = (sh.cf || []).map(ru => shxCfPrep(wb, si, ru)); let ytop = 20;
   for (let r = 1; r <= R; r++) {
     const rd = sh.rh[r]; if (rd && rd[1]) continue; if (gap && r >= gap[0] && r <= gap[1]) continue;
-    h += '<tr style="height:' + (rd ? rd[0] : 20) + 'px">' + (uf ? '<th data-rh="' + r + '">' + r + '</th>' : '');
+    if (flt && r > fr) { let hide = false; for (const c of Object.keys(flt)) if (flt[c].includes(dt(r, +c))) { hide = true; break; } if (hide) continue; }
+    const rh = rd ? rd[0] : 20, rfz = r <= fz[0];
+    h += '<tr style="height:' + rh + 'px">' + (uf ? '<th data-rh="' + r + '" style="position:sticky;inset-inline-start:0;z-index:' + (rfz ? 6 : 3) + (rfz ? ';top:' + ytop + 'px' : '') + '">' + r + '</th>' : '');
     for (let c = 1; c <= C; c++) {
       const k = r * 100000 + c; if (cov.has(k)) continue; const cd = sh.cw[c]; if (cd && cd[1]) continue;
-      const b = base.get(k), s = b ? b[4] : -1, v = eng.get(wb, si, r, c), stl = st[s], a = anc.get(k), key = sh.n + '!' + shxA(r, c);
-      const od = ov[key], txt = SHX_ENG.fmtNum(v, stl ? stl.nf : 'General', (stl && stl.d) || (od && od.d) ? 1 : 0);
-      h += '<td' + (forPrint ? '' : ' data-r="' + r + '" data-c="' + c + '"') + ' class="' + (s >= 0 ? 'sx' + s : '') + (ov[key] && !shxU(wb) ? ' ed' : '') + (uf && SHX.rg && wb === SHX.wb && r >= SHX.rg[0] && r <= SHX.rg[2] && c >= SHX.rg[1] && c <= SHX.rg[3] ? ' rg' : '') + (SHX_ENG.isE(v) ? ' er' : '') + '"' + (a ? ' rowspan="' + a[0] + '" colspan="' + a[1] + '"' : '') + '>' + esc(txt) + '</td>';
+      const b = base.get(k), s = b ? b[4] : -1, v = eng.get(wb, si, r, c), stl = st[s], a = anc.get(k), key = sh.n + '!' + shxA(r, c), od = ov[key], txt = dt(r, c);
+      let sty = ''; if (rfz || c <= fz[1]) sty += 'position:sticky;z-index:' + (rfz && c <= fz[1] ? 3 : 2) + ';' + (rfz ? 'top:' + ytop + 'px;' : '') + (c <= fz[1] ? 'inset-inline-start:' + leftOf[c] + 'px;' : '');
+      for (const f of cfs) { const x = f(r, c, v); if (x) { if (x.bg) sty += 'background:#' + x.bg + ';'; if (x.fc) sty += 'color:#' + x.fc + ';'; if (x.b) sty += 'font-weight:700;'; } }
+      const isF = sh.fc && fr === r && c >= sh.fc[0] && c <= sh.fc[1];
+      h += '<td' + (forPrint ? '' : ' data-r="' + r + '" data-c="' + c + '"') + ' class="' + (s >= 0 ? 'sx' + s : '') + (ov[key] && !shxU(wb) ? ' ed' : '') + (uf && SHX.rg && wb === SHX.wb && r >= SHX.rg[0] && r <= SHX.rg[2] && c >= SHX.rg[1] && c <= SHX.rg[3] ? ' rg' : '') + (SHX_ENG.isE(v) ? ' er' : '') + (rfz || c <= fz[1] ? ' fzc' : '') + (isF && !forPrint ? ' fh' + (flt && flt[c] && flt[c].length ? ' fa' : '') : '') + '"' + (sty ? ' style="' + sty + '"' : '') + (a ? ' rowspan="' + a[0] + '" colspan="' + a[1] + '"' : '') + '>' + esc(txt) + '</td>';
     }
-    h += '</tr>';
+    h += '</tr>'; if (rfz) ytop += rh;
   }
   return { html: h, tw, rtl: sh.rtl };
 }
 function shxDraw(full) {
   const w = SHX.D[SHX.wb]; if (SHX.si >= w.sh.length) SHX.si = 0; $('#shx-title').textContent = w.t; const uf = shxU(SHX.wb); $('#shx-rb').style.display = uf && canWrite() ? 'block' : 'none'; if (uf && canWrite()) shxRbRender(); $('#shx-rs').style.display = uf ? 'none' : '';
   $('#shx-css').textContent = shxCss(SHX.wb); if (full) { $('#shx-tabs').innerHTML = w.sh.map((s, i) => '<button data-i="' + i + '" class="' + (i === SHX.si ? 'on' : '') + '">' + esc(s.n) + '</button>').join(''); }
-  const t = shxTable(SHX.wb, SHX.si), tb = $('#shx-t'); tb.dir = t.rtl ? 'rtl' : 'ltr'; tb.innerHTML = t.html; tb.style.width = t.tw + 'px'; SHX.tw = t.tw; if (full) SHX.z = Math.max(0.55, Math.min(1, ($('#shx-w').clientWidth - 4) / t.tw)); tb.style.zoom = SHX.z; SHX.selTd = null;
+  const t = shxTable(SHX.wb, SHX.si), tb = $('#shx-t'); tb.dir = t.rtl ? 'rtl' : 'ltr'; tb.innerHTML = t.html; tb.style.width = t.tw + 'px'; SHX.tw = t.tw; if (full) SHX.z = Math.max(0.55, Math.min(1, ($('#shx-w').clientWidth - 4) / t.tw)); tb.style.zoom = SHX.z; tb.classList.toggle('ng', !!w.sh[SHX.si].ng); SHX.selTd = null; shxCharts(); shxSbSync();
   if (SHX.sel) { const td = tb.querySelector('td[data-r="' + SHX.sel[0] + '"][data-c="' + SHX.sel[1] + '"]'); if (td) { td.classList.add('sel'); SHX.selTd = td; } }
   $('#shx-zl').textContent = Math.round(SHX.z * 100) + '%';
 }
@@ -1472,6 +1506,7 @@ function shxUserSync() {
   for (const k of Object.keys(SHX.D)) if (shxU(k) && !seen.has(k)) { delete SHX.D[k]; delete SHX.uv[k]; shxFlush(); }
 }
 const shxFolders = () => docsOf('shxd').map(d => ({ id:d.id, n:(d.data && d.data.n) || 'مجلد' })).sort((a, b) => a.n.localeCompare(b.n, 'ar'));
+const shxDead = k => { const d = S.docs.get('shxp:' + k); return !!(d && !d.deleted && d.data && d.data.x); };
 const shxHid = k => { const d = S.docs.get('shxp:' + k); return d && !d.deleted && d.data && d.data.h != null ? !!d.data.h : !shxU(k); };
 function shxPlace(k) { const d = S.docs.get('shxp:' + k), f = d && !d.deleted && d.data ? d.data.f : ''; const fd = f && S.docs.get(f); return fd && !fd.deleted ? f : ''; }
 const SHX_FIC = '<svg viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
@@ -1487,12 +1522,12 @@ function shxMenu(title, items) {
 function shxList() {
   const L = $('#shx-list'); L.classList.remove('hide'); const fs = shxFolders(); let cur = SHX.fd || '';
   if (cur && !fs.find(f => f.id === cur)) cur = SHX.fd = null;
-  const allK = Object.keys(SHX.D), nHid = allK.filter(shxHid).length, keys = allK.filter(k => SHX.sh2 || !shxHid(k)), inF = id => keys.filter(k => shxPlace(k) === id), curF = fs.find(f => f.id === cur), cw = canWrite();
+  const allK = Object.keys(SHX.D).filter(k => !shxDead(k)), nHid = allK.filter(shxHid).length, keys = allK.filter(k => SHX.sh2 || !shxHid(k)), inF = id => keys.filter(k => shxPlace(k) === id), curF = fs.find(f => f.id === cur), cw = canWrite();
   let h = '<div class="sub"><button id="shx-hb" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b>' + esc(curF ? curF.n : 'ملفات الإكسل') + '</b>' + (curF && cw ? '<button class="shm" data-mf="' + curF.id + '" aria-label="خيارات المجلد">⋯</button>' : '<span style="width:42px"></span>') + '</div><div class="shl">';
   if (cw) h += '<div class="sha">' + (cur ? '' : '<button class="btn ghost" data-a="nf">＋ مجلد</button>') + '<button class="btn ghost" data-a="nw">＋ ملف فاضي</button><button class="btn" data-a="im">استيراد إكسل</button></div>';
-  if (!cur) h += fs.map(f => '<div class="shc" data-fd="' + f.id + '"><span class="i" style="background:#C98A1B">' + SHX_FIC + '</span><span style="flex:1;min-width:0"><b>' + esc(f.n) + '</b><small style="display:block;color:var(--muted)">' + inF(f.id).length + ' ملفات</small></span>' + (cw ? '<button class="shm" data-mf="' + f.id + '" aria-label="خيارات المجلد">⋯</button>' : '') + '</div>').join('');
+  if (!cur) h += fs.map(f => '<div class="shc" data-fd="' + f.id + '"><span class="i" style="background:#C98A1B">' + SHX_FIC + '</span><span style="flex:1;min-width:0"><b>' + esc(f.n) + '</b><small style="display:block;color:var(--muted)">' + inF(f.id).length + ' ملفات</small></span>' + (cw ? '<button class="shm" data-mf="' + f.id + '" aria-label="خيارات المجلد">⋯</button><button class="shm" data-df="' + f.id + '" aria-label="مسح المجلد" style="background:#FBE9E7;color:#B3261E">🗑</button>' : '') + '</div>').join('');
   const ks = inF(cur);
-  h += ks.map(k => { const w = SHX.D[k], n = shxU(k) ? 0 : shxEdCount(k); return '<div class="shc" data-w="' + k + '"><span class="i">' + SHX_IC + '</span><span style="flex:1;min-width:0"><b>' + esc(w.t) + '</b><small style="display:block;color:var(--muted)">' + w.sh.length + ' شيتات: ' + esc(w.sh.map(x => x.n).join('، ')) + (n ? ' · عدّلت ' + n + ' خلية' : '') + '</small></span>' + (cw ? '<button class="shm" data-m="' + k + '" aria-label="خيارات الملف">⋯</button>' : '') + '</div>'; }).join('');
+  h += ks.map(k => { const w = SHX.D[k], n = shxU(k) ? 0 : shxEdCount(k); return '<div class="shc" data-w="' + k + '"><span class="i">' + SHX_IC + '</span><span style="flex:1;min-width:0"><b>' + esc(w.t) + '</b><small style="display:block;color:var(--muted)">' + w.sh.length + ' شيتات: ' + esc(w.sh.map(x => x.n).join('، ')) + (n ? ' · عدّلت ' + n + ' خلية' : '') + '</small></span>' + (cw ? '<button class="shm" data-m="' + k + '" aria-label="خيارات الملف">⋯</button><button class="shm" data-dl="' + k + '" aria-label="مسح الملف" style="background:#FBE9E7;color:#B3261E">🗑</button>' : '') + '</div>'; }).join('');
   if (!ks.length && cur) h += '<div class="note" style="text-align:center;padding:14px">المجلد فاضي. اعمل ملف جديد أو استورد ملف إكسل، أو انقل ملف من ⋯ بتاع أي ملف.</div>';
   if (!cur && !ks.length && !fs.length) h += '<div class="note" style="text-align:center;padding:18px">مفيش ملفات لسه. اعمل ملف فاضي أو استورد ملف إكسل (xlsx أو xls) من الزراير اللي فوق.</div>';
   if (!cur && nHid) h += '<button class="btn ghost" data-a="hid" style="margin-top:8px">' + (SHX.sh2 ? 'إخفاء الملفات القديمة' : 'الملفات المخفية (' + nHid + ')') + '</button>';
@@ -1515,7 +1550,12 @@ function shxDelFile(k) {
   docSave('shxw', 'shxw:' + k.slice(2), d, true); if (S.docs.has('shx:' + k)) docSave('shx', 'shx:' + k, {}, true); if (S.docs.has('shxp:' + k)) docSave('shxp', 'shxp:' + k, { f:'' });
   shxUserSync(); SHX.wb = null; renderSHX(); toast('اتمسح');
 }
-function shxFileMenu(k) { const it = [{ l:'نقل لمجلد', fn:() => shxMoveMenu(k) }, { l:shxHid(k) ? 'إظهار في القايمة' : 'إخفاء من القايمة', fn:() => shxHide(k, !shxHid(k)) }, { l:shxU(k) ? 'تصدير كملف إكسل (xlsx)' : 'تصدير كملف إكسل (xlsx) بالقيم', fn:() => shxExport(k) }]; if (shxU(k)) { it.push({ l:'إعادة تسمية الملف', fn:() => shxRenFile(k) }); it.push({ l:'مسح الملف', d:1, fn:() => shxDelFile(k) }); } shxMenu(SHX.D[k].t, it); }
+function shxDelAny(k) {
+  if (shxU(k)) return shxDelFile(k); const w = SHX.D[k]; if (!w || !confirm('تمسح الملف "' + w.t + '" نهائياً؟ (تقدر تستورد نسخة معدلة منه بعد كده)')) return;
+  docSave('shxp', 'shxp:' + k, { f:'', h:1, x:1 }); if (S.docs.has('shx:' + k)) docSave('shx', 'shx:' + k, {}, true); if (SHX.wb === k) SHX.wb = null; renderSHX(); toast('اتمسح');
+}
+function shxDelFolder(id) { const d = S.docs.get(id); if (!d || d.deleted) return; if (confirm('تمسح المجلد "' + d.data.n + '"؟ الملفات اللي جواه مش هتتمسح وهترجع للرئيسي.')) { docSave('shxd', id, d.data, true); if (SHX.fd === id) SHX.fd = null; renderSHX(); } }
+function shxFileMenu(k) { const it = [{ l:'نقل لمجلد', fn:() => shxMoveMenu(k) }, { l:shxHid(k) ? 'إظهار في القايمة' : 'إخفاء من القايمة', fn:() => shxHide(k, !shxHid(k)) }, { l:shxU(k) ? 'تصدير كملف إكسل (xlsx)' : 'تصدير كملف إكسل (xlsx) بالقيم', fn:() => shxExport(k) }]; if (shxU(k)) it.push({ l:'إعادة تسمية الملف', fn:() => shxRenFile(k) }); it.push({ l:'مسح الملف', d:1, fn:() => shxDelAny(k) }); shxMenu(SHX.D[k].t, it); }
 function shxFolderMenu(id) {
   const d = S.docs.get(id); if (!d || d.deleted) return;
   shxMenu(d.data.n, [{ l:'إعادة تسمية المجلد', fn:() => { const n = (prompt('اسم المجلد', d.data.n) || '').trim(); if (n) { docSave('shxd', id, { n }); renderSHX(); } } },
@@ -1548,9 +1588,10 @@ async function shxParseXlsx(buf, title) {
   const col = c => { if (!c) return null; if (c.hasAttribute('rgb')) return xa(c, 'rgb').slice(-6).toUpperCase(); if (c.hasAttribute('theme')) return tint(TH[+xa(c, 'theme')] || '000000', xa(c, 'tint')); if (c.hasAttribute('indexed')) return IDX[+xa(c, 'indexed')] || null; return null; };
   const BN = { 1:'0', 2:'0.00', 3:'#,##0', 4:'#,##0.00', 9:'0%', 10:'0.00%', 11:'0.00E+00', 14:'dd/mm/yyyy', 15:'d-mmm-yy', 16:'d-mmm', 17:'mmm-yy', 22:'dd/mm/yyyy h:mm', 37:'#,##0 ;(#,##0)', 38:'#,##0 ;[Red](#,##0)', 39:'#,##0.00;(#,##0.00)', 40:'#,##0.00;[Red](#,##0.00)', 49:'@' };
   const isDt = c => { const x = c.replace(/"[^"]*"|\[[^\]]*\]|\\./g, ''); return /[ymd]/i.test(x) && !/[0#?]/.test(x); };
-  const st = [], stx = await get('xl/styles.xml');
+  const st = [], dxfs = [], stx = await get('xl/styles.xml');
   if (stx) {
-    const sd = px(stx), nfm = {}; for (const n of xt(sd, 'numFmt')) nfm[xa(n, 'numFmtId')] = xa(n, 'formatCode');
+    const sd = px(stx), nfm = {};
+    for (const dx of xt(sd, 'dxf')) { if (dx.parentElement.localName !== 'dxfs') continue; const ft = xt(dx, 'font')[0], fl = xt(dx, 'fill')[0], o = {}; if (ft) { const c = [...ft.children].find(x => x.localName === 'color'); if (c && col(c)) o.fc = col(c); if ([...ft.children].some(x => x.localName === 'b' && xa(x, 'val') !== '0')) o.bo = 1; } if (fl) { const pf = xt(fl, 'patternFill')[0]; const bg = pf && (col(xt(pf, 'bgColor')[0]) || col(xt(pf, 'fgColor')[0])); if (bg) o.bg = bg; } dxfs.push(o); } for (const n of xt(sd, 'numFmt')) nfm[xa(n, 'numFmtId')] = xa(n, 'formatCode');
     const flag = (f, n) => { const e = [...f.children].find(x => x.localName === n); return !!e && xa(e, 'val') !== '0'; };
     const fonts = [...xt(sd, 'font')].filter(f => f.parentElement.localName === 'fonts').map(f => { const sz = [...f.children].find(x => x.localName === 'sz'), c = [...f.children].find(x => x.localName === 'color'); const nm = [...f.children].find(x => x.localName === 'name'), un = [...f.children].find(x => x.localName === 'u'); return { b:flag(f, 'b'), i:flag(f, 'i'), fs:sz ? +xa(sz, 'val') : 0, fc:col(c), ff:nm ? xa(nm, 'val') : '', u:!!un && xa(un, 'val') !== 'none', sk:flag(f, 'strike') }; });
     const fills = [...xt(sd, 'fill')].filter(f => f.parentElement.localName === 'fills').map(f => { const pf = xt(f, 'patternFill')[0]; if (!pf || xa(pf, 'patternType') !== 'solid') return null; return col(xt(pf, 'fgColor')[0]); });
@@ -1583,10 +1624,29 @@ async function shxParseXlsx(buf, title) {
         sh.cells.push([r, cc, f, v, st[sI] ? sI : -1]); if (r > sh.R) sh.R = r; if (cc > sh.C) sh.C = cc; total++;
       }
     }
+    { const pn = xt(d, 'pane')[0]; if (pn && /frozen/.test(xa(pn, 'state') || '')) sh.fz = [+xa(pn, 'ySplit') || 0, +xa(pn, 'xSplit') || 0];
+      const af = xt(d, 'autoFilter')[0], m2 = af && /([A-Z]+)(\d+):([A-Z]+)/.exec(xa(af, 'ref') || ''); if (m2) { sh.fr = +m2[2]; sh.fc = [SHX_ENG.colN(m2[1]), SHX_ENG.colN(m2[3])]; sh.flt = {}; }
+      const rgOf = ref => { const q = /^\$?([A-Z]+)\$?(\d+)(?::\$?([A-Z]+)\$?(\d+))?$/.exec(ref); return q ? [+q[2], SHX_ENG.colN(q[1]), +(q[4] || q[2]), SHX_ENG.colN(q[3] || q[1])] : null; };
+      const lit = f => { if (f == null) return null; if (/^"(.*)"$/.test(f)) return f.slice(1, -1); return f !== '' && !isNaN(+f) ? +f : null; };
+      const OPS = { greaterThan:'gt', lessThan:'lt', greaterThanOrEqual:'ge', lessThanOrEqual:'le', equal:'eq', notEqual:'ne', between:'bt' };
+      for (const cf of xt(d, 'conditionalFormatting')) for (const ru of xt(cf, 'cfRule')) {
+        const ty = xa(ru, 'type'), dx = dxfs[+xa(ru, 'dxfId')] || {}, fm = [...xt(ru, 'formula')].map(f => f.textContent); let rule = null;
+        if (ty === 'cellIs' && OPS[xa(ru, 'operator')] && lit(fm[0]) != null) rule = { t:OPS[xa(ru, 'operator')], a:lit(fm[0]), b:lit(fm[1]), ...dx };
+        else if (ty === 'containsText' || ty === 'notContainsText') rule = { t:ty === 'containsText' ? 'ct' : 'nct', a:xa(ru, 'text') || '', ...dx };
+        else if (ty === 'duplicateValues') rule = { t:'dp', ...dx }; else if (ty === 'uniqueValues') rule = { t:'up', ...dx };
+        else if (ty === 'top10' && xa(ru, 'percent') !== '1') rule = { t:xa(ru, 'bottom') === '1' ? 'bp' : 'tp', a:+xa(ru, 'rank') || 10, ...dx };
+        else if (ty === 'aboveAverage') rule = { t:xa(ru, 'aboveAverage') === '0' ? 'be' : 'ab', ...dx };
+        else if (ty === 'colorScale') { const cols = [...xt(ru, 'color')].map(c => col(c)).filter(Boolean); if (cols.length >= 2) rule = { t:'cs', cols:cols.slice(0, 3) }; }
+        if (rule) for (const q of (xa(cf, 'sqref') || '').split(/\s+/)) { const g = rgOf(q); if (g) (sh.cf = sh.cf || []).push({ rg:g, ...rule }); }
+      }
+      for (const dv of xt(d, 'dataValidation')) { if (xa(dv, 'type') !== 'list') continue; const f1 = xt(dv, 'formula1')[0], ft = f1 ? f1.textContent : ''; if (!ft) continue; const it = /^"(.*)"$/.test(ft) ? { list:ft.slice(1, -1).split(',') } : { ref:ft }; for (const q of (xa(dv, 'sqref') || '').split(/\s+/)) { const g = rgOf(q); if (g) (sh.dv = sh.dv || []).push({ rg:g, ...it }); } }
+    }
     for (const mc of xt(d, 'mergeCell')) { const ref = xa(mc, 'ref'); if (!ref) continue; sh.mg.push(ref); const e = /([A-Z]+)(\d+)$/.exec(ref); if (e) { sh.R = Math.max(sh.R, +e[2]); sh.C = Math.max(sh.C, SHX_ENG.colN(e[1])); } }
     if (total > 100000) throw { msg:'الملف كبير أوي (أكتر من 100 ألف خلية)' };
     out.push(sh);
   }
+  const names = {}; for (const dn of xt(wbd, 'definedName')) { const nm = xa(dn, 'name') || '', v = dn.textContent || ''; if (!nm || nm.startsWith('_xlnm') || dn.hasAttribute('localSheetId')) continue; if (/^(?:'[^']+'|[A-Za-z0-9_.\u0600-\u06FF]+)!\$?[A-Z]+\$?\d+(?::\$?[A-Z]+\$?\d+)?$/.test(v) || (v !== '' && !isNaN(+v))) names[nm.toLowerCase()] = v; }
+  if (Object.keys(names).length) for (const sh of out) for (const c of sh.cells) if (typeof c[2] === 'string') c[2] = c[2].split('"').map((seg, i) => i % 2 ? seg : seg.replace(/[A-Za-z_\u0600-\u06FF][A-Za-z0-9_.\u0600-\u06FF]*/g, (m, off, all) => { const pv = all[off - 1], nx = all[off + m.length]; if ((pv && /[A-Za-z0-9_.!'$]/.test(pv)) || nx === '(' || nx === '!') return m; return names[m.toLowerCase()] !== undefined ? names[m.toLowerCase()] : m; })).join('"');
   return { t:title || 'ملف مستورد', sh:out, st };
 }
 /* ---- قراءة ملف xls القديم (BIFF8): القيم والتنسيق، والمعادلات بتتقرا كقيم ---- */
@@ -1699,7 +1759,7 @@ async function shxParseXls(buf, title) {
   };
   const out = []; let total = 0;
   for (const bs of bounds) {
-    if (bs.type !== 0) continue; const sh = { n:bs.n, cells:[], R:1, C:1, cw:{}, rh:{}, mg:[], rtl:false }, cm = new Map(); let pp = bs.off, dp = 0, pend = null, last = 0; const tx = [], shr = new Map();
+    if (bs.type !== 0) continue; const sh = { n:bs.n, cells:[], R:1, C:1, cw:{}, rh:{}, mg:[], rtl:false }, cm = new Map(); let pp = bs.off, dp = 0, pend = null, last = 0, frz = false, pane = null; const tx = [], shr = new Map();
     const put = (r, c, v, x, f) => { const sx = st[x] || {}; if ((v == null || v === '') && !f && !sx.bg && !sx.bd) return; if (typeof v === 'number' && sx.d && d1904) v += 1462; cm.set((r + 1) * 100000 + c + 1, [r + 1, c + 1, f || null, v, st[x] ? x : -1]); };
     const rk = n => { let v; if (n & 2) v = (n | 0) >> 2; else { const t = new DataView(new ArrayBuffer(8)); t.setUint32(4, (n & 0xFFFFFFFC) >>> 0, true); v = t.getFloat64(0, true); } return n & 1 ? v / 100 : v; };
     const mgAdd = (o, n) => { for (let i = 0; i < n; i++) { const q = o + i * 8; if (q + 8 > u.length) break; const r1 = u16(q), r2 = u16(q + 2), c1 = u16(q + 4), c2 = u16(q + 6); sh.mg.push(SHX_ENG.colL(c1 + 1) + (r1 + 1) + ':' + SHX_ENG.colL(c2 + 1) + (r2 + 1)); } };
@@ -1707,7 +1767,7 @@ async function shxParseXls(buf, title) {
       const id = u16(pp), len = u16(pp + 2), o = pp + 4; pp = o + len;
       if (id === 0x809) dp++; else if (id === 0x0A) { dp--; if (dp <= 0) break; }
       else if (id === 0x2F) throw { msg:'الملف ده عليه كلمة سر' };
-      else if (id === 0x23E) sh.rtl = !!(u16(o) & 0x40);
+      else if (id === 0x23E) { sh.rtl = !!(u16(o) & 0x40); frz = !!(u16(o) & 0x08); } else if (id === 0x41) pane = [u16(o + 2), u16(o)];
       else if (id === 0x7D) { const w = Math.round(u16(o + 4) / 256 * 7 + 5), hid = u16(o + 8) & 1 ? 1 : 0; for (let c = u16(o); c <= Math.min(u16(o + 2), 255); c++) sh.cw[c + 1] = [w, hid]; }
       else if (id === 0x208) { const r = u16(o) + 1, ht = u16(o + 6), gb = u16(o + 12); if (gb & 0x20) sh.rh[r] = [20, 1]; else if (gb & 0x40) sh.rh[r] = [Math.round((ht & 0x7FFF) / 15), 0]; }
       else if (id === 0xFD) put(u16(o), u16(o + 2), sst[u32(o + 6)], u16(o + 4));
@@ -1732,6 +1792,7 @@ async function shxParseXls(buf, title) {
       last = id;
     }
     for (const t of tx) { const rec = shr.get(t.mr + ',' + t.mc); if (!rec || (rec.t === 'a' && (t.r !== t.mr || t.c !== t.mc))) continue; let f = null; try { f = dec(rec.tok, rec.cce, t.r, t.c); } catch (e) { f = null; } const cc = cm.get((t.r + 1) * 100000 + t.c + 1); if (f && cc) cc[2] = f; }
+    if (frz && pane && (pane[0] || pane[1])) sh.fz = pane;
     for (const c of cm.values()) { sh.cells.push(c); if (c[0] > sh.R) sh.R = c[0]; if (c[1] > sh.C) sh.C = c[1]; } total += sh.cells.length;
     for (const ref of sh.mg) { const e = /([A-Z]+)(\d+)$/.exec(ref); if (e) { sh.R = Math.max(sh.R, +e[2]); sh.C = Math.max(sh.C, SHX_ENG.colN(e[1])); } }
     for (const k of Object.keys(sh.cw)) if (+k > sh.C) delete sh.cw[k];
@@ -1782,14 +1843,14 @@ function shxPrint(all) {
     parts.push({ sh:w.sh[si], t:shxTable(SHX.wb, si, true, gp) });
   }
   let el = document.getElementById('shxprint'); if (!el) { el = document.createElement('div'); el.id = 'shxprint'; document.body.appendChild(el); }
-  const port = parts.every(x => x.t.tw <= 720);
+  const forced = idx.map(i => w.sh[i].po), port = forced.some(x => x === 'l') ? false : forced.every(x => x === 'p') ? true : parts.every(x => x.t.tw <= 720);
   el.innerHTML = parts.map((x, i) => { const z = Math.max(0.3, Math.min(1.6, (port ? 730 : 1040) / x.t.tw)); return '<div' + (i < parts.length - 1 ? ' style="page-break-after:always;break-after:page"' : '') + '><div class="shph"><b>' + esc(w.t) + ' — ' + esc(x.sh.n) + '</b></div><table class="sxt" dir="' + (x.t.rtl ? 'rtl' : 'ltr') + '" style="width:' + x.t.tw + 'px;zoom:' + z.toFixed(3) + '">' + x.t.html + '</table></div>'; }).join(''); document.body.classList.add('sx');
   document.querySelectorAll('style[data-pf]').forEach(x => x.remove()); const fit = document.createElement('style'); fit.setAttribute('data-pf', '1'); fit.textContent = '@media print{@page{size:A4 ' + (port ? 'portrait' : 'landscape') + ';margin:8mm}}'; document.head.appendChild(fit);
   const done = () => { window.removeEventListener('afterprint', done); document.body.classList.remove('sx'); el.innerHTML = ''; fit.remove(); }; window.addEventListener('afterprint', done); setTimeout(() => window.print(), 150);
 }
 /* ===== تنسيق الخلايا (للملفات الجديدة) ===== */
 const shxRgTxt = g => SHX_ENG.colL(g[1]) + g[0] + (g[0] === g[2] && g[1] === g[3] ? '' : ':' + SHX_ENG.colL(g[3]) + g[2]);
-function shxRgShow() { if (!SHX.rg) return; $('#shx-addr').textContent = shxRgTxt(SHX.rg); $('#shx-in').value = ''; SHX.orig = ''; }
+function shxRgShow() { shxSbSync(); if (!SHX.rg) return; $('#shx-addr').textContent = shxRgTxt(SHX.rg); $('#shx-in').value = ''; SHX.orig = ''; }
 const shxTR = () => SHX.rg || (SHX.sel ? [SHX.sel[0], SHX.sel[1], SHX.sel[0], SHX.sel[1]] : null);
 function shxColors(title, noneLbl, cb) {
   const old = document.getElementById('shx-ov'); if (old) old.remove();
@@ -1815,27 +1876,57 @@ function shxStyle(fn, rg) {
   }
   shxWSave(k, d); SHX.eng && shxDraw(false);
 }
+const SHX_CC = ['#2E7D5B', '#E67E22', '#2980B9', '#C0392B', '#8E44AD', '#F1C40F', '#16A085', '#7F8C8D'];
+function shxChartData(ch) {
+  const k = SHX.wb, si = SHX.si, eng = SHX.eng, [r1, c1, r2, c2] = ch.rg, v = (r, c) => eng.get(k, si, r, c), isT = x => typeof x === 'string' && x !== '';
+  let hdr = false, cat = false; for (let c = c1; c <= c2; c++) if (isT(v(r1, c))) hdr = true; if (r2 > r1) for (let r = r1 + (hdr ? 1 : 0); r <= r2; r++) if (isT(v(r, c1))) cat = true;
+  const sc = c1 + (cat ? 1 : 0), sr = r1 + (hdr ? 1 : 0), cats = [], series = [];
+  for (let r = sr; r <= r2; r++) cats.push(cat ? String(v(r, c1) ?? '') : String(r - sr + 1));
+  for (let c = sc; c <= c2; c++) { const vals = []; for (let r = sr; r <= r2; r++) { const x = v(r, c); vals.push(typeof x === 'number' ? x : 0); } series.push({ n:hdr ? String(v(r1, c) ?? '') : 'Series' + (c - sc + 1), v:vals }); }
+  return { cats, series };
+}
+function shxChartSvg(ch) {
+  const { cats, series } = shxChartData(ch); if (!series.length || !cats.length) return '<div style="padding:20px;text-align:center;color:#999">مفيش بيانات</div>';
+  const W = 360, H = 230, L = 40, Rm = 10, T = 14, B = 44, pw = W - L - Rm, ph = H - T - B, n = cats.length, all = series.flatMap(x => x.v), mx = Math.max(0, ...all), mn = Math.min(0, ...all), rg = (mx - mn) || 1, nice = (() => { const p = Math.pow(10, Math.floor(Math.log10(rg))); const f = rg / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p / 5; })();
+  const y = x => T + ph - (x - mn) / rg * ph, fm = x => Math.abs(x) >= 1000 ? Math.round(x).toLocaleString('en') : String(+x.toFixed(2)); let o = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;direction:ltr;font-family:system-ui,sans-serif">';
+  if (ch.t === 'pie') { const s0 = series[0].v.map(x => Math.max(0, x)), tot = s0.reduce((a, b) => a + b, 0) || 1; let ang = -Math.PI / 2; const cx = 120, cy = 115, rr = 90; s0.forEach((x, i) => { const a2 = ang + x / tot * Math.PI * 2, big = a2 - ang > Math.PI ? 1 : 0; if (x > 0) o += (s0.filter(q => q > 0).length === 1) ? '<circle cx="' + cx + '" cy="' + cy + '" r="' + rr + '" fill="' + SHX_CC[i % 8] + '"/>' : '<path d="M' + cx + ' ' + cy + 'L' + (cx + rr * Math.cos(ang)) + ' ' + (cy + rr * Math.sin(ang)) + 'A' + rr + ' ' + rr + ' 0 ' + big + ' 1 ' + (cx + rr * Math.cos(a2)) + ' ' + (cy + rr * Math.sin(a2)) + 'Z" fill="' + SHX_CC[i % 8] + '" stroke="#fff"/>'; ang = a2; }); cats.slice(0, 10).forEach((c, i) => { o += '<rect x="235" y="' + (20 + i * 19) + '" width="11" height="11" fill="' + SHX_CC[i % 8] + '"/><text x="251" y="' + (30 + i * 19) + '" font-size="11">' + esc(c.slice(0, 16)) + ' (' + Math.round(s0[i] / tot * 100) + '%)</text>'; }); return o + '</svg>'; }
+  for (let g = Math.ceil(mn / nice) * nice; g <= mx + 1e-9; g += nice) o += '<line x1="' + L + '" x2="' + (W - Rm) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="#e3e3e3"/><text x="' + (L - 4) + '" y="' + (y(g) + 4) + '" font-size="10" text-anchor="end" fill="#666">' + fm(g) + '</text>';
+  const step = Math.ceil(n / 8), bw = pw / n;
+  if (ch.t === 'bar') { const k = series.length, w = bw * 0.78 / k; series.forEach((s, i) => s.v.forEach((x, j) => { const x0 = L + j * bw + bw * 0.11 + i * w, y1 = y(Math.max(x, 0)), y2 = y(Math.min(x, 0)); o += '<rect x="' + x0 + '" y="' + y1 + '" width="' + w + '" height="' + Math.max(0.5, y2 - y1) + '" fill="' + SHX_CC[i % 8] + '"/>'; })); }
+  else if (ch.t === 'line' || ch.t === 'area') series.forEach((s, i) => { const pts = s.v.map((x, j) => (L + j * bw + bw / 2) + ',' + y(x)); if (ch.t === 'area') o += '<polygon points="' + (L + bw / 2) + ',' + y(0) + ' ' + pts.join(' ') + ' ' + (L + (n - 1) * bw + bw / 2) + ',' + y(0) + '" fill="' + SHX_CC[i % 8] + '" opacity=".35"/>'; o += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + SHX_CC[i % 8] + '" stroke-width="2.2"/>'; s.v.forEach((x, j) => { o += '<circle cx="' + (L + j * bw + bw / 2) + '" cy="' + y(x) + '" r="2.8" fill="' + SHX_CC[i % 8] + '"/>'; }); });
+  else if (ch.t === 'barh') { const k = series.length, bh = ph / n, w = bh * 0.78 / k, xx = x => L + (x - mn) / rg * pw; series.forEach((s, i) => s.v.forEach((x, j) => { o += '<rect x="' + xx(Math.min(x, 0)) + '" y="' + (T + j * bh + bh * 0.11 + i * w) + '" width="' + Math.max(0.5, Math.abs(xx(x) - xx(0))) + '" height="' + w + '" fill="' + SHX_CC[i % 8] + '"/>'; })); o += cats.map((c, j) => '<text x="' + (L - 3) + '" y="' + (T + j * bh + bh / 2 + 3) + '" font-size="10" text-anchor="end">' + esc(c.slice(0, 7)) + '</text>').join(''); return o + '</svg>'; }
+  cats.forEach((c, j) => { if (j % step === 0) o += '<text x="' + (L + j * bw + bw / 2) + '" y="' + (H - B + 14) + '" font-size="10" text-anchor="middle" fill="#444">' + esc(c.slice(0, 9)) + '</text>'; });
+  if (series.length > 1 || series[0].n) series.forEach((s, i) => { o += '<rect x="' + (L + i * 90) + '" y="' + (H - 14) + '" width="10" height="10" fill="' + SHX_CC[i % 8] + '"/><text x="' + (L + 14 + i * 90) + '" y="' + (H - 5) + '" font-size="10">' + esc(s.n.slice(0, 12)) + '</text>'; });
+  return o + '</svg>';
+}
+function shxCharts() { const el = $('#shx-ch'); if (!el) return; const sh = SHX.D[SHX.wb] && SHX.D[SHX.wb].sh[SHX.si]; el.innerHTML = sh && sh.ch ? sh.ch.map(c => '<div class="chc" data-chid="' + c.id + '"><b>' + esc(c.ttl || '') + '</b>' + shxChartSvg(c) + '</div>').join('') : ''; }
+function shxSbSync() {
+  const el = $('#shx-sb'); if (!el) return; const g = SHX.rg; if (!g || !shxU(SHX.wb) || (g[0] === g[2] && g[1] === g[3])) { el.style.display = 'none'; return; }
+  const ns = []; let cnt = 0; for (let r = g[0]; r <= g[2]; r++) for (let c = g[1]; c <= g[3]; c++) { const v = SHX.eng.get(SHX.wb, SHX.si, r, c); if (v != null && v !== '') cnt++; if (typeof v === 'number') ns.push(v); }
+  const f = x => String(+x.toFixed(4)); el.style.display = 'block'; el.textContent = 'العدد: ' + cnt + (ns.length ? '   المجموع: ' + f(ns.reduce((a, b) => a + b, 0)) + '   المتوسط: ' + f(ns.reduce((a, b) => a + b, 0) / ns.length) + '   أكبر: ' + f(Math.max(...ns)) + '   أصغر: ' + f(Math.min(...ns)) : '');
+}
 /* ===== الشريط (Ribbon) وعمليات الإكسل ===== */
 const SHX_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 36, 48, 72], SHX_FONTS = ['Calibri', 'Arial', 'Tahoma', 'Times New Roman', 'Courier New', 'Verdana', 'Segoe UI', 'Cairo', 'Amiri', 'Traditional Arabic'];
 function shxStyleAt(r, c) { const k = SHX.wb, b = SHX.eng.smap(k, SHX.si).get(r * 100000 + c); return b && b[4] >= 0 ? SHX.D[k].st[b[4]] || {} : {}; }
 const SHX_AIC = { al:'<svg viewBox="0 0 24 24"><path d="M3 6h18M9 12h12M5 18h16"/></svg>', ac:'<svg viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M5 18h14"/></svg>', ar:'<svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h12M3 18h16"/></svg>', vt:'<svg viewBox="0 0 24 24"><path d="M4 4h16M12 20V9M8 12l4-4 4 4"/></svg>', vm:'<svg viewBox="0 0 24 24"><path d="M4 12h16M12 4v5M9 6l3 3 3-3M12 20v-5M9 18l3-3 3 3"/></svg>', vb:'<svg viewBox="0 0 24 24"><path d="M4 20h16M12 4v11M8 12l4 4 4-4"/></svg>' };
 function shxRbRender() {
-  const T = [['h', 'الرئيسية'], ['i', 'إدراج'], ['f', 'صيغ'], ['d', 'بيانات'], ['v', 'عرض'], ['m', 'الملف']]; SHX.rt = SHX.rt || 'h';
+  const T = [['h', 'الرئيسية'], ['i', 'إدراج'], ['p', 'تخطيط الصفحة'], ['f', 'صيغ'], ['d', 'بيانات'], ['v', 'عرض'], ['m', 'الملف']]; SHX.rt = SHX.rt || 'h';
   $('#rb-t').innerHTML = T.map(x => '<button data-rt="' + x[0] + '" class="' + (x[0] === SHX.rt ? 'on' : '') + '">' + x[1] + '</button>').join('');
   const B = (a, l, c) => '<button class="rb' + (c ? ' ' + c : '') + '" data-fm="' + a + '">' + l + '</button>', G = (...rows) => '<div class="rbg">' + rows.map(r => '<div class="rr">' + r.join('') + '</div>').join('') + '</div>';
   const P = {
-    h: [G([B('un', '↶'), B('re', '↷'), B('rg', 'نطاق')], [B('cp', 'نسخ'), B('ct', 'قص'), B('ps', 'لصق')]),
+    h: [G([B('un', '↶'), B('re', '↷'), B('rg', 'نطاق')], [B('cp', 'نسخ'), B('ct', 'قص'), B('ps', 'لصق'), B('psm', '▾')]),
       G([B('fn', '<span id="rb-fn">Calibri</span> ▾', 'w'), B('fs-', '−'), B('fsz', '<span id="rb-fs">11</span>'), B('fs+', '＋')], [B('b', '<b>B</b>'), B('i', '<i>I</i>'), B('u', '<u>U</u>'), B('sk', '<s>S</s>'), B('tc', '<span style="border-bottom:4px solid #C0392B;line-height:1.1">A</span>'), B('bg', '<span style="border-bottom:4px solid #F1C40F;line-height:1.1">▨</span>'), B('bd', '▦')]),
       G([B('al', SHX_AIC.al), B('ac', SHX_AIC.ac), B('ar', SHX_AIC.ar), B('vt', SHX_AIC.vt), B('vm', SHX_AIC.vm), B('vb', SHX_AIC.vb)], [B('w', 'لف النص'), B('mg', 'دمج ▾')]),
       G([B('nf', '<span id="rb-nf">عام</span> ▾', 'w')], [B('cur', 'ج.م'), B('pc', '%'), B('cm', '٫٫٫'), B('nd-', '.0←'), B('nd+', '.00→')]),
-      G([B('cl', 'مسح ▾')])],
+      G([B('fp', 'فرشاة التنسيق'), B('cfm', 'تنسيق شرطي ▾'), B('ts', 'تنسيق كجدول ▾')], [B('fnd', 'بحث واستبدال'), B('fil', 'تعبئة ▾'), B('cl', 'مسح ▾')])],
     i: [G([B('ri-', 'صف فوق'), B('ri+', 'صف تحت'), B('ci-', 'عمود قبل'), B('ci+', 'عمود بعد')], [B('rd', 'مسح الصف'), B('cd', 'مسح العمود')]),
-      G([B('sh+', '＋ شيت'), B('shr', 'اسم الشيت')], [B('shd', 'مسح الشيت'), B('shm', 'اتجاه الشيت')]),
-      G([B('rh+', 'ارتفاع ＋'), B('rh-', 'ارتفاع −')], [B('cw+', 'عرض ＋'), B('cw-', 'عرض −'), B('af', 'ملاءمة العرض')])],
+      G([B('sh+', '＋ شيت'), B('shr', 'اسم الشيت'), B('shd', 'مسح الشيت')], [B('shdup', 'نسخ الشيت'), B('shl', '▸ نقل'), B('shr2', 'نقل ◂'), B('shm', 'اتجاه الشيت')]),
+      G([B('chm', 'رسم بياني ▾'), B('dvm', 'قائمة منسدلة ▾')], [B('rh+', 'ارتفاع ＋'), B('rh-', 'ارتفاع −'), B('cw+', 'عرض ＋'), B('cw-', 'عرض −'), B('af', 'ملاءمة العرض')])],
+    p: [G([B('po:p', 'طولي'), B('po:l', 'عرضي'), B('po:a', 'تلقائي')], [B('pdf', 'طباعة / PDF')])],
     f: [G([B('fx', '<b>fx</b> دالة', 'w'), B('as', 'Σ جمع تلقائي ▾', 'w')], [B('as:SUM', 'جمع'), B('as:AVERAGE', 'متوسط'), B('as:COUNT', 'عدد'), B('as:MAX', 'أكبر'), B('as:MIN', 'أصغر')])],
-    d: [G([B('sa', 'ترتيب ↑ (أ-ي)'), B('sd', 'ترتيب ↓ (ي-أ)')], [B('rg', 'تحديد نطاق')])],
-    v: [G([B('z-', 'تصغير'), B('z+', 'تكبير'), B('zf', 'ملاءمة')], [B('shm', 'اتجاه الشيت (يمين/شمال)')])],
-    m: [G([B('xp', 'تصدير xlsx'), B('pdf', 'طباعة / PDF')], [B('frn', 'اسم الملف'), B('fmv', 'نقل لمجلد'), B('fdl', 'مسح الملف')])]
+    d: [G([B('sa', 'ترتيب ↑'), B('sd', 'ترتيب ↓')], [B('ft', 'فلتر'), B('fc', 'مسح الفلتر')]), G([B('rdp', 'إزالة المكرر'), B('rg', 'تحديد نطاق')])],
+    v: [G([B('z-', 'تصغير'), B('z+', 'تكبير'), B('zf', 'ملاءمة')], [B('fzm', 'تجميد ▾'), B('gl', 'خطوط الشبكة')]), G([B('hr', 'إخفاء الصفوف'), B('hc', 'إخفاء الأعمدة')], [B('uh', 'إظهار الكل'), B('shm', 'اتجاه الشيت')])],
+    m: [G([B('xp', 'تصدير xlsx'), B('pdf', 'طباعة / PDF'), B('imp', 'استيراد ملف')], [B('frn', 'اسم الملف'), B('fmv', 'نقل لمجلد'), B('fdl', 'مسح الملف')])]
   };
   $('#rb-p').innerHTML = P[SHX.rt].join(''); shxRbSync();
 }
@@ -1894,26 +1985,30 @@ function shxStruct(ax, at, n, del) {
     const mv = o => { const out = {}; for (const key of Object.keys(o)) { const v = +key; if (del && v >= at && v <= at + n - 1) continue; out[v >= (del ? at + n : at) ? v + (del ? -n : n) : v] = o[key]; } return out; };
     if (ax === 'r') { sh.rh = mv(sh.rh); sh.R = Math.max(1, sh.R + (del ? -n : n)); } else { sh.cw = mv(sh.cw); sh.C = Math.max(1, sh.C + (del ? -n : n)); }
     sh.mg = sh.mg.map(ref => { const p = ref.split(':'), a = /([A-Z]+)(\d+)/.exec(p[0]), b = /([A-Z]+)(\d+)/.exec(p[1] || p[0]); let r1 = +a[2], r2 = +b[2], c1 = SHX_ENG.colN(a[1]), c2 = SHX_ENG.colN(b[1]); const x = ax === 'r' ? shxAdjR(r1, r2, at, n, del) : shxAdjR(c1, c2, at, n, del); if (!x) return null; if (ax === 'r') [r1, r2] = x; else [c1, c2] = x; return r1 === r2 && c1 === c2 ? null : SHX_ENG.colL(c1) + r1 + ':' + SHX_ENG.colL(c2) + r2; }).filter(Boolean);
+    const aj = rg => { const i1 = ax === 'r' ? 0 : 1, x = shxAdjR(rg[i1], rg[i1 + 2], at, n, del); if (!x) return null; const o = rg.slice(); o[i1] = x[0]; o[i1 + 2] = x[1]; return o; };
+    for (const key of ['cf', 'dv', 'ch']) if (sh[key]) sh[key] = sh[key].map(ru => { const g = aj(ru.rg); return g ? { ...ru, rg:g } : null; }).filter(Boolean);
+    if (ax === 'r' && sh.fr) { if (del && sh.fr >= at && sh.fr <= at + n - 1) { delete sh.fr; delete sh.fc; sh.flt = {}; } else if (sh.fr >= at + (del ? n : 0)) sh.fr += del ? -n : n; }
+    if (ax === 'c' && sh.fc) { const x = shxAdjR(sh.fc[0], sh.fc[1], at, n, del); if (x) { sh.fc = x; sh.flt = mv(sh.flt || {}); } else { delete sh.fr; delete sh.fc; sh.flt = {}; } }
   });
 }
 /* ---- نسخ / قص / لصق ---- */
 function shxCopy(cut) {
   const rg = shxTR(); if (!rg) return toast('اختار خلية أو نطاق الأول'); const k = SHX.wb, si = SHX.si, eng = SHX.eng, w = SHX.D[k], sh = w.sh[si], ov = shxOv(k) || {}, rows = [], tsv = [];
-  for (let r = rg[0]; r <= rg[2]; r++) { const row = [], tr = []; for (let c = rg[1]; c <= rg[3]; c++) { const raw = eng.cellRaw(k, si, r, c), stl = shxStyleAt(r, c), od = ov[sh.n + '!' + shxA(r, c)], v = eng.get(k, si, r, c); row.push({ f:raw ? raw.f : null, v:raw && raw.f == null ? raw.v : null, st:Object.keys(stl).length ? { ...stl } : null, d:od && od.d ? 1 : 0 }); tr.push(SHX_ENG.fmtNum(v, stl.nf, stl.d || (od && od.d) ? 1 : 0)); } rows.push(row); tsv.push(tr.join('\t')); }
+  for (let r = rg[0]; r <= rg[2]; r++) { const row = [], tr = []; for (let c = rg[1]; c <= rg[3]; c++) { const raw = eng.cellRaw(k, si, r, c), stl = shxStyleAt(r, c), od = ov[sh.n + '!' + shxA(r, c)], v = eng.get(k, si, r, c); row.push({ x:v, f:raw ? raw.f : null, v:raw && raw.f == null ? raw.v : null, st:Object.keys(stl).length ? { ...stl } : null, d:od && od.d ? 1 : 0 }); tr.push(SHX_ENG.fmtNum(v, stl.nf, stl.d || (od && od.d) ? 1 : 0)); } rows.push(row); tsv.push(tr.join('\t')); }
   SHX.clip = { k, si, r1:rg[0], c1:rg[1], rows, cut:!!cut }; try { navigator.clipboard && navigator.clipboard.writeText(tsv.join('\n')); } catch (e) {} toast(cut ? 'اتقص — روح للمكان ودوس لصق' : 'اتنسخ');
 }
-function shxPasteCells(items, r0, c0, clip) {
+function shxPasteCells(items, r0, c0, clip, mode) {
   shxEdit((d, sh, cell) => {
     const idx = {}; d.st.forEach((x, i) => { idx[JSON.stringify(x)] = i; }); const sidx = o => { if (!o || !Object.keys(o).length) return -1; const kk = JSON.stringify(o); if (idx[kk] == null) { idx[kk] = d.st.length; d.st.push(o); } return idx[kk]; };
     if (clip && clip.cut && clip.k === SHX.wb) { const ssh = d.sh[clip.si]; if (ssh) for (const x of ssh.cells) if (x[0] >= clip.r1 && x[0] < clip.r1 + items.length && x[1] >= clip.c1 && x[1] < clip.c1 + items[0].length) { x[2] = null; x[3] = null; x[4] = -1; } }
     const dr = clip ? r0 - clip.r1 : 0, dc = clip ? c0 - clip.c1 : 0;
-    items.forEach((row, i) => row.forEach((it, j) => { const r = r0 + i, c = c0 + j; if (r > 5000 || c > 80) return; const x = cell(r, c); x[2] = it.f != null ? (clip ? shxShiftF(it.f, dr, dc) : it.f) : null; x[3] = it.f != null ? null : it.v; let so = it.st ? { ...it.st } : {}; if (it.d && !so.d) { so.d = 1; if (!so.nf || so.nf === 'General') so.nf = 'dd/mm/yyyy'; } x[4] = clip ? sidx(so) : (it.d ? sidx(so) : x[4]); }));
+    items.forEach((row, i) => row.forEach((it, j) => { const r = r0 + i, c = c0 + j; if (r > 5000 || c > 80) return; const x = cell(r, c); if (mode !== 'f') { if (mode === 'v') { x[2] = null; x[3] = it.x === undefined ? it.v : it.x; } else { x[2] = it.f != null ? (clip ? shxShiftF(it.f, dr, dc) : it.f) : null; x[3] = it.f != null ? null : it.v; } } if (mode === 'v' || mode === 'n') return; let so = it.st ? { ...it.st } : {}; if (it.d && !so.d) { so.d = 1; if (!so.nf || so.nf === 'General') so.nf = 'dd/mm/yyyy'; } x[4] = clip ? sidx(so) : (it.d ? sidx(so) : x[4]); }));
   }, true);
   if (clip && clip.cut) SHX.clip = null;
 }
-function shxPaste() {
+function shxPaste(menu) {
   const t = shxTR(); if (!t) return toast('اختار الخلية اللي هتلصق فيها'); const c = SHX.clip;
-  if (c) return shxPasteCells(c.rows, t[0], t[1], c);
+  if (c) return menu ? shxMenu('لصق خاص', [{ l:'لصق القيم بس', fn:() => shxPasteCells(c.rows, t[0], t[1], c, 'v') }, { l:'لصق المعادلات من غير تنسيق', fn:() => shxPasteCells(c.rows, t[0], t[1], c, 'n') }, { l:'لصق التنسيق بس', fn:() => shxPasteCells(c.rows, t[0], t[1], c, 'f') }]) : shxPasteCells(c.rows, t[0], t[1], c);
   if (!navigator.clipboard || !navigator.clipboard.readText) return toast('انسخ خلايا الأول');
   navigator.clipboard.readText().then(txt => { if (!txt) return toast('الحافظة فاضية'); const rows = txt.replace(/\r/g, '').replace(/\n$/, '').split('\n').map(l => l.split('\t').map(x => { const p = shxParse(x, SHX.wb, SHX.si, t[0], t[1]) || { v:x }; return p.x ? { f:null, v:null, st:null, d:0 } : p.f != null ? { f:p.f, v:null, st:null, d:0 } : { f:null, v:p.v, st:null, d:p.d ? 1 : 0 }; })); shxPasteCells(rows, t[0], t[1], null); }).catch(() => toast('المتصفح منع قراءة الحافظة. انسخ خلايا من هنا الأول'));
 }
@@ -1950,22 +2045,113 @@ function shxFxMenu() {
 function shxFxInsert(name) {
   if (!SHX.sel) return toast('اختار الخلية الأول'); if (SHX.rg) { SHX.rg = null; shxDraw(false); } const i = $('#shx-in'); let v = i.value; if (v[0] !== '=') v = '='; i.value = v + name + '('; i.dir = 'ltr'; SHX.fe = true; i.focus();
 }
+function shxRegion(g) {
+  const k = SHX.wb, si = SHX.si, eng = SHX.eng, sh = SHX.D[k].sh[si]; let [r1, c1, r2, c2] = g; if (r1 !== r2 || c1 !== c2) return [r1, c1, r2, c2];
+  const ne = (r, c) => { const v = eng.get(k, si, r, c); return v != null && v !== ''; }, rowHas = (r, a, b) => { for (let c = a; c <= b; c++) if (ne(r, c)) return true; return false; }, colHas = (c, a, b) => { for (let r = a; r <= b; r++) if (ne(r, c)) return true; return false; };
+  let ch = true; while (ch) { ch = false; if (r1 > 1 && rowHas(r1 - 1, c1, c2)) { r1--; ch = true; } if (r2 < sh.R && rowHas(r2 + 1, c1, c2)) { r2++; ch = true; } if (c1 > 1 && colHas(c1 - 1, r1, r2)) { c1--; ch = true; } if (c2 < sh.C && colHas(c2 + 1, r1, r2)) { c2++; ch = true; } } return [r1, c1, r2, c2];
+}
+function shxOverlay(build) {
+  const old = document.getElementById('shx-ov'); if (old) old.remove(); const o = document.createElement('div'); o.id = 'shx-ov'; o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  const b = document.createElement('div'); b.style.cssText = 'background:var(--paper,#fff);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:14px 14px calc(16px + env(safe-area-inset-bottom));display:grid;gap:8px;max-height:85vh;overflow:auto'; build(b, () => o.remove()); o.appendChild(b); o.onclick = e => { if (e.target === o) o.remove(); }; document.body.appendChild(o);
+}
+function shxFilterMenu(c) {
+  const k = SHX.wb, si = SHX.si, sh = SHX.D[k].sh[si], fr = sh.fr, vals = new Map(); for (let r = fr + 1; r <= sh.R; r++) { const t = shxDT(k, si, r, c); vals.set(t, (vals.get(t) || 0) + 1); }
+  const list = [...vals.keys()].sort((a, b) => { const x = parseFloat(a.replace(/,/g, '')), y = parseFloat(b.replace(/,/g, '')); return !isNaN(x) && !isNaN(y) ? x - y : a.localeCompare(b, 'ar'); }).slice(0, 300), ex = new Set((sh.flt && sh.flt[c]) || []);
+  shxOverlay((b, close) => {
+    const t = document.createElement('b'); t.textContent = 'فلتر العمود ' + SHX_ENG.colL(c); b.appendChild(t);
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:6px'; for (const [l, d] of [['ترتيب ↑', 0], ['ترتيب ↓', 1]]) { const x = document.createElement('button'); x.className = 'btn ghost'; x.textContent = l; x.style.flex = '1'; x.onclick = () => { close(); SHX.sel = [fr + 1, c]; SHX.rg = null; shxSort(!!d); }; row.appendChild(x); } b.appendChild(row);
+    const q = document.createElement('input'); q.placeholder = 'بحث في القيم'; q.style.cssText = 'border:1.5px solid var(--line);border-radius:10px;padding:8px;font-size:16px'; b.appendChild(q);
+    const box = document.createElement('div'); box.style.cssText = 'display:grid;gap:2px;max-height:34vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:4px'; b.appendChild(box); const chk = new Map();
+    for (const v of list) { const l = document.createElement('label'); l.style.cssText = 'display:flex;gap:8px;align-items:center;padding:5px 6px;font-size:15px'; const i = document.createElement('input'); i.type = 'checkbox'; i.checked = !ex.has(v); chk.set(v, i); const sp = document.createElement('span'); sp.textContent = (v === '' ? '(فاضي)' : v) + '  ·' + vals.get(v); l.append(i, sp); l.dataset.t = v.toLowerCase(); box.appendChild(l); }
+    q.oninput = () => { const s2 = q.value.toLowerCase(); for (const l of box.children) l.style.display = !s2 || l.dataset.t.includes(s2) ? 'flex' : 'none'; };
+    const r2 = document.createElement('div'); r2.style.cssText = 'display:flex;gap:6px'; const mk = (l, f, cls) => { const x = document.createElement('button'); x.className = 'btn ' + (cls || 'ghost'); x.textContent = l; x.style.flex = '1'; x.onclick = f; r2.appendChild(x); };
+    mk('تحديد الكل', () => chk.forEach(i => { if (i.parentElement.style.display !== 'none') i.checked = true; })); mk('إلغاء الكل', () => chk.forEach(i => { if (i.parentElement.style.display !== 'none') i.checked = false; })); b.appendChild(r2);
+    const r3 = document.createElement('div'); r3.style.cssText = 'display:flex;gap:6px'; const mk3 = (l, f, cls) => { const x = document.createElement('button'); x.className = 'btn ' + (cls || 'ghost'); x.textContent = l; x.style.flex = '1'; x.onclick = f; r3.appendChild(x); };
+    mk3('تطبيق', () => { const exc = [...chk.entries()].filter(([v, i]) => !i.checked).map(x => x[0]); close(); shxEdit((d, s2) => { s2.flt = s2.flt || {}; if (exc.length) s2.flt[c] = exc; else delete s2.flt[c]; }, true); }, ''); mk3('مسح فلتر العمود', () => { close(); shxEdit((d, s2) => { if (s2.flt) delete s2.flt[c]; }, true); }); b.appendChild(r3);
+  });
+}
+function shxDvValues(sh, dv) { if (dv.list) return dv.list; try { const ast = SHX_ENG.getAst(dv.ref.replace(/^=/, '')); if (!ast || ast.t !== 'r') return []; const g = SHX.eng.rng(ast, { wb:SHX.wb, si:SHX.si }); if (SHX_ENG.isE(g)) return []; const out = [], seen = new Set(); SHX.eng.cellsOf(g, v => { if (v != null && v !== '') { const t = String(v); if (!seen.has(t)) { seen.add(t); out.push(t); } } }); return out; } catch (e) { return []; } }
+function shxDvAt(r, c) { const sh = SHX.D[SHX.wb].sh[SHX.si]; return (sh.dv || []).find(d => r >= d.rg[0] && r <= d.rg[2] && c >= d.rg[1] && c <= d.rg[3]); }
+function shxDvPick(r, c) { const dv = shxDvAt(r, c), vals = shxDvValues(null, dv); if (!vals.length) return false; shxMenu('اختار القيمة', vals.slice(0, 200).map(v => ({ l:v, fn:() => { const i = $('#shx-in'); i.value = v; shxCommit(); } }))); return true; }
+function shxPresetMenu(title, cb) { const P = [['أحمر فاتح (خلفية + نص)', { bg:'FFC7CE', fc:'9C0006' }], ['أصفر', { bg:'FFEB9C', fc:'9C5700' }], ['أخضر', { bg:'C6EFCE', fc:'006100' }], ['أزرق', { bg:'BDD7EE', fc:'1F3864' }], ['نص أحمر غامق بس', { fc:'C00000', bo:1 }]]; shxMenu(title, P.map(x => ({ l:x[0], fn:() => cb(x[1]) }))); }
+function shxCfMenu(rg) {
+  const add = (t, a, b) => shxPresetMenu('التنسيق', st => shxEdit((d, sh) => { sh.cf = sh.cf || []; sh.cf.push({ rg:rg.slice(), t, a, b, ...st }); }, true)), ask = (l, t, two) => () => { const a = prompt(l); if (a == null || a === '') return; if (two) { const b = prompt('إلى'); if (b == null || b === '') return; return add(t, a, b); } add(t, a); };
+  shxMenu('تنسيق شرطي', [{ l:'أكبر من…', fn:ask('أكبر من (رقم)', 'gt') }, { l:'أقل من…', fn:ask('أقل من (رقم)', 'lt') }, { l:'يساوي…', fn:ask('يساوي', 'eq') }, { l:'بين…', fn:ask('من', 'bt', 1) }, { l:'يحتوي على نص…', fn:ask('النص', 'ct') }, { l:'قيم مكررة', fn:() => add('dp') }, { l:'قيم فريدة', fn:() => add('up') }, { l:'أعلى N قيم…', fn:ask('كام قيمة؟', 'tp') }, { l:'أقل N قيم…', fn:ask('كام قيمة؟', 'bp') }, { l:'أعلى من المتوسط', fn:() => add('ab') }, { l:'أقل من المتوسط', fn:() => add('be') },
+    { l:'تدرج لوني (أحمر-أصفر-أخضر)', fn:() => shxEdit((d, sh) => { sh.cf = sh.cf || []; sh.cf.push({ rg:rg.slice(), t:'cs', cols:['F8696B', 'FFEB84', '63BE7B'] }); }, true) }, { l:'تدرج لوني (أبيض-أخضر)', fn:() => shxEdit((d, sh) => { sh.cf = sh.cf || []; sh.cf.push({ rg:rg.slice(), t:'cs', cols:['FFFFFF', '63BE7B'] }); }, true) },
+    { l:'مسح التنسيق الشرطي من النطاق', d:1, fn:() => shxEdit((d, sh) => { sh.cf = (sh.cf || []).filter(r => !(r.rg[0] <= rg[2] && r.rg[2] >= rg[0] && r.rg[1] <= rg[3] && r.rg[3] >= rg[1])); }, true) }, { l:'مسح كل قواعد الشيت', d:1, fn:() => shxEdit((d, sh) => { sh.cf = []; }, true) }]);
+}
+function shxFill(mode, rg) {
+  const k = SHX.wb, si = SHX.si, eng = SHX.eng; const [r1, c1, r2, c2] = rg; if ((mode === 'd' || mode === 's') && r2 === r1) return toast('حدد الخلية الأولى وتحتها الخلايا اللي هتتعبى'); if (mode === 'r' && c2 === c1) return toast('حدد الخلية الأولى وجنبها الخلايا اللي هتتعبى');
+  shxEdit((d, sh, cell, m) => {
+    const idx = {}; d.st.forEach((x, i) => { idx[JSON.stringify(x)] = i; });
+    if (mode === 'd' || mode === 's') for (let c = c1; c <= c2; c++) { const s0 = m.get(r1 * 100000 + c), s1 = r1 + 1 <= r2 ? m.get((r1 + 1) * 100000 + c) : null, ser = mode === 's' && s0 && s1 && s0[2] == null && s1[2] == null && typeof s0[3] === 'number' && typeof s1[3] === 'number', step = ser ? s1[3] - s0[3] : 0;
+      for (let r = r1 + 1; r <= r2; r++) { const x = cell(r, c); if (s0) { x[2] = s0[2] != null ? shxShiftF(s0[2], r - r1, 0) : null; x[3] = ser ? s0[3] + step * (r - r1) : s0[3]; x[4] = s0[4]; } else { x[2] = null; x[3] = null; x[4] = -1; } } }
+    else for (let r = r1; r <= r2; r++) { const s0 = m.get(r * 100000 + c1); for (let c = c1 + 1; c <= c2; c++) { const x = cell(r, c); if (s0) { x[2] = s0[2] != null ? shxShiftF(s0[2], 0, c - c1) : null; x[3] = s0[3]; x[4] = s0[4]; } else { x[2] = null; x[3] = null; x[4] = -1; } } }
+  }, true);
+}
+function shxRemoveDup(g) {
+  const k = SHX.wb, si = SHX.si, reg = shxRegion(g), eng = SHX.eng; let [r1, c1, r2, c2] = reg; const hdr = confirm('الصف الأول عناوين؟ (موافق = أيوه، إلغاء = لأ)'); if (hdr) r1++; if (r2 <= r1) return toast('مفيش بيانات');
+  const seen = new Set(), keep = []; for (let r = r1; r <= r2; r++) { const key = []; for (let c = c1; c <= c2; c++) key.push(String(eng.get(k, si, r, c) ?? '').toLowerCase()); const kk = key.join('\u0001'); if (!seen.has(kk)) { seen.add(kk); keep.push(r); } }
+  const removed = (r2 - r1 + 1) - keep.length; if (!removed) return toast('مفيش مكرر');
+  shxEdit((d, sh) => { const to = new Map(keep.map((r, i) => [r, r1 + i])); sh.cells = sh.cells.filter(x => !(x[0] >= r1 && x[0] <= r2 && x[1] >= c1 && x[1] <= c2 && !to.has(x[0]))); for (const x of sh.cells) if (x[0] >= r1 && x[0] <= r2 && x[1] >= c1 && x[1] <= c2) { const nr = to.get(x[0]); if (nr !== x[0]) { if (typeof x[2] === 'string') x[2] = shxShiftF(x[2], nr - x[0], 0); x[0] = nr; } } }); toast('اتشال ' + removed + ' صف مكرر');
+}
+function shxFind() {
+  const f = SHX.find, q = prompt('ابحث عن', f ? f.q : ''); if (!q) return; const k = SHX.wb, si = SHX.si, sh = SHX.D[k].sh[si], ql = q.toLowerCase();
+  if (!f || f.q !== q || f.si !== si) { const list = []; for (let r = 1; r <= sh.R; r++) for (let c = 1; c <= sh.C; c++) { const raw = SHX.eng.cellRaw(k, si, r, c); if (!raw) continue; if (shxDT(k, si, r, c).toLowerCase().includes(ql) || (raw.f && raw.f.toLowerCase().includes(ql))) list.push([r, c]); } SHX.find = { q, si, list, i:-1 }; }
+  const F = SHX.find; if (!F.list.length) return toast('مفيش نتايج'); F.i = (F.i + 1) % F.list.length; const [r, c] = F.list[F.i]; SHX.sel = [r, c]; SHX.rg = null; shxDraw(false); const td = document.querySelector('#shx-t td[data-r="' + r + '"][data-c="' + c + '"]'); if (td) { shxSelect(td); if (td.scrollIntoView) td.scrollIntoView({ block:'center', inline:'center' }); } toast((F.i + 1) + ' من ' + F.list.length + ' (دوس بحث تاني للنتيجة اللي بعدها)');
+}
+function shxReplaceAll() {
+  const q = prompt('استبدل'); if (!q) return; const w = prompt('بـ', ''); if (w == null) return; const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'); let n = 0;
+  shxEdit((d, sh) => { for (const x of sh.cells) { if (typeof x[3] === 'string' && re.test(x[3])) { re.lastIndex = 0; x[3] = x[3].replace(re, () => { n++; return w; }); } re.lastIndex = 0; if (typeof x[2] === 'string' && re.test(x[2])) { re.lastIndex = 0; x[2] = x[2].replace(re, () => { n++; return w; }); } re.lastIndex = 0; } }, true); toast('اتبدل ' + n + ' مرة');
+}
+const SHX_TS = { 'أخضر':['217346', 'E2F0D9'], 'أزرق':['2F5597', 'DEEAF6'], 'برتقالي':['C55A11', 'FBE5D6'], 'رمادي':['404040', 'EDEDED'] };
+function shxTableStyle(g) {
+  const [r1, c1, r2, c2] = shxRegion(g); shxMenu('تنسيق كجدول', Object.keys(SHX_TS).map(n => ({ l:n, fn:() => { const [hc, bc] = SHX_TS[n], L = ['thin', 'BFBFBF']; shxStyle((o, r) => { o.bd = [L, L, L, L]; if (r === r1) { o.bg = hc; o.fc = 'FFFFFF'; o.b = 1; } else { o.bg = (r - r1) % 2 ? 'FFFFFF' : bc; delete o.fc; delete o.b; } }, [r1, c1, r2, c2]); } })));
+}
+function shxChartMenu(rg) {
+  const T = [['bar', 'أعمدة'], ['barh', 'أعمدة أفقية'], ['line', 'خطي'], ['area', 'مساحة'], ['pie', 'دائري']]; shxMenu('رسم بياني', T.map(([t, l]) => ({ l, fn:() => { const g = shxRegion(rg), ttl = prompt('عنوان الرسم (اختياري)', '') || ''; if (g[0] === g[2] && g[1] === g[3]) return toast('اختار بيانات الأول'); shxEdit((d, sh) => { sh.ch = sh.ch || []; sh.ch.push({ id:'c' + Date.now().toString(36), t, rg:g, ttl }); }, true); toast('اتضاف الرسم تحت الجدول'); } })));
+}
+function shxChartTap(id) {
+  const sh = SHX.D[SHX.wb].sh[SHX.si], ch = (sh.ch || []).find(x => x.id === id); if (!ch) return; const T = [['bar', 'أعمدة'], ['barh', 'أعمدة أفقية'], ['line', 'خطي'], ['area', 'مساحة'], ['pie', 'دائري']];
+  shxMenu('الرسم البياني', [{ l:'تغيير النوع', fn:() => shxMenu('النوع', T.map(([t, l]) => ({ l, fn:() => shxEdit((d, s2) => { const c = s2.ch.find(x => x.id === id); if (c) c.t = t; }, true) }))) }, { l:'تغيير العنوان', fn:() => { const t = prompt('العنوان', ch.ttl || ''); if (t != null) shxEdit((d, s2) => { const c = s2.ch.find(x => x.id === id); if (c) c.ttl = t; }, true); } }, { l:'تحديد بيانات الرسم', fn:() => { SHX.rg = ch.rg.slice(); SHX.sel = [ch.rg[0], ch.rg[1]]; shxDraw(false); shxRgShow(); } }, { l:'حذف الرسم', d:1, fn:() => shxEdit((d, s2) => { s2.ch = s2.ch.filter(x => x.id !== id); }, true) }]);
+}
+function shxAct2(a, rg) {
+  const k = SHX.wb;
+  if (a === 'fnd') return shxMenu('بحث واستبدال', [{ l:'بحث…', fn:shxFind }, { l:'استبدال الكل…', fn:shxReplaceAll }]);
+  if (a === 'fil') return shxMenu('تعبئة', [{ l:'لأسفل (نسخ)', fn:() => shxFill('d', rg) }, { l:'لأسفل (سلسلة أرقام)', fn:() => shxFill('s', rg) }, { l:'لليمين (نسخ)', fn:() => shxFill('r', rg) }]);
+  if (a === 'fp') { if (!SHX.fpS) { SHX.fpS = { ...shxStyleAt(rg[0], rg[1]) }; return toast('اختار الخلايا اللي هتطبق عليها وادوس فرشاة التنسيق تاني'); } const stl = SHX.fpS; SHX.fpS = null; return shxStyle(o => { for (const q of Object.keys(o)) delete o[q]; Object.assign(o, JSON.parse(JSON.stringify(stl))); }, rg); }
+  if (a === 'cfm') return shxCfMenu(rg); if (a === 'ts') return shxTableStyle(rg); if (a === 'chm') return shxChartMenu(rg);
+  if (a === 'dvm') return shxMenu('قائمة منسدلة', [{ l:'اكتب عناصر القايمة', fn:() => { const t = prompt('العناصر مفصولة بفاصلة (مثال: نعم,لا)'); if (!t) return; const list = t.split(/[,،]/).map(x => x.trim()).filter(Boolean); shxEdit((d, sh) => { sh.dv = (sh.dv || []).filter(x => !(x.rg[0] <= rg[2] && x.rg[2] >= rg[0] && x.rg[1] <= rg[3] && x.rg[3] >= rg[1])); sh.dv.push({ rg:rg.slice(), list }); }, true); toast('دوس مرتين على الخلية تظهر القايمة'); } }, { l:'من نطاق خلايا', fn:() => { const t = prompt('النطاق (مثال: E1:E10 أو Sheet2!A1:A5)'); if (!t) return; shxEdit((d, sh) => { sh.dv = (sh.dv || []).filter(x => !(x.rg[0] <= rg[2] && x.rg[2] >= rg[0] && x.rg[1] <= rg[3] && x.rg[3] >= rg[1])); sh.dv.push({ rg:rg.slice(), ref:t.trim() }); }, true); toast('دوس مرتين على الخلية تظهر القايمة'); } }, { l:'مسح القايمة المنسدلة', d:1, fn:() => shxEdit((d, sh) => { sh.dv = (sh.dv || []).filter(x => !(x.rg[0] <= rg[2] && x.rg[2] >= rg[0] && x.rg[1] <= rg[3] && x.rg[3] >= rg[1])); }, true) }]);
+  if (a === 'ft') { const sh = SHX.D[k].sh[SHX.si]; if (sh.fr) return shxEdit((d, s2) => { delete s2.fr; delete s2.fc; s2.flt = {}; }, true); const g = shxRegion(rg); if (g[0] === g[2] && g[1] === g[3]) return toast('اختار خلية جوه الجدول'); return shxEdit((d, s2) => { s2.fr = g[0]; s2.fc = [g[1], g[3]]; s2.flt = {}; }, true); }
+  if (a === 'fc') return shxEdit((d, s2) => { s2.flt = {}; }, true);
+  if (a === 'rdp') return shxRemoveDup(rg);
+  if (a === 'fzm') { const set = z => shxEdit((d, s2) => { if (z) s2.fz = z; else delete s2.fz; }, true); return shxMenu('تجميد', [{ l:'تجميد الصف الأول', fn:() => set([1, 0]) }, { l:'تجميد العمود الأول', fn:() => set([0, 1]) }, { l:'تجميد الصفوف والأعمدة قبل الخلية المحددة', fn:() => set([rg[0] - 1, rg[1] - 1]) }, { l:'إلغاء التجميد', fn:() => set(null) }]); }
+  if (a === 'gl') return shxEdit((d, s2) => { s2.ng = s2.ng ? 0 : 1; }, true);
+  if (a === 'hr') return shxEdit((d, s2) => { for (let r = rg[0]; r <= rg[2]; r++) s2.rh[r] = [s2.rh[r] ? s2.rh[r][0] : 20, 1]; }, true);
+  if (a === 'hc') return shxEdit((d, s2) => { for (let c = rg[1]; c <= rg[3]; c++) s2.cw[c] = [s2.cw[c] ? s2.cw[c][0] : 69, 1]; }, true);
+  if (a === 'uh') return shxEdit((d, s2) => { for (const x of Object.keys(s2.rh)) s2.rh[x] = [s2.rh[x][0], 0]; for (const x of Object.keys(s2.cw)) s2.cw[x] = [s2.cw[x][0], 0]; }, true);
+  if (a.startsWith('po:')) { const v = a.slice(3); return shxEdit((d, s2) => { if (v === 'a') delete s2.po; else s2.po = v; }, true), toast(v === 'p' ? 'الطباعة طولي' : v === 'l' ? 'الطباعة عرضي' : 'الطباعة تلقائي'); }
+  if (a === 'shdup') return (shxEdit((d, sh) => { let n = sh.n + ' (2)', i = 2; while (d.sh.some(x => x.n === n)) n = sh.n + ' (' + (++i) + ')'; const cp = JSON.parse(JSON.stringify(sh)); cp.n = n; d.sh.splice(SHX.si + 1, 0, cp); SHX.si = SHX.si + 1; }), shxDraw(true));
+  if (a === 'shl' || a === 'shr2') { const dr = a === 'shl' ? 1 : -1; return (shxEdit((d, sh) => { const j = SHX.si + dr; if (j < 0 || j >= d.sh.length) return false; [d.sh[SHX.si], d.sh[j]] = [d.sh[j], d.sh[SHX.si]]; SHX.si = j; }), shxDraw(true)); }
+  if (a === 'imp') return $('#shx-file').click();
+}
 /* ---- مُوزّع أوامر الشريط ---- */
 function shxAct(a) {
   const k = SHX.wb; if (!shxU(k) || !canWrite()) return;
   if (a === 'un') return shxUndo(false); if (a === 're') return shxUndo(true);
   if (a === 'rg') { if (!SHX.sel) return toast('اختار أول خلية في النطاق الأول'); SHX.rm = !SHX.rm; if (SHX.rm) toast('دوس على آخر خلية في النطاق'); return shxRbSync(); }
   SHX.rm = false;
-  if (a === 'cp') return shxCopy(false); if (a === 'ct') return shxCopy(true); if (a === 'ps') return shxPaste();
+  if (a === 'cp') return shxCopy(false); if (a === 'ct') return shxCopy(true); if (a === 'ps') return shxPaste(false); if (a === 'psm') { if (!SHX.clip) return toast('انسخ خلايا الأول'); return shxPaste(true); }
   if (a === 'z-' || a === 'z+' || a === 'zf') return document.querySelector('[data-z="' + (a === 'z-' ? '-' : a === 'z+' ? '+' : 'fit') + '"]').click();
   if (a === 'sh+' || a === 'shr' || a === 'shd' || a === 'shm') { if (a === 'sh+') return shxUAct('sh+'); const d = shxWData(k), sh = d.sh[SHX.si]; if (a === 'shm') { shxSnap(k); sh.rtl = !sh.rtl; shxWSave(k, d); return shxDraw(true); } SHX.pk = a === 'shr' ? 'ren' : 'del'; return shxUAct('sh'); }
   if (a === 'pdf') { const w = SHX.D[k]; if (w.sh.length < 2) return shxPrint(false); return shxMenu('طباعة / PDF', [{ l:'طباعة الشيت ده بس (' + w.sh[SHX.si].n + ')', fn:() => shxPrint(false) }, { l:'طباعة الملف كله (' + w.sh.length + ' شيتات)', fn:() => shxPrint(true) }]); }
-  if (a === 'xp') return shxExport(k); if (a === 'frn') return shxRenFile(k); if (a === 'fmv') return shxMoveMenu(k); if (a === 'fdl') return shxDelFile(k);
+  if (a === 'xp') return shxExport(k); if (a === 'frn') return shxRenFile(k); if (a === 'fmv') return shxMoveMenu(k); if (a === 'fdl') return shxDelAny(k);
   if (a === 'fx') return shxFxMenu();
   if (a === 'as') return shxMenu('جمع تلقائي', [['SUM', 'جمع'], ['AVERAGE', 'متوسط'], ['COUNT', 'عدد'], ['MAX', 'أكبر قيمة'], ['MIN', 'أصغر قيمة']].map(x => ({ l:x[1], fn:() => shxAutoSum(x[0]) })));
   if (a.startsWith('as:')) return shxAutoSum(a.slice(3));
   if (a === 'sa') return shxSort(false); if (a === 'sd') return shxSort(true);
   const rg = shxTR(); if (!rg) return toast('اختار خلية الأول');
+  if (shxAct2(a, rg) !== undefined || ['fnd', 'fil', 'fp', 'cfm', 'ts', 'chm', 'dvm', 'ft', 'fc', 'rdp', 'fzm', 'gl', 'hr', 'hc', 'uh', 'shdup', 'shl', 'shr2', 'imp'].includes(a) || a.startsWith('po:')) return;
   const n = rg[2] - rg[0] + 1, m = rg[3] - rg[1] + 1;
   if (a === 'ri-') return shxStruct('r', rg[0], n, false); if (a === 'ri+') return shxStruct('r', rg[2] + 1, n, false); if (a === 'rd') return shxStruct('r', rg[0], n, true);
   if (a === 'ci-') return shxStruct('c', rg[1], m, false); if (a === 'ci+') return shxStruct('c', rg[3] + 1, m, false); if (a === 'cd') return shxStruct('c', rg[1], m, true);
@@ -2025,7 +2211,7 @@ async function shxBuildXlsx(k) {
     xfs.push('<xf numFmtId="' + nid + '" fontId="' + fo + '" fillId="' + fi + '" borderId="' + bo + '" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"' + (al ? ' applyAlignment="1"><alignment' + al + '/></xf>' : '/>'));
     return (seen[kk] = xfs.length - 1);
   };
-  const sheetsXml = [];
+  const sheetsXml = [], dxfs = [];
   for (let si = 0; si < w.sh.length; si++) {
     const sh = w.sh[si], rows = new Map(), add = (r, c) => { if (!rows.has(r)) rows.set(r, new Set()); rows.get(r).add(c); };
     for (const c of sh.cells) add(c[0], c[1]);
@@ -2050,14 +2236,34 @@ async function shxBuildXlsx(k) {
       sd += '</row>';
     }
     let cols = ''; for (const c of Object.keys(sh.cw).map(Number).sort((a, b) => a - b)) { const d = sh.cw[c]; cols += '<col min="' + c + '" max="' + c + '" width="' + Math.max(1, (d[0] - 5) / 7).toFixed(2) + '" customWidth="1"' + (d[1] ? ' hidden="1"' : '') + '/>'; }
-    sheetsXml.push('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"' + (sh.rtl ? ' rightToLeft="1"' : '') + '/></sheetViews><sheetFormatPr defaultRowHeight="15"/>' + (cols ? '<cols>' + cols + '</cols>' : '') + '<sheetData>' + sd + '</sheetData>' + (sh.mg.length ? '<mergeCells count="' + sh.mg.length + '">' + sh.mg.map(m => '<mergeCell ref="' + X(m) + '"/>').join('') + '</mergeCells>' : '') + '</worksheet>');
+    const L = SHX_ENG.colL, rgS = g => L(g[1]) + g[0] + (g[0] === g[2] && g[1] === g[3] ? '' : ':' + L(g[3]) + g[2]); let tail = '';
+    if (sh.fr && sh.fc) tail += '<autoFilter ref="' + L(sh.fc[0]) + sh.fr + ':' + L(sh.fc[1]) + Math.max(sh.R, sh.fr) + '"/>';
+    if (sh.mg.length) tail += '<mergeCells count="' + sh.mg.length + '">' + sh.mg.map(m => '<mergeCell ref="' + X(m) + '"/>').join('') + '</mergeCells>';
+    let pr = 1; for (const ru of sh.cf || []) {
+      const a = ru.a, q = isNaN(+a) || a === '' ? '"' + X(a) + '"' : a, fc = L(ru.rg[1]) + ru.rg[0], OP = { gt:'greaterThan', lt:'lessThan', ge:'greaterThanOrEqual', le:'lessThanOrEqual', eq:'equal', ne:'notEqual' };
+      let dx = ''; if (ru.t !== 'cs') { dxfs.push('<dxf>' + (ru.fc || ru.bo ? '<font>' + (ru.bo ? '<b/>' : '') + (ru.fc ? '<color rgb="FF' + ru.fc + '"/>' : '') + '</font>' : '') + (ru.bg ? '<fill><patternFill><bgColor rgb="FF' + ru.bg + '"/></patternFill></fill>' : '') + '</dxf>'); dx = ' dxfId="' + (dxfs.length - 1) + '"'; }
+      let body = ''; const h = '<cfRule type="'; const pa = ' priority="' + (pr++) + '"';
+      if (OP[ru.t]) body = h + 'cellIs"' + dx + pa + ' operator="' + OP[ru.t] + '"><formula>' + q + '</formula></cfRule>';
+      else if (ru.t === 'bt') body = h + 'cellIs"' + dx + pa + ' operator="between"><formula>' + ru.a + '</formula><formula>' + ru.b + '</formula></cfRule>';
+      else if (ru.t === 'ct') body = h + 'containsText"' + dx + pa + ' operator="containsText" text="' + X(a) + '"><formula>NOT(ISERROR(SEARCH("' + X(a) + '",' + fc + ')))</formula></cfRule>';
+      else if (ru.t === 'nct') body = h + 'notContainsText"' + dx + pa + ' operator="notContains" text="' + X(a) + '"><formula>ISERROR(SEARCH("' + X(a) + '",' + fc + '))</formula></cfRule>';
+      else if (ru.t === 'dp') body = h + 'duplicateValues"' + dx + pa + '/>'; else if (ru.t === 'up') body = h + 'uniqueValues"' + dx + pa + '/>';
+      else if (ru.t === 'tp' || ru.t === 'bp') body = h + 'top10"' + dx + pa + (ru.t === 'bp' ? ' bottom="1"' : '') + ' rank="' + (+a || 10) + '"/>';
+      else if (ru.t === 'ab' || ru.t === 'be') body = h + 'aboveAverage"' + dx + pa + (ru.t === 'be' ? ' aboveAverage="0"' : '') + '/>';
+      else if (ru.t === 'cs') body = h + 'colorScale"' + pa + '><colorScale><cfvo type="min"/>' + (ru.cols.length === 3 ? '<cfvo type="percentile" val="50"/>' : '') + '<cfvo type="max"/>' + ru.cols.map(c => '<color rgb="FF' + c + '"/>').join('') + '</colorScale></cfRule>';
+      if (body) tail += '<conditionalFormatting sqref="' + rgS(ru.rg) + '">' + body + '</conditionalFormatting>';
+    }
+    if ((sh.dv || []).length) tail += '<dataValidations count="' + sh.dv.length + '">' + sh.dv.map(v => '<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="' + rgS(v.rg) + '"><formula1>' + (v.list ? '"' + X(v.list.join(',')) + '"' : X(v.ref.replace(/^=/, ''))) + '</formula1></dataValidation>').join('') + '</dataValidations>';
+    if (sh.po) tail += '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/><pageSetup orientation="' + (sh.po === 'l' ? 'landscape' : 'portrait') + '"/>';
+    const fz = sh.fz && (sh.fz[0] || sh.fz[1]) ? sh.fz : null, pane = fz ? '<pane' + (fz[1] ? ' xSplit="' + fz[1] + '"' : '') + (fz[0] ? ' ySplit="' + fz[0] + '"' : '') + ' topLeftCell="' + L(fz[1] + 1) + (fz[0] + 1) + '" activePane="' + (fz[0] && fz[1] ? 'bottomRight' : fz[0] ? 'bottomLeft' : 'topRight') + '" state="frozen"/>' : '';
+    sheetsXml.push('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"' + (sh.rtl ? ' rightToLeft="1"' : '') + (sh.ng ? ' showGridLines="0"' : '') + (pane ? '>' + pane + '</sheetView>' : '/>') + '</sheetViews><sheetFormatPr defaultRowHeight="15"/>' + (cols ? '<cols>' + cols + '</cols>' : '') + '<sheetData>' + sd + '</sheetData>' + tail + '</worksheet>');
   }
   const H = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"';
   const files = [{ n:'[Content_Types].xml', d:H + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' + w.sh.map((x, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') + '</Types>' },
     { n:'_rels/.rels', d:H + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
     { n:'xl/workbook.xml', d:H + '<workbook ' + NS + ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' + w.sh.map((x, i) => '<sheet name="' + X(x.n) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets></workbook>' },
     { n:'xl/_rels/workbook.xml.rels', d:H + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + w.sh.map((x, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') + '<Relationship Id="rId' + (w.sh.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' }];
-  files.push({ n:'xl/styles.xml', d:H + '<styleSheet ' + NS + '>' + (nfs.length ? '<numFmts count="' + nfs.length + '">' + nfs.map((f, i) => '<numFmt numFmtId="' + (164 + i) + '" formatCode="' + X(f) + '"/>').join('') + '</numFmts>' : '') + '<fonts count="' + fonts.length + '">' + fonts.join('') + '</fonts><fills count="' + fills.length + '">' + fills.join('') + '</fills><borders count="' + bords.length + '">' + bords.join('') + '</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="' + xfs.length + '">' + xfs.join('') + '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' });
+  files.push({ n:'xl/styles.xml', d:H + '<styleSheet ' + NS + '>' + (nfs.length ? '<numFmts count="' + nfs.length + '">' + nfs.map((f, i) => '<numFmt numFmtId="' + (164 + i) + '" formatCode="' + X(f) + '"/>').join('') + '</numFmts>' : '') + '<fonts count="' + fonts.length + '">' + fonts.join('') + '</fonts><fills count="' + fills.length + '">' + fills.join('') + '</fills><borders count="' + bords.length + '">' + bords.join('') + '</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="' + xfs.length + '">' + xfs.join('') + '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' + (dxfs.length ? '<dxfs count="' + dxfs.length + '">' + dxfs.join('') + '</dxfs>' : '') + '</styleSheet>' });
   sheetsXml.forEach((x, i) => files.push({ n:'xl/worksheets/sheet' + (i + 1) + '.xml', d:x }));
   return await shxZipBuild(files);
 }
@@ -2073,6 +2279,8 @@ function shxInit() {
     const t = e.target;
     if (t.closest('#shx-hb')) { if (SHX.fd) { SHX.fd = null; return renderSHX(); } return back(); }
     const ac = t.closest('[data-a]'); if (ac) { const k = ac.dataset.a; if (k === 'nf') { shxNewFolder(); renderSHX(); } else if (k === 'nw') shxNewFile(); else if (k === 'im') $('#shx-file').click(); else if (k === 'hid') { SHX.sh2 = !SHX.sh2; renderSHX(); } return; }
+    const dl = t.closest('[data-dl]'); if (dl) return shxDelAny(dl.dataset.dl);
+    const dfo = t.closest('[data-df]'); if (dfo) return shxDelFolder(dfo.dataset.df);
     const mf = t.closest('[data-mf]'); if (mf) return shxFolderMenu(mf.dataset.mf);
     const mm = t.closest('[data-m]'); if (mm) return shxFileMenu(mm.dataset.m);
     const fdc = t.closest('[data-fd]'); if (fdc) { SHX.fd = fdc.dataset.fd; renderSHX(); window.scrollTo(0, 0); return; }
@@ -2083,11 +2291,13 @@ function shxInit() {
     const td = t.closest('#shx-t td'); if (td) {
       if (SHX.rm && SHX.sel) { const r = +td.dataset.r, c = +td.dataset.c; SHX.rg = [Math.min(r, SHX.sel[0]), Math.min(c, SHX.sel[1]), Math.max(r, SHX.sel[0]), Math.max(c, SHX.sel[1])]; SHX.rm = false; shxDraw(false); shxRgShow(); return; }
       if (SHX.fe && SHX.sel) { const i = $('#shx-in'), ref = shxA(+td.dataset.r, +td.dataset.c); let v = i.value; if (/[=+\-*\/^&(,;:<>]$/.test(v)) v += ref; else v = v.replace(/\$?[A-Z]{1,3}\$?\d+$/, ref); i.value = v; i.dir = 'ltr'; i.focus(); return; }
-      const same = SHX.selTd === td, had = !!SHX.rg; shxSelect(td); if (had) { SHX.rg = null; shxDraw(false); } else if (same && canWrite()) $('#shx-in').focus(); return; }
+      if (td.classList.contains('fh') && shxU(SHX.wb) && canWrite() && !SHX.rg) { shxSelect(td); return shxFilterMenu(+td.dataset.c); }
+      const same = SHX.selTd === td, had = !!SHX.rg; if (same && !had && shxU(SHX.wb) && canWrite() && shxDvAt(+td.dataset.r, +td.dataset.c) && shxDvPick(+td.dataset.r, +td.dataset.c)) return; shxSelect(td); if (had) { SHX.rg = null; shxDraw(false); } else if (same && canWrite()) $('#shx-in').focus(); return; }
     if (t.closest('#shx-ok')) return shxCommit();
     if (t.closest('#shx-no')) { SHX.fe = false; $('#shx-in').value = SHX.orig || ''; $('#shx-in').blur(); return; }
     if (t.closest('#shx-rs')) return shxRestoreCell();
     if (t.closest('#shx-pdf')) { const w = SHX.D[SHX.wb]; if (w.sh.length < 2) return shxPrint(false); return shxMenu('طباعة / PDF', [{ l:'طباعة الشيت ده بس (' + w.sh[SHX.si].n + ')', fn:() => shxPrint(false) }, { l:'طباعة الملف كله (' + w.sh.length + ' شيتات)', fn:() => shxPrint(true) }]); }
+    const chc = t.closest('[data-chid]'); if (chc && shxU(SHX.wb) && canWrite()) return shxChartTap(chc.dataset.chid);
     const rt = t.closest('[data-rt]'); if (rt) { SHX.rt = rt.dataset.rt; shxRbRender(); return; }
     const fb = t.closest('[data-fm]'); if (fb) return shxAct(fb.dataset.fm);
     const zb = t.closest('[data-z]'); if (zb) { const k = zb.dataset.z; if (k === 'fit') { const w = $('#shx-w').clientWidth - 4; SHX.z = Math.max(0.25, Math.min(1.5, w / SHX.tw)); } else SHX.z = Math.max(0.3, Math.min(2.5, SHX.z + (k === '+' ? 0.15 : -0.15))); $('#shx-t').style.zoom = SHX.z; $('#shx-zl').textContent = Math.round(SHX.z * 100) + '%'; return; }
