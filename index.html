@@ -325,11 +325,28 @@ button.rb.on{background:#EEF4EC;border-color:var(--green);color:var(--green-d)}
 button.rb.w{min-width:92px}
 button.rb svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .sxt td.fe{outline:2.5px dashed #C0392B;outline-offset:-2px}
-.sxt td.fzc{background-color:#fff}
+:where(.sxt td.fzc){background-color:#fff}
 .sxt.ng td{box-shadow:none}
 .sxt td.fh::after{content:' ▾';font-size:10px;color:#1E6FE8;float:inline-end}.sxt td.fa::after{color:#C0392B;content:' ▾●'}
 .shsb{padding:3px 12px;font-size:12px;color:var(--muted);background:var(--paper);border-bottom:1px solid var(--line);min-height:0;display:none}
 .chc{background:#fff;border:1px solid var(--line);border-radius:12px;margin:8px 12px;padding:6px;cursor:pointer}.chc b{display:block;text-align:center;font-size:13px;margin-bottom:2px}
+body.shxf header,body.shxf nav{display:none!important}
+body.shxf main{padding:0!important}
+body.shxf #shx-sheet{position:fixed;inset:0;z-index:20;background:var(--paper);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+body.shxf #shx-sheet .sub{position:static;padding:3px 8px;gap:6px}
+body.shxf #shx-sheet .sub button{width:36px;height:36px}
+body.shxf #shx-sheet .sub b{font-size:15px}
+body.shxf .shw{flex:1;max-height:none;min-height:0}
+body.shxf #shx-tabs{order:9;padding:3px 8px calc(3px + env(safe-area-inset-bottom));border-top:1px solid var(--line);border-bottom:0}
+body.shxf .shtabs button{min-height:30px;padding:2px 12px;font-size:13px}
+body.shxf .shfx{padding:3px 8px}
+body.shxf .shfx input{padding:3px 8px;height:32px}
+body.shxf .shfx button{height:32px}
+body.shxf #shx-ch{order:8}
+#shx-sheet.uf .shtl,#shx-sheet.uf #shx-pdf{display:none}
+.rbt .rbtg{padding:8px 10px;font-size:16px}
+.chb{display:flex;gap:6px;padding:4px 8px;overflow-x:auto;background:var(--paper);border-top:1px solid var(--line);align-items:center;font-size:12px;color:var(--muted)}
+.chb button{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:2px 12px;font-weight:700;font-size:13px;min-height:30px;flex:none;cursor:pointer}
 #shxprint{display:none}
 @media print{body.sx>*:not(#shxprint){display:none!important}body.sx{background:#fff}body.sx #shxprint{display:block!important}#shxprint .shph{font-size:16px;margin:0 0 8px;direction:rtl}#shxprint td{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none!important}#shxprint tr{page-break-inside:avoid}}
 </style>
@@ -1388,13 +1405,14 @@ function shxOv(wb) { const d = S.docs.get('shx:' + wb); return d && !d.deleted &
 const shxEdCount = wb => { const o = shxOv(wb); return o ? Object.keys(o).length : 0; };
 function renderSHX() {
   if (!SHX.D) { $('#shx-list').innerHTML = '<div class="empty" style="padding:30px;text-align:center">بنفتح الملفات…</div>'; $('#shx-list').classList.remove('hide'); $('#shx-sheet').classList.add('hide'); shxLoad().then(ok => { if (ok && S.view === 'shx') renderSHX(); }); return; }
-  shxUserSync(); if (SHX.wb && !SHX.D[SHX.wb]) SHX.wb = null;
+  shxUserSync(); if (SHX.wb && !SHX.D[SHX.wb]) SHX.wb = null; document.body.classList.toggle('shxf', !!SHX.wb);
   if (!SHX.wb) { $('#shx-sheet').classList.add('hide'); shxList(); return; }
   $('#shx-list').classList.add('hide'); $('#shx-sheet').classList.remove('hide'); shxDraw(true);
 }
+const shxDark = h => { const x = [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)); return (0.299 * x[0] + 0.587 * x[1] + 0.114 * x[2]) / 255 < 0.5; };
 function shxCss(wb) {
   const st = SHX.D[wb].st, bd = b => { if (!b) return ''; const w = { thin:'1px solid', medium:'2px solid', thick:'3px solid', dashed:'1px dashed', dotted:'1px dotted', hair:'1px dotted', double:'3px double', mediumDashed:'2px dashed' }[b[0]] || '1px solid'; return w + ' #' + (b[1] || '000000'); };
-  return st.map((s, i) => '.sx' + i + '{' + (s.b ? 'font-weight:700;' : '') + (s.i ? 'font-style:italic;' : '') + (s.ff ? "font-family:'" + String(s.ff).replace(/['"\\]/g, '') + "',system-ui,sans-serif;" : '') + (s.u || s.sk ? 'text-decoration:' + [s.u ? 'underline' : '', s.sk ? 'line-through' : ''].filter(Boolean).join(' ') + ';' : '') + (s.fc ? 'color:#' + s.fc + ';' : '') + (s.fs ? 'font-size:' + Math.round(s.fs * 1.1) + 'px;' : '') + (s.bg ? 'background:#' + s.bg + ';' : '') +
+  return st.map((s, i) => '.sx' + i + '{' + (s.b ? 'font-weight:700;' : '') + (s.i ? 'font-style:italic;' : '') + (s.ff ? "font-family:'" + String(s.ff).replace(/['"\\]/g, '') + "',system-ui,sans-serif;" : '') + (s.u || s.sk ? 'text-decoration:' + [s.u ? 'underline' : '', s.sk ? 'line-through' : ''].filter(Boolean).join(' ') + ';' : '') + (s.fc ? 'color:#' + s.fc + ';' : (s.bg && shxDark(s.bg) ? 'color:#fff;' : '')) + (s.fs ? 'font-size:' + Math.round(s.fs * 1.1) + 'px;' : '') + (s.bg ? 'background:#' + s.bg + ';' : '') +
     (s.bd ? ['left', 'right', 'top', 'bottom'].map((n, j) => s.bd[j] ? 'border-' + n + ':' + bd(s.bd[j]) + ';' : '').join('') : '') +
     (s.h && s.h !== 'general' ? 'text-align:' + (s.h === 'centerContinuous' ? 'center' : s.h) + ';' : '') + 'vertical-align:' + (s.va === 'center' ? 'middle' : s.va === 'top' ? 'top' : 'bottom') + ';' + (s.w ? 'white-space:pre-wrap;word-break:break-word;' : '') + '}').join('');
 }
@@ -1428,7 +1446,9 @@ function shxTable(wb, si, forPrint, gap) {
   const cov = new Set(), anc = new Map();
   for (const m of sh.mg) { const p = m.split(':'), a = /([A-Z]+)(\d+)/.exec(p[0]), b = /([A-Z]+)(\d+)/.exec(p[1] || p[0]); const c1 = SHX_ENG.colN(a[1]), r1 = +a[2], c2 = SHX_ENG.colN(b[1]), r2 = +b[2]; anc.set(r1 * 100000 + c1, [r2 - r1 + 1, c2 - c1 + 1]); for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) if (r !== r1 || c !== c1) cov.add(r * 100000 + c); }
   let R = Math.max(sh.R, ...Object.keys(ov).filter(k => k.startsWith(sh.n + '!')).map(k => +k.slice(sh.n.length + 1).replace(/^[A-Z]+/, '')), 1), C = sh.C;
-  const fz = uf && sh.fz ? sh.fz : [0, 0], colW = [], leftOf = []; let cg = uf ? '<col style="width:34px">' : '', tw = uf ? 34 : 0, lx = uf ? 34 : 0;
+  const fz = uf && sh.fz ? sh.fz.slice() : [0, 0], colW = [], leftOf = [];
+  if (fz[0]) { let hs = 0; for (let r = 1; r <= fz[0]; r++) { const d = sh.rh[r]; hs += d && d[1] ? 0 : (d ? d[0] : 20); } if (hs > 200) fz[0] = 0; }
+  if (fz[1]) { let ws = 0; for (let c = 1; c <= fz[1]; c++) { const d = sh.cw[c]; ws += d && d[1] ? 0 : (d ? d[0] : 69); } if (ws > 260) fz[1] = 0; } let cg = uf ? '<col style="width:34px">' : '', tw = uf ? 34 : 0, lx = uf ? 34 : 0;
   for (let c = 1; c <= C; c++) { const d = sh.cw[c], w = d && d[1] ? 0 : (d ? d[0] : 69); colW[c] = w; leftOf[c] = lx; lx += w; tw += w; cg += '<col style="width:' + w + 'px">'; }
   let h = '<colgroup>' + cg + '</colgroup>';
   if (uf) { h += '<tr style="height:20px"><th data-all="1" style="position:sticky;top:0;inset-inline-start:0;z-index:6"></th>'; for (let c = 1; c <= C; c++) { const d = sh.cw[c]; if (d && d[1]) continue; h += '<th data-ch="' + c + '" style="position:sticky;top:0;z-index:' + (c <= fz[1] ? 5 : 4) + (c <= fz[1] ? ';inset-inline-start:' + leftOf[c] + 'px' : '') + '">' + SHX_ENG.colL(c) + '</th>'; } h += '</tr>'; }
@@ -1443,18 +1463,18 @@ function shxTable(wb, si, forPrint, gap) {
       const k = r * 100000 + c; if (cov.has(k)) continue; const cd = sh.cw[c]; if (cd && cd[1]) continue;
       const b = base.get(k), s = b ? b[4] : -1, v = eng.get(wb, si, r, c), stl = st[s], a = anc.get(k), key = sh.n + '!' + shxA(r, c), od = ov[key], txt = dt(r, c);
       let sty = ''; if (rfz || c <= fz[1]) sty += 'position:sticky;z-index:' + (rfz && c <= fz[1] ? 3 : 2) + ';' + (rfz ? 'top:' + ytop + 'px;' : '') + (c <= fz[1] ? 'inset-inline-start:' + leftOf[c] + 'px;' : '');
-      for (const f of cfs) { const x = f(r, c, v); if (x) { if (x.bg) sty += 'background:#' + x.bg + ';'; if (x.fc) sty += 'color:#' + x.fc + ';'; if (x.b) sty += 'font-weight:700;'; } }
+      for (const f of cfs) { const x = f(r, c, v); if (x) { if (x.bg) sty += 'background:#' + x.bg + ';'; if (x.fc) sty += 'color:#' + x.fc + ';'; else if (x.bg && shxDark(x.bg)) sty += 'color:#fff;'; if (x.b) sty += 'font-weight:700;'; } }
       const isF = sh.fc && fr === r && c >= sh.fc[0] && c <= sh.fc[1];
-      h += '<td' + (forPrint ? '' : ' data-r="' + r + '" data-c="' + c + '"') + ' class="' + (s >= 0 ? 'sx' + s : '') + (ov[key] && !shxU(wb) ? ' ed' : '') + (uf && SHX.rg && wb === SHX.wb && r >= SHX.rg[0] && r <= SHX.rg[2] && c >= SHX.rg[1] && c <= SHX.rg[3] ? ' rg' : '') + (SHX_ENG.isE(v) ? ' er' : '') + (rfz || c <= fz[1] ? ' fzc' : '') + (isF && !forPrint ? ' fh' + (flt && flt[c] && flt[c].length ? ' fa' : '') : '') + '"' + (sty ? ' style="' + sty + '"' : '') + (a ? ' rowspan="' + a[0] + '" colspan="' + a[1] + '"' : '') + '>' + esc(txt) + '</td>';
+      h += '<td' + (forPrint ? '' : ' data-r="' + r + '" data-c="' + c + '"') + ' class="' + (s >= 0 ? 'sx' + s : '') + (ov[key] && !shxU(wb) ? ' ed' : '') + (uf && SHX.rg && wb === SHX.wb && r >= SHX.rg[0] && r <= SHX.rg[2] && c >= SHX.rg[1] && c <= SHX.rg[3] ? ' rg' : '') + (SHX_ENG.isE(v) ? ' er' : '') + ((rfz || c <= fz[1]) && !(stl && stl.bg) ? ' fzc' : '') + (isF && !forPrint ? ' fh' + (flt && flt[c] && flt[c].length ? ' fa' : '') : '') + '"' + (sty ? ' style="' + sty + '"' : '') + (a ? ' rowspan="' + a[0] + '" colspan="' + a[1] + '"' : '') + '>' + esc(txt) + '</td>';
     }
     h += '</tr>'; if (rfz) ytop += rh;
   }
   return { html: h, tw, rtl: sh.rtl };
 }
 function shxDraw(full) {
-  const w = SHX.D[SHX.wb]; if (SHX.si >= w.sh.length) SHX.si = 0; $('#shx-title').textContent = w.t; const uf = shxU(SHX.wb); $('#shx-rb').style.display = uf && canWrite() ? 'block' : 'none'; if (uf && canWrite()) shxRbRender(); $('#shx-rs').style.display = uf ? 'none' : '';
+  const w = SHX.D[SHX.wb]; if (SHX.si >= w.sh.length) SHX.si = 0; $('#shx-title').textContent = w.t; const uf = shxU(SHX.wb); $('#shx-sheet').classList.toggle('uf', uf); $('#shx-rb').style.display = uf && canWrite() ? 'block' : 'none'; if (uf && canWrite()) shxRbRender(); $('#shx-rs').style.display = uf ? 'none' : '';
   $('#shx-css').textContent = shxCss(SHX.wb); if (full) { $('#shx-tabs').innerHTML = w.sh.map((s, i) => '<button data-i="' + i + '" class="' + (i === SHX.si ? 'on' : '') + '">' + esc(s.n) + '</button>').join(''); }
-  const t = shxTable(SHX.wb, SHX.si), tb = $('#shx-t'); tb.dir = t.rtl ? 'rtl' : 'ltr'; tb.innerHTML = t.html; tb.style.width = t.tw + 'px'; SHX.tw = t.tw; if (full) SHX.z = Math.max(0.55, Math.min(1, ($('#shx-w').clientWidth - 4) / t.tw)); tb.style.zoom = SHX.z; tb.classList.toggle('ng', !!w.sh[SHX.si].ng); SHX.selTd = null; shxCharts(); shxSbSync();
+  const t = shxTable(SHX.wb, SHX.si), tb = $('#shx-t'); tb.dir = t.rtl ? 'rtl' : 'ltr'; tb.innerHTML = t.html; tb.style.width = t.tw + 'px'; SHX.tw = t.tw; if (full) SHX.z = Math.max(0.55, Math.min(1, ($('#shx-w').clientWidth - 4) / t.tw)); tb.style.zoom = SHX.z; tb.classList.toggle('ng', !!w.sh[SHX.si].ng); SHX.selTd = null; shxCharts(); shxSbSync(); if (uf && !SHX.fv) { SHX.fv = 1; const wbk = SHX.wb; setTimeout(() => { SHX.fv = 0; if (S.view === 'shx' && SHX.wb === wbk) shxFillView(); }, 60); }
   if (SHX.sel) { const td = tb.querySelector('td[data-r="' + SHX.sel[0] + '"][data-c="' + SHX.sel[1] + '"]'); if (td) { td.classList.add('sel'); SHX.selTd = td; } }
   $('#shx-zl').textContent = Math.round(SHX.z * 100) + '%';
 }
@@ -1561,7 +1581,7 @@ function shxFolderMenu(id) {
   shxMenu(d.data.n, [{ l:'إعادة تسمية المجلد', fn:() => { const n = (prompt('اسم المجلد', d.data.n) || '').trim(); if (n) { docSave('shxd', id, { n }); renderSHX(); } } },
     { l:'مسح المجلد (الملفات اللي جواه بترجع للرئيسي)', d:1, fn:() => { if (confirm('تمسح المجلد "' + d.data.n + '"؟ الملفات اللي جواه مش هتتمسح.')) { docSave('shxd', id, d.data, true); if (SHX.fd === id) SHX.fd = null; renderSHX(); } } }]);
 }
-const shxBlank = n => ({ n, cells:[], R:50, C:12, cw:{}, rh:{}, mg:[], rtl:true });
+const shxBlank = n => ({ n, cells:[], R:100, C:26, cw:{}, rh:{}, mg:[], rtl:true });
 function shxNewFile() {
   const n = (prompt('اسم الملف الجديد', 'ملف جديد') || '').trim(); if (!n) return; const uid = uid8();
   docSave('shxw', 'shxw:' + uid, { t:n, sh:[shxBlank('شيت1')], st:[] }); if (SHX.fd) docSave('shxp', 'shxp:u_' + uid, { f:SHX.fd }); shxUserSync(); shxOpen('u_' + uid);
@@ -1899,7 +1919,7 @@ function shxChartSvg(ch) {
   if (series.length > 1 || series[0].n) series.forEach((s, i) => { o += '<rect x="' + (L + i * 90) + '" y="' + (H - 14) + '" width="10" height="10" fill="' + SHX_CC[i % 8] + '"/><text x="' + (L + 14 + i * 90) + '" y="' + (H - 5) + '" font-size="10">' + esc(s.n.slice(0, 12)) + '</text>'; });
   return o + '</svg>';
 }
-function shxCharts() { const el = $('#shx-ch'); if (!el) return; const sh = SHX.D[SHX.wb] && SHX.D[SHX.wb].sh[SHX.si]; el.innerHTML = sh && sh.ch ? sh.ch.map(c => '<div class="chc" data-chid="' + c.id + '"><b>' + esc(c.ttl || '') + '</b>' + shxChartSvg(c) + '</div>').join('') : ''; }
+function shxCharts() { const el = $('#shx-ch'); if (!el) return; const sh = SHX.D[SHX.wb] && SHX.D[SHX.wb].sh[SHX.si], has = sh && sh.ch && sh.ch.length; el.className = has ? 'chb' : ''; el.innerHTML = has ? '📊 الرسوم:' + sh.ch.map(c => '<button data-chid="' + c.id + '">' + esc(c.ttl || 'رسم بياني') + '</button>').join('') : ''; }
 function shxSbSync() {
   const el = $('#shx-sb'); if (!el) return; const g = SHX.rg; if (!g || !shxU(SHX.wb) || (g[0] === g[2] && g[1] === g[3])) { el.style.display = 'none'; return; }
   const ns = []; let cnt = 0; for (let r = g[0]; r <= g[2]; r++) for (let c = g[1]; c <= g[3]; c++) { const v = SHX.eng.get(SHX.wb, SHX.si, r, c); if (v != null && v !== '') cnt++; if (typeof v === 'number') ns.push(v); }
@@ -1907,11 +1927,20 @@ function shxSbSync() {
 }
 /* ===== الشريط (Ribbon) وعمليات الإكسل ===== */
 const SHX_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 36, 48, 72], SHX_FONTS = ['Calibri', 'Arial', 'Tahoma', 'Times New Roman', 'Courier New', 'Verdana', 'Segoe UI', 'Cairo', 'Amiri', 'Traditional Arabic'];
+function shxGrow(ax, n) {
+  const k = SHX.wb; if (!shxU(k) || !canWrite()) return; const d = shxWData(k); if (!d) return; const sh = d.sh[SHX.si];
+  if (ax === 'r') { if (sh.R >= 5000) return false; sh.R = Math.min(5000, sh.R + n); } else { if (sh.C >= 80) return false; sh.C = Math.min(80, sh.C + n); }
+  shxWSave(k, d); shxDraw(false); return true;
+}
+function shxFillView() {
+  const k = SHX.wb; if (!shxU(k) || !canWrite()) return; const w = $('#shx-w'), tb = $('#shx-t'), sh = SHX.D[k].sh[SHX.si]; if (!w || !tb || sh.R >= 5000) return;
+  const th = tb.getBoundingClientRect().height; if (th > 0 && th < w.clientHeight - 4) { const per = 20 * (SHX.z || 1), need = Math.ceil((w.clientHeight - th) / per) + 10; shxGrow('r', Math.min(need, 400)); }
+}
 function shxStyleAt(r, c) { const k = SHX.wb, b = SHX.eng.smap(k, SHX.si).get(r * 100000 + c); return b && b[4] >= 0 ? SHX.D[k].st[b[4]] || {} : {}; }
 const SHX_AIC = { al:'<svg viewBox="0 0 24 24"><path d="M3 6h18M9 12h12M5 18h16"/></svg>', ac:'<svg viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M5 18h14"/></svg>', ar:'<svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h12M3 18h16"/></svg>', vt:'<svg viewBox="0 0 24 24"><path d="M4 4h16M12 20V9M8 12l4-4 4 4"/></svg>', vm:'<svg viewBox="0 0 24 24"><path d="M4 12h16M12 4v5M9 6l3 3 3-3M12 20v-5M9 18l3-3 3 3"/></svg>', vb:'<svg viewBox="0 0 24 24"><path d="M4 20h16M12 4v11M8 12l4 4 4-4"/></svg>' };
 function shxRbRender() {
   const T = [['h', 'الرئيسية'], ['i', 'إدراج'], ['p', 'تخطيط الصفحة'], ['f', 'صيغ'], ['d', 'بيانات'], ['v', 'عرض'], ['m', 'الملف']]; SHX.rt = SHX.rt || 'h';
-  $('#rb-t').innerHTML = T.map(x => '<button data-rt="' + x[0] + '" class="' + (x[0] === SHX.rt ? 'on' : '') + '">' + x[1] + '</button>').join('');
+  const sl = $('#rb-p').scrollLeft; $('#rb-t').innerHTML = '<button class="rbtg" data-rtg="1" aria-label="إخفاء/إظهار الشريط">' + (SHX.rbc ? '⌄' : '⌃') + '</button>' + T.map(x => '<button data-rt="' + x[0] + '" class="' + (x[0] === SHX.rt && !SHX.rbc ? 'on' : '') + '">' + x[1] + '</button>').join('');
   const B = (a, l, c) => '<button class="rb' + (c ? ' ' + c : '') + '" data-fm="' + a + '">' + l + '</button>', G = (...rows) => '<div class="rbg">' + rows.map(r => '<div class="rr">' + r.join('') + '</div>').join('') + '</div>';
   const P = {
     h: [G([B('un', '↶'), B('re', '↷'), B('rg', 'نطاق')], [B('cp', 'نسخ'), B('ct', 'قص'), B('ps', 'لصق'), B('psm', '▾')]),
@@ -1921,14 +1950,14 @@ function shxRbRender() {
       G([B('fp', 'فرشاة التنسيق'), B('cfm', 'تنسيق شرطي ▾'), B('ts', 'تنسيق كجدول ▾')], [B('fnd', 'بحث واستبدال'), B('fil', 'تعبئة ▾'), B('cl', 'مسح ▾')])],
     i: [G([B('ri-', 'صف فوق'), B('ri+', 'صف تحت'), B('ci-', 'عمود قبل'), B('ci+', 'عمود بعد')], [B('rd', 'مسح الصف'), B('cd', 'مسح العمود')]),
       G([B('sh+', '＋ شيت'), B('shr', 'اسم الشيت'), B('shd', 'مسح الشيت')], [B('shdup', 'نسخ الشيت'), B('shl', '▸ نقل'), B('shr2', 'نقل ◂'), B('shm', 'اتجاه الشيت')]),
-      G([B('chm', 'رسم بياني ▾'), B('dvm', 'قائمة منسدلة ▾')], [B('rh+', 'ارتفاع ＋'), B('rh-', 'ارتفاع −'), B('cw+', 'عرض ＋'), B('cw-', 'عرض −'), B('af', 'ملاءمة العرض')])],
+      G([B('chm', 'رسم بياني ▾'), B('dvm', 'قائمة منسدلة ▾')], [B('rh+', 'ارتفاع ＋'), B('rh-', 'ارتفاع −'), B('cw+', 'عرض ＋'), B('cw-', 'عرض −'), B('af', 'ملاءمة العرض')], [B('rows+', 'زوّد صفوف'), B('cols+', 'زوّد أعمدة')])],
     p: [G([B('po:p', 'طولي'), B('po:l', 'عرضي'), B('po:a', 'تلقائي')], [B('pdf', 'طباعة / PDF')])],
     f: [G([B('fx', '<b>fx</b> دالة', 'w'), B('as', 'Σ جمع تلقائي ▾', 'w')], [B('as:SUM', 'جمع'), B('as:AVERAGE', 'متوسط'), B('as:COUNT', 'عدد'), B('as:MAX', 'أكبر'), B('as:MIN', 'أصغر')])],
     d: [G([B('sa', 'ترتيب ↑'), B('sd', 'ترتيب ↓')], [B('ft', 'فلتر'), B('fc', 'مسح الفلتر')]), G([B('rdp', 'إزالة المكرر'), B('rg', 'تحديد نطاق')])],
     v: [G([B('z-', 'تصغير'), B('z+', 'تكبير'), B('zf', 'ملاءمة')], [B('fzm', 'تجميد ▾'), B('gl', 'خطوط الشبكة')]), G([B('hr', 'إخفاء الصفوف'), B('hc', 'إخفاء الأعمدة')], [B('uh', 'إظهار الكل'), B('shm', 'اتجاه الشيت')])],
     m: [G([B('xp', 'تصدير xlsx'), B('pdf', 'طباعة / PDF'), B('imp', 'استيراد ملف')], [B('frn', 'اسم الملف'), B('fmv', 'نقل لمجلد'), B('fdl', 'مسح الملف')])]
   };
-  $('#rb-p').innerHTML = P[SHX.rt].join(''); shxRbSync();
+  $('#rb-p').innerHTML = P[SHX.rt].join(''); $('#rb-p').style.display = SHX.rbc ? 'none' : 'flex'; $('#rb-p').scrollLeft = sl; shxRbSync();
 }
 function shxRbSync() {
   const rb = $('#shx-rb'); if (!rb || rb.style.display === 'none' || !shxU(SHX.wb)) return; const rg = shxTR(), st = rg ? shxStyleAt(rg[0], rg[1]) : {}, on = (a, v) => { const b = document.querySelector('#rb-p [data-fm="' + a + '"]'); if (b) b.classList.toggle('on', !!v); };
@@ -2109,11 +2138,18 @@ function shxTableStyle(g) {
   const [r1, c1, r2, c2] = shxRegion(g); shxMenu('تنسيق كجدول', Object.keys(SHX_TS).map(n => ({ l:n, fn:() => { const [hc, bc] = SHX_TS[n], L = ['thin', 'BFBFBF']; shxStyle((o, r) => { o.bd = [L, L, L, L]; if (r === r1) { o.bg = hc; o.fc = 'FFFFFF'; o.b = 1; } else { o.bg = (r - r1) % 2 ? 'FFFFFF' : bc; delete o.fc; delete o.b; } }, [r1, c1, r2, c2]); } })));
 }
 function shxChartMenu(rg) {
-  const T = [['bar', 'أعمدة'], ['barh', 'أعمدة أفقية'], ['line', 'خطي'], ['area', 'مساحة'], ['pie', 'دائري']]; shxMenu('رسم بياني', T.map(([t, l]) => ({ l, fn:() => { const g = shxRegion(rg), ttl = prompt('عنوان الرسم (اختياري)', '') || ''; if (g[0] === g[2] && g[1] === g[3]) return toast('اختار بيانات الأول'); shxEdit((d, sh) => { sh.ch = sh.ch || []; sh.ch.push({ id:'c' + Date.now().toString(36), t, rg:g, ttl }); }, true); toast('اتضاف الرسم تحت الجدول'); } })));
+  const T = [['bar', 'أعمدة'], ['barh', 'أعمدة أفقية'], ['line', 'خطي'], ['area', 'مساحة'], ['pie', 'دائري']]; shxMenu('رسم بياني', T.map(([t, l]) => ({ l, fn:() => { const g = shxRegion(rg), ttl = prompt('عنوان الرسم (اختياري)', '') || ''; if (g[0] === g[2] && g[1] === g[3]) return toast('اختار بيانات الأول'); shxEdit((d, sh) => { sh.ch = sh.ch || []; sh.ch.push({ id:'c' + Date.now().toString(36), t, rg:g, ttl }); }, true); toast('اتضاف الرسم — هتلاقيه في شريط 📊 الرسوم تحت'); } })));
 }
 function shxChartTap(id) {
   const sh = SHX.D[SHX.wb].sh[SHX.si], ch = (sh.ch || []).find(x => x.id === id); if (!ch) return; const T = [['bar', 'أعمدة'], ['barh', 'أعمدة أفقية'], ['line', 'خطي'], ['area', 'مساحة'], ['pie', 'دائري']];
-  shxMenu('الرسم البياني', [{ l:'تغيير النوع', fn:() => shxMenu('النوع', T.map(([t, l]) => ({ l, fn:() => shxEdit((d, s2) => { const c = s2.ch.find(x => x.id === id); if (c) c.t = t; }, true) }))) }, { l:'تغيير العنوان', fn:() => { const t = prompt('العنوان', ch.ttl || ''); if (t != null) shxEdit((d, s2) => { const c = s2.ch.find(x => x.id === id); if (c) c.ttl = t; }, true); } }, { l:'تحديد بيانات الرسم', fn:() => { SHX.rg = ch.rg.slice(); SHX.sel = [ch.rg[0], ch.rg[1]]; shxDraw(false); shxRgShow(); } }, { l:'حذف الرسم', d:1, fn:() => shxEdit((d, s2) => { s2.ch = s2.ch.filter(x => x.id !== id); }, true) }]);
+  shxOverlay((b, close) => {
+    const t = document.createElement('b'); t.textContent = ch.ttl || 'رسم بياني'; b.appendChild(t); const v = document.createElement('div'); v.innerHTML = shxChartSvg(ch); v.style.cssText = 'background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px'; b.appendChild(v);
+    const mk = (l, f, cls) => { const x = document.createElement('button'); x.className = 'btn ' + (cls || 'ghost'); x.textContent = l; x.onclick = () => { close(); f(); }; b.appendChild(x); };
+    mk('تغيير النوع', () => shxMenu('النوع', T.map(([ty, l]) => ({ l, fn:() => { shxEdit((d, s2) => { const c = s2.ch.find(x => x.id === id); if (c) c.t = ty; }, true); shxChartTap(id); } }))));
+    mk('تغيير العنوان', () => { const tt = prompt('العنوان', ch.ttl || ''); if (tt != null) shxEdit((d, s2) => { const c = s2.ch.find(x => x.id === id); if (c) c.ttl = tt; }, true); });
+    mk('تحديد بيانات الرسم', () => { SHX.rg = ch.rg.slice(); SHX.sel = [ch.rg[0], ch.rg[1]]; shxDraw(false); shxRgShow(); });
+    mk('حذف الرسم', () => shxEdit((d, s2) => { s2.ch = s2.ch.filter(x => x.id !== id); }, true), 'danger');
+  });
 }
 function shxAct2(a, rg) {
   const k = SHX.wb;
@@ -2141,6 +2177,7 @@ function shxAct(a) {
   if (a === 'un') return shxUndo(false); if (a === 're') return shxUndo(true);
   if (a === 'rg') { if (!SHX.sel) return toast('اختار أول خلية في النطاق الأول'); SHX.rm = !SHX.rm; if (SHX.rm) toast('دوس على آخر خلية في النطاق'); return shxRbSync(); }
   SHX.rm = false;
+  if (a === 'rows+' || a === 'cols+') { const n = Math.floor(+(prompt(a === 'rows+' ? 'تزود كام صف؟' : 'تزود كام عمود؟', a === 'rows+' ? '100' : '10') || 0)); if (!(n > 0)) return; if (shxGrow(a === 'rows+' ? 'r' : 'c', n) === false) toast('وصلت للحد الأقصى (5000 صف / 80 عمود)'); return; }
   if (a === 'cp') return shxCopy(false); if (a === 'ct') return shxCopy(true); if (a === 'ps') return shxPaste(false); if (a === 'psm') { if (!SHX.clip) return toast('انسخ خلايا الأول'); return shxPaste(true); }
   if (a === 'z-' || a === 'z+' || a === 'zf') return document.querySelector('[data-z="' + (a === 'z-' ? '-' : a === 'z+' ? '+' : 'fit') + '"]').click();
   if (a === 'sh+' || a === 'shr' || a === 'shd' || a === 'shm') { if (a === 'sh+') return shxUAct('sh+'); const d = shxWData(k), sh = d.sh[SHX.si]; if (a === 'shm') { shxSnap(k); sh.rtl = !sh.rtl; shxWSave(k, d); return shxDraw(true); } SHX.pk = a === 'shr' ? 'ren' : 'del'; return shxUAct('sh'); }
@@ -2298,11 +2335,13 @@ function shxInit() {
     if (t.closest('#shx-rs')) return shxRestoreCell();
     if (t.closest('#shx-pdf')) { const w = SHX.D[SHX.wb]; if (w.sh.length < 2) return shxPrint(false); return shxMenu('طباعة / PDF', [{ l:'طباعة الشيت ده بس (' + w.sh[SHX.si].n + ')', fn:() => shxPrint(false) }, { l:'طباعة الملف كله (' + w.sh.length + ' شيتات)', fn:() => shxPrint(true) }]); }
     const chc = t.closest('[data-chid]'); if (chc && shxU(SHX.wb) && canWrite()) return shxChartTap(chc.dataset.chid);
-    const rt = t.closest('[data-rt]'); if (rt) { SHX.rt = rt.dataset.rt; shxRbRender(); return; }
+    const tg = t.closest('[data-rtg]'); if (tg) { SHX.rbc = !SHX.rbc; shxRbRender(); return; }
+    const rt = t.closest('[data-rt]'); if (rt) { if (rt.dataset.rt === SHX.rt && !SHX.rbc) SHX.rbc = true; else { SHX.rt = rt.dataset.rt; SHX.rbc = false; } shxRbRender(); return; }
     const fb = t.closest('[data-fm]'); if (fb) return shxAct(fb.dataset.fm);
     const zb = t.closest('[data-z]'); if (zb) { const k = zb.dataset.z; if (k === 'fit') { const w = $('#shx-w').clientWidth - 4; SHX.z = Math.max(0.25, Math.min(1.5, w / SHX.tw)); } else SHX.z = Math.max(0.3, Math.min(2.5, SHX.z + (k === '+' ? 0.15 : -0.15))); $('#shx-t').style.zoom = SHX.z; $('#shx-zl').textContent = Math.round(SHX.z * 100) + '%'; return; }
   });
   $('#shx-in').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); shxCommit(); } else if (e.key === 'Escape') { $('#shx-in').value = SHX.orig || ''; $('#shx-in').blur(); } });
+  $('#shx-w').addEventListener('scroll', () => { if (!shxU(SHX.wb) || !canWrite() || SHX.gr) return; const w = $('#shx-w'), nb = w.scrollTop + w.clientHeight >= w.scrollHeight - 160, nr = Math.abs(w.scrollLeft) + w.clientWidth >= w.scrollWidth - 140; if (!nb && !nr) return; SHX.gr = 1; setTimeout(() => { SHX.gr = 0; }, 350); if (nb) shxGrow('r', 40); else shxGrow('c', 6); }, { passive:true });
   $('#shx-in').addEventListener('input', e => { e.target.dir = e.target.value[0] === '=' ? 'ltr' : 'auto'; SHX.fe = e.target.value[0] === '=' && shxU(SHX.wb); });
   $('#shx-file').addEventListener('change', async e => { const fl = [...e.target.files]; e.target.value = ''; if (fl.length) await shxImport(fl); });
   $('#shx-in').addEventListener('focus', () => { if (!canWrite() || !SHX.sel || SHX.rg) $('#shx-in').blur(); else SHX.fe = $('#shx-in').value[0] === '=' && shxU(SHX.wb); });
@@ -2345,7 +2384,7 @@ function go(v) {
   if (v === 'shx' && (!S.profile || S.profile.role === 'partner')) { toast('الصفحة دي مش متاحة لحسابك'); v = 'home'; }
   const pk = PERM_VIEW[v]; if (pk && !canSee(pk)) { toast('الصفحة دي مش متاحة لحسابك'); v = 'home'; }
   if (v === 'set' && S.view !== 'set' && !S.vlKeepOpen) { const d = $('#s-vl'); if (d) d.open = false; }
-  S.vlKeepOpen = false; S.view = v;
+  S.vlKeepOpen = false; S.view = v; if (v !== 'shx') document.body.classList.remove('shxf');
   for (const x of VIEWS) $('#v-' + x).classList.toggle('hide', x !== v);
   const tab = { home:'home', tb:'home', lg:'home', gl:'home', is:'home', bs:'home', mp:'home', dp:'home', db:'home', hr:'home', cs:'home', pr:'home', au:'home', yr:'home', arc:'home', arcy:'home', arcc:'home', cc:'home', rp:'home', shx:'home', list:'list', an:'an', acc:'an', stm:'an', set:'set', form: S.from === 'list' ? 'list' : 'home' }[v];
   for (const t of ['home', 'list', 'an', 'set']) $('#n-' + t).classList.toggle('on', t === tab);
