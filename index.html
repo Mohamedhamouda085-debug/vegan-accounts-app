@@ -3407,10 +3407,13 @@ function fgData() { const d = S.docs.get('fg2'); return d && !d.deleted && d.dat
 const fgClone = o => JSON.parse(JSON.stringify(o));
 const fgCont = (D, id) => D.cont.find(c => c.id === id) || { n:'؟', kg:0, pk:[], op:[] };
 const fgSum = a => (a || []).reduce((t, x) => t + (+x.p || 0), 0);
-function fgRawKg(D, p) { const pr = D.ing[p.k] || {}; return p.r.reduce((a, [n, pc]) => a + pc * (+pr[n] || 0), 0); }
-function fgCost(D, p, z) { const c = fgCont(D, z.c); return fgRawKg(D, p) * c.kg + (z.pk != null ? +z.pk : fgSum(c.pk)) + (z.op != null ? +z.op : fgSum(c.op)); }
+/* وضع الكيلو (للبرميل/السايب): z.kgm = 1 → التكلفة والسعر بالكيلو، ومفيش ربط بوزن العبوة */
+const fgKgm = (c, z) => z && z.kgm ? 1 : c.kg;
+const fgEff = (r, z) => { if (z && z.kgm) { const rr = r.filter(x => x[0]); if (rr.length === 1 && !(+rr[0][1] > 0)) return [[rr[0][0], 1]]; } return r; };
+function fgRawKg(D, p, z) { const pr = D.ing[p.k] || {}; return fgEff(p.r, z).reduce((a, [n, pc]) => a + pc * (+pr[n] || 0), 0); }
+function fgCost(D, p, z) { const c = fgCont(D, z.c); return fgRawKg(D, p, z) * fgKgm(c, z) + (z.pk != null ? +z.pk : fgSum(c.pk)) + (z.op != null ? +z.op : fgSum(c.op)); }
 const fgName = (D, p, z) => p.n + ' - ' + fgCont(D, z.c).n;
-function fgParts(D, p, z) { const c = fgCont(D, z.c); return { ing:fgRawKg(D, p) * c.kg, pack:z.pk != null ? +z.pk : fgSum(c.pk), op:z.op != null ? +z.op : fgSum(c.op) }; }
+function fgParts(D, p, z) { const c = fgCont(D, z.c); return { ing:fgRawKg(D, p, z) * fgKgm(c, z), pack:z.pk != null ? +z.pk : fgSum(c.pk), op:z.op != null ? +z.op : fgSum(c.op) }; }
 function fgList(D) { const L = []; D.prods.forEach((p, i) => p.s.forEach((z, k) => L.push({ p, i, z, k, name:fgName(D, p, z) }))); return L; }
 function fgMatch(name) { const D = fgData(); if (!D || !name) return null; const k = csKey(name); return fgList(D).find(x => csKey(x.name) === k) || null; }
 /* دفعات الإنتاج والبيع بنظام الأقدم أولاً */
@@ -3502,7 +3505,7 @@ function fgPriceHTML(D, w) {
       if (it.p1 != null) o.push({ ...base, cn:cnJ('720'), e:bt ? it.et : '720 g', d:bt ? '' : '400 g', pk:bt ? null : it.p1 / 0.4, pt:it.p1, cost:plCost(D, 'برطمان', it, '720') });
       if (it.p2 != null) o.push({ ...base, cn:cnJ('1050'), e:bt ? '' : '1050 g', d:bt ? '' : '550 g', pk:bt ? null : it.p2 / 0.55, pt:it.p2, cost:plCost(D, 'برطمان', it, '1050') });
       return o; };
-    const rowO = it => ({ id:it.id, x:1, n:it.n, note:it.note, cn:it.cn, e:it.e, d:it.d, pk:it.pk, pt:it.pr, cost:it.pz ? fgCost(D, it.pz[0], it.pz[1]) : null });
+    const rowO = it => ({ id:it.id, x:1, n:it.n, note:it.note, cn:it.cn, e:it.e, d:it.d, pk:it.pk, pt:it.pr, cost:it.pz ? fgCost(D, it.pz[0], it.pz[1]) * (it.kgw || 1) : null });
     const order = [], map = new Map(), seed = ttl => { const k = ttl == null ? 'منتجات خاصة' : cl(ttl); if (!map.has(k)) { map.set(k, []); order.push(k); } return k; }, add = (ttl, r) => map.get(seed(ttl)).push(r);
     seed(''); for (const k of ['B', 'J']) for (const sec of (P[k] ? P[k].secs : [])) seed(sec.t);
     for (const k of ['B', 'J']) { const sl = plSelGet(k); for (const sec of (P[k] ? P[k].secs : [])) for (const it of sec.items) if (sl.has(it.id)) for (const r of (k === 'B' ? [rowB(it)] : rowsJ(it))) add(sec.t, r); }
@@ -3596,7 +3599,7 @@ const plXHas = (D, x, p) => csKey(x.p) === csKey(p.n) && (x.q ? x.q === plSig(p)
 const plXN = D => plXItems(D, 'B').length + plXItems(D, 'J').length + plXItems(D, 'O').length;
 function plXItems(D, K) {
   const kind = K === 'J' ? 'برطمان' : 'جردل', out = [];
-  if (K === 'O') { for (const x of plXGet('O')) { const p = plXFind(D, x, x.g || null); if (!p) continue; const z = p.s.find(q => q.c === x.c); if (!z) continue; const c = fgCont(D, z.c); const pr = x.po != null ? x.po : z.price; out.push({ id:x.id, x:1, n:cl(x.t) || (p.s.length > 1 ? p.n + ' - ' + c.n : p.n), cn:c.n, e:c.gw || '', d:c.kg, pk:c.kg ? pr / c.kg : null, pr, pz:[p, z], note:x.note, link:p.n, lp:p, s:x.s }); } return out; }
+  if (K === 'O') { for (const x of plXGet('O')) { const p = plXFind(D, x, x.g || null); if (!p) continue; const z = p.s.find(q => q.c === x.c); if (!z) continue; const c = fgCont(D, z.c); const pr = x.po != null ? x.po : z.price, km = !!z.kgm, w = km && +x.w > 0 ? +x.w : 0; out.push({ id:x.id, x:1, n:cl(x.t) || (p.s.length > 1 ? p.n + ' - ' + c.n : p.n), cn:c.n, e:km ? '' : (c.gw || ''), d:km ? (w || '') : c.kg, pk:km ? pr : (c.kg ? pr / c.kg : null), pr:km ? (w ? pr * w : null) : pr, kgw:km ? (w || 1) : 1, pz:[p, z], note:x.note, link:p.n, lp:p, s:x.s }); } return out; }
   for (const x of plXGet(K)) {
     const p = plXFind(D, x, kind); if (!p) continue;
     if (K === 'B') {
@@ -3631,9 +3634,9 @@ function openPLX() {
   $('#hsheet').classList.remove('hide');
 }
 function openPLXE(id) {
-  const K = ['B', 'J', 'O'].find(k => plXGet(k).some(q => q.id === id)) || 'B', x = plXGet(K).find(q => q.id === id); if (!x) return; S.hs = { type:'plxe', K, id };
+  const K = ['B', 'J', 'O'].find(k => plXGet(k).some(q => q.id === id)) || 'B', x = plXGet(K).find(q => q.id === id); if (!x) return; S.hs = { type:'plxe', K, id }; const kz = K === 'O' && (() => { const D0 = fgData(), p0 = D0 && plXFind(D0, x, x.g || null), z0 = p0 && p0.s.find(q => q.c === x.c); return !!(z0 && z0.kgm); })();
   $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">تعديل منتج في القائمة المخصصة</h2><label for="pxe-t">الاسم في القائمة (اختياري)</label>' + fgIn('pxe-t', x.t, '', 0) + '<label for="pxe-note">ملاحظات</label>' + fgIn('pxe-note', x.note, '', 0) + '<label for="pxe-sec">البند</label>' + plSecSel('pxe-sec', x.s == null ? 'منتجات خاصة' : x.s) + '<label for="pxe-new">أو اكتب اسم بند جديد (اختياري)</label>' + fgIn('pxe-new', '', '', 0) +
-    (K !== 'J' ? '<label for="pxe-po">' + (K === 'O' ? 'سعر العبوة' : 'سعر الجردل') + ' (فاضي = سعر المنتج في الشيت)</label>' + fgIn('pxe-po', x.po) : '<div class="grid"><div><label for="pxe-p1">سعر 720</label>' + fgIn('pxe-p1', x.p1, 'من الشيت') + '</div><div><label for="pxe-p2">سعر 1050</label>' + fgIn('pxe-p2', x.p2, 'من الشيت') + '</div></div>') +
+    (K !== 'J' ? '<label for="pxe-po">' + (K === 'O' ? (kz ? 'سعر الكيلو' : 'سعر العبوة') : 'سعر الجردل') + ' (فاضي = سعر المنتج في الشيت)</label>' + fgIn('pxe-po', x.po) + (kz ? '<label for="pxe-w">وزن البرميل كجم (اختياري — لو كتبته بيظهر السعر الإجمالي)</label>' + fgIn('pxe-w', x.w) : '') : '<div class="grid"><div><label for="pxe-p1">سعر 720</label>' + fgIn('pxe-p1', x.p1, 'من الشيت') + '</div><div><label for="pxe-p2">سعر 1050</label>' + fgIn('pxe-p2', x.p2, 'من الشيت') + '</div></div>') +
     '<div class="actions"><button class="btn" id="pxe-save">حفظ</button><button class="btn danger" id="pxe-del">شيله من القائمة</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
   $('#hsheet').classList.remove('hide');
 }
@@ -3681,6 +3684,7 @@ function plSheetClick(e) {
     if (t.closest('#pxe-save')) {
       const x = a.find(q => q.id === S.hs.id); if (!x) return true; const nt = cl(g('#pxe-t')), nn = cl(g('#pxe-note')); if (nt) x.t = nt; else delete x.t; if (nn) x.note = nn; else delete x.note; x.s = plSecVal('#pxe-sec', '#pxe-new');
       for (const [k, id] of K !== 'J' ? [['po', '#pxe-po']] : [['p1', '#pxe-p1'], ['p2', '#pxe-p2']]) { if (cl(g(id)) !== '') x[k] = num(g(id)); else delete x[k]; }
+      const we = $('#pxe-w'); if (we) { if (cl(we.value) !== '') x.w = num(we.value); else delete x.w; }
       plXSave(K, a); closeHS(); renderCS(); toast('تم الحفظ'); return true;
     }
   }
@@ -3755,8 +3759,8 @@ function fgSyncP() {
 function fgDx(W) { const D = W.D, k = W.p.k; return { ...D, ing:{ ...D.ing, [k]:{ ...(D.ing[k] || {}), ...W.prices } } }; }
 /* تكلفة الحجم ده + النسبة فوقها: اكتب النسبة يطلع السعر، أو اكتب السعر تظهر النسبة */
 function fgCostZ(W, z) {
-  const Dx = fgDx(W), p = W.p, pr = Dx.ing[p.k] || {}, c = fgCont(Dx, z.c), kg = c.kg;
-  const ing = p.r.filter(r => r[0]).reduce((a, r) => a + r[1] * (+pr[r[0]] || 0) * kg, 0);
+  const Dx = fgDx(W), p = W.p, pr = Dx.ing[p.k] || {}, c = fgCont(Dx, z.c), kg = fgKgm(c, z);
+  const ing = fgEff(p.r.filter(r => r[0]), z).reduce((a, r) => a + r[1] * (+pr[r[0]] || 0) * kg, 0);
   return ing + (z.pk != null ? +z.pk : fgSum(c.pk)) + (z.op != null ? +z.op : fgSum(c.op));
 }
 function fgMar(W, z) { const c = fgCostZ(W, z); return c > 0 && z.price > 0 ? +((z.price - c) / c * 100).toFixed(2) : ''; }
@@ -3771,16 +3775,16 @@ function fgInp(e) {
   fgLive();
 }
 function fgDetHTML() {
-  const W = S.fgW, p = W.p, Dx = fgDx(W), pr = Dx.ing[p.k] || {}, rows = p.r.filter(r => r[0]);
-  const tot = rows.reduce((a, r) => a + (+r[1] || 0), 0), c2 = x => esc(fmt(x));
-  return p.s.map(z => { const c = fgCont(Dx, z.c), kg = c.kg, ing = rows.reduce((a, r) => a + r[1] * (+pr[r[0]] || 0) * kg, 0), pk = z.pk != null ? +z.pk : fgSum(c.pk), op = z.op != null ? +z.op : fgSum(c.op), all = ing + pk + op, pf = z.price - all;
-    return '<div class="hrow"><div class="n">' + esc(c.n) + ' <small style="color:var(--muted)">(صافي ' + c2(kg) + ' كجم)</small></div>' +
+  const W = S.fgW, p = W.p, Dx = fgDx(W), pr = Dx.ing[p.k] || {}, rows0 = p.r.filter(r => r[0]);
+  const c2 = x => esc(fmt(x));
+  return p.s.map(z => { const c = fgCont(Dx, z.c), kg = fgKgm(c, z), rows = fgEff(rows0, z), tot = rows.reduce((a, r) => a + (+r[1] || 0), 0), ing = rows.reduce((a, r) => a + r[1] * (+pr[r[0]] || 0) * kg, 0), pk = z.pk != null ? +z.pk : fgSum(c.pk), op = z.op != null ? +z.op : fgSum(c.op), all = ing + pk + op, pf = z.price - all;
+    return '<div class="hrow"><div class="n">' + esc(c.n) + ' <small style="color:var(--muted)">' + (z.kgm ? '(بالكيلو)' : '(صافي ' + c2(kg) + ' كجم)') + '</small></div>' +
       '<div style="overflow:visible"><table class="stb"><colgroup><col style="width:40%"><col style="width:18%"><col style="width:20%"><col style="width:22%"></colgroup><thead><tr><th>الخامة</th><th>النسبة</th><th>الوزن كجم</th><th>التكلفة</th></tr></thead><tbody>' +
       rows.map(r => '<tr><td class="l">' + esc(r[0]) + '</td><td class="v">' + c2(r[1] * 100) + '%</td><td class="v">' + c2(r[1] * kg) + '</td><td class="v">' + c2(r[1] * (+pr[r[0]] || 0) * kg) + '</td></tr>').join('') +
       '<tr class="h"><td class="l">إجمالي المكونات</td><td class="v">' + c2(tot * 100) + '%</td><td class="v">' + c2(tot * kg) + '</td><td class="v">' + c2(ing) + '</td></tr></tbody></table></div>' +
       '<div class="kv"><span>خامات التعبئة والتغليف' + (z.pk != null ? ' (معدّل)' : '') + '<small style="display:block;color:var(--muted)">' + esc(c.pk.map(x => x.n + ' ' + fmt(x.p)).join(' + ')) + '</small></span><span dir="ltr">' + c2(pk) + '</span></div>' +
       '<div class="kv"><span>التشغيل' + (z.op != null ? ' (معدّل)' : '') + '<small style="display:block;color:var(--muted)">' + esc(c.op.map(x => x.n + ' ' + fmt(x.p)).join(' + ')) + '</small></span><span dir="ltr">' + c2(op) + '</span></div>' +
-      '<div class="kv"><b>التكلفة الإجمالية</b><b dir="ltr">' + c2(all) + '</b></div><div class="kv"><span>سعر البيع</span><span dir="ltr">' + c2(z.price) + '</span></div>' +
+      '<div class="kv"><b>التكلفة الإجمالية</b><b dir="ltr">' + c2(all) + '</b></div><div class="kv"><span>سعر البيع' + (z.kgm ? ' (للكيلو)' : '') + '</span><span dir="ltr">' + c2(z.price) + '</span></div>' +
       '<div class="kv"><b>الربح</b><b dir="ltr" class="' + (pf < 0 ? 'neg' : '') + '">' + c2(pf) + (all ? ' (' + c2(pf / all * 100) + '%)' : '') + '</b></div></div>'; }).join('');
 }
 function fgLive() { if (!S.hs || S.hs.type !== 'fgp' || !S.fgW || !$('#fg-det')) return; fgSyncP(); const tot = S.fgW.p.r.reduce((a, r) => a + (+r[1] || 0), 0); $('#fg-tot').textContent = fmt(tot * 100) + '%'; $('#fg-det').innerHTML = fgDetHTML(); S.fgW.p.s.forEach((z, k) => { const el = $('#fg-sm' + k); if (el && document.activeElement !== el) el.value = fgMar(S.fgW, z); const kg = $('#fg-skg' + k); if (kg && document.activeElement !== kg) { const c = fgCont(fgDx(S.fgW), z.c); kg.value = c.kg ? +(z.price / c.kg).toFixed(3) : ''; } }); }
@@ -3795,9 +3799,9 @@ function fgRenderP() {
     '<div class="note" style="margin-top:12px"><b>العبوات والأسعار</b></div>' +
     p.s.map((z, k) => { const c = fgCont(D, z.c);
       return '<div class="hrow"><label for="fg-sc' + k + '">العبوة</label><select id="fg-sc' + k + '">' + D.cont.map(x => '<option value="' + x.id + '"' + (x.id === z.c ? ' selected' : '') + '>' + esc(x.n) + '</option>').join('') + '</select>' +
-        '<div class="grid"><div><label for="fg-sp' + k + '">سعر البيع (قطاعي)</label>' + fgIn('fg-sp' + k, z.price) + '</div><div><label for="fg-sm' + k + '">النسبة % فوق التكلفة</label>' + fgIn('fg-sm' + k, fgMar(W, z), '%') + '</div></div><div class="grid"><div><label for="fg-sw' + k + '">سعر الجملة (أرض المصنع)</label>' + fgIn('fg-sw' + k, z.wp, fmt(z.price * 0.8)) + '</div><div><label for="fg-skg' + k + '">سعر الكيلو</label>' + fgIn('fg-skg' + k, c.kg ? +(z.price / c.kg).toFixed(3) : '', 'جنيه / كجم') + '</div></div>' +
+        '<div class="grid"><div><label for="fg-sp' + k + '">سعر البيع (قطاعي)' + (z.kgm ? ' للكيلو' : '') + '</label>' + fgIn('fg-sp' + k, z.price) + '</div><div><label for="fg-sm' + k + '">النسبة % فوق التكلفة</label>' + fgIn('fg-sm' + k, fgMar(W, z), '%') + '</div></div><div class="grid"><div><label for="fg-sw' + k + '">سعر الجملة (أرض المصنع)' + (z.kgm ? ' للكيلو' : '') + '</label>' + fgIn('fg-sw' + k, z.wp, fmt(z.price * 0.8)) + '</div>' + (z.kgm ? '<div class="note" style="align-self:end">وضع الكيلو: الأسعار والتكلفة بالكيلو</div>' : '<div><label for="fg-skg' + k + '">سعر الكيلو</label>' + fgIn('fg-skg' + k, c.kg ? +(z.price / c.kg).toFixed(3) : '', 'جنيه / كجم') + '</div>') + '</div>' +
         '<div class="grid"><div><label for="fg-sk' + k + '">عبوة وكيس (للمنتج ده بس)</label>' + fgIn('fg-sk' + k, z.pk, fmt(fgSum(c.pk))) + '</div><div><label for="fg-so' + k + '">تشغيل (للمنتج ده بس)</label>' + fgIn('fg-so' + k, z.op, fmt(fgSum(c.op))) + '</div></div>' +
-        '<div class="actions"><button class="btn ghost" data-fgnp="' + k + '">' + (z.pk === 0 ? 'رجّع تكلفة العبوة' : 'بدون عبوة (بيتباع سايب)') + '</button><button class="btn danger" data-fgrs="' + k + '">مسح الحجم</button></div></div>'; }).join('') +
+        '<div class="actions"><button class="btn ghost" data-fgkg="' + k + '">' + (z.kgm ? 'رجّع للعبوة (شيل وضع الكيلو)' : '⚖️ بالكيلو (برميل / سايب)') + '</button><button class="btn ghost" data-fgnp="' + k + '">' + (z.pk === 0 ? 'رجّع تكلفة العبوة' : 'بدون عبوة (بيتباع سايب)') + '</button><button class="btn danger" data-fgrs="' + k + '">مسح الحجم</button></div></div>'; }).join('') +
     '<div class="actions"><button class="btn ghost" id="fg-adds">＋ عبوة / حجم</button></div>' +
     '<div class="note" style="margin-top:12px"><b>تفاصيل التكلفة لكل حجم</b> (بتتحدث وإنت بتعدل)</div><div id="fg-det">' + fgDetHTML() + '</div>' +
     '<div class="err" id="fg-err"></div><div class="actions"><button class="btn" id="fg-save">حفظ</button>' + (W.idx != null ? '<button class="btn ghost" id="fg-copy">نسخ المنتج</button><button class="btn danger" id="fg-del">حذف</button>' : '') + '<button class="btn ghost" id="he-x">إغلاق</button></div>';
@@ -3827,7 +3831,7 @@ function fgRenderI() {
 function openFI() { const D = fgData(); if (!D) return; const K = S.fgKind || Object.keys(D.ing)[0]; S.hs = { type:'fgi' }; S.fgW = { D, K, rows:Object.entries(D.ing[K] || {}).map(([n, p]) => [n, p]) }; fgRenderI(); }
 function fgLines(D, p, z, units, k) {
   const c = fgCont(D, z.c), pr = D.ing[p.k] || {}, L = [];
-  for (const [n, pc] of p.r) { const q = pc * c.kg * units, pz = +pr[n] || 0; if (q > 0 && pz > 0) L.push({ g:'ing', n, q, p:pz * k, mk:csKey(n) }); }
+  for (const [n, pc] of fgEff(p.r, z)) { const q = pc * fgKgm(c, z) * units, pz = +pr[n] || 0; if (q > 0 && pz > 0) L.push({ g:'ing', n, q, p:pz * k, mk:csKey(n) }); }
   if (z.pk != null) { if (+z.pk > 0) L.push({ g:'pk', n:c.n, q:units, p:+z.pk * k, cid:c.id, mk:'pk:' + c.id + ':' + csKey(c.n) }); } else for (const x of c.pk) if (+x.p > 0 && cl(x.n)) L.push({ g:'pk', n:cl(x.n), q:units, p:+x.p * k, cid:c.id, mk:'pk:' + c.id + ':' + csKey(x.n) });
   if (z.op != null) { if (+z.op > 0) L.push({ g:'op', n:'تشغيل', q:units, p:+z.op * k }); } else for (const x of c.op) if (+x.p > 0 && cl(x.n)) L.push({ g:'op', n:cl(x.n), q:units, p:+x.p * k });
   return L;
@@ -3883,6 +3887,7 @@ function fgSheetClick(e) {
     if (t.closest('#fg-addr')) { fgSyncP(); W.p.r.push(['', 0]); fgRenderP(); return true; }
     const rm = t.closest('[data-fgrm]'); if (rm) { fgSyncP(); W.p.r.splice(+rm.dataset.fgrm, 1); fgRenderP(); return true; }
     if (t.closest('#fg-adds')) { fgSyncP(); W.p.s.push({ c:W.D.cont[0].id, price:0 }); fgRenderP(); return true; }
+    const kb = t.closest('[data-fgkg]'); if (kb) { fgSyncP(); const z1 = W.p.s[+kb.dataset.fgkg]; if (z1) { if (z1.kgm) delete z1.kgm; else { z1.kgm = 1; if (z1.pk == null) z1.pk = 0; } } fgRenderP(); return true; }
     const np = t.closest('[data-fgnp]'); if (np) { fgSyncP(); const z0 = W.p.s[+np.dataset.fgnp]; if (z0) { if (z0.pk === 0) delete z0.pk; else z0.pk = 0; } fgRenderP(); return true; }
     const rs = t.closest('[data-fgrs]'); if (rs) { fgSyncP(); if (W.p.s.length > 1) W.p.s.splice(+rs.dataset.fgrs, 1); fgRenderP(); return true; }
     if (t.closest('#fg-copy')) { fgSyncP(); W.idx = null; W.p.n += ' (نسخة)'; fgRenderP(); return true; }
@@ -5303,7 +5308,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.53';
+const VER = '1.54';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
