@@ -235,7 +235,7 @@ table.rt{width:100%;border-collapse:collapse;font-size:13px}.rt td,.rt th{border
 @media print{
  @page{size:A4 landscape;margin:10mm}
  body{background:#fff}
- header,nav,.sub,.tot,.mrow,.seg,.count,.noprint,#toast,#lock,#fsheet,#hsheet{display:none!important}
+ header,nav,.sub,.tot,.mrow,.seg,.count,.noprint,#toast,#lock,#fsheet,#hsheet,#psheet,#ptr,#vl-prev,#vl-rp,#vl-dot{display:none!important}
  #ph{display:flex!important;align-items:center;gap:14px;margin:0 0 8px}
  #ph img{height:46px}#ph b{font-size:16px}#ph div{font-size:12px;color:#444}
  main{padding:0}.tbw{overflow:visible;border:0}
@@ -3471,6 +3471,7 @@ function fgPriceHTML(D, w) {
     '<div class="mrow"><div class="seg" style="margin:0"><button class="' + (custom ? '' : 'on') + '" data-plm="f">قائمة كاملة</button><button class="' + (custom ? 'on' : '') + '" data-plm="c">قائمة مخصصة</button></div></div>' +
     '<div class="mrow"><input id="pl-date" placeholder="التاريخ (اكتبه بنفسك، بيظهر فوق على الشمال)" value="' + esc(S.plDate || '') + '"></div>' +
     (custom ? '<div class="mrow"><input id="pl-title" placeholder="اسم العميل أو أي كلام تحب يظهر تحت بيانات الشركة" value="' + esc(S.plTitle || '') + '"></div><div class="mrow"><button class="btn" id="pl-sel" style="width:100%">اختيار من قائمة ' + (K === 'B' ? 'الجرادل' : 'البرطمانات') + ' (' + [...sel].filter(id => L.secs.some(s => s.items.some(i => i.id === id))).length + ')</button></div><div class="mrow"><button class="btn" id="pl-fx" style="width:100%">＋ منتجات من شيت المنتجات (' + plXN(D) + ')</button></div>' : '') +
+    (custom && w ? '<div class="mrow" style="display:flex;gap:8px"><button class="btn ghost" id="pl-svs" style="flex:1">💾 ' + (plSvGet(S.plCur) ? 'حفظ / تحديث' : 'حفظ القائمة') + '</button><button class="btn ghost" id="pl-svl" style="flex:1">🗂 المحفوظة (' + plSvList().length + ')</button></div>' + (plSvGet(S.plCur) ? '<div class="note" style="padding:0 14px 6px">القائمة المفتوحة: <b>' + esc(plSvGet(S.plCur).data.n) + '</b>' + (plSvDirty() ? ' — فيها تعديلات لسه ما اتحفظتش' : '') + '</div>' : '') : '') +
     '<div class="mrow" style="display:flex;gap:8px"><button class="btn ghost" data-plx="1" style="flex:1">' + (X ? 'إخفاء التكلفة والربح' : 'إظهار التكلفة والربح') + '</button>' + (w && !custom ? '<button class="btn ghost" id="pl-add" style="flex:1">＋ صنف</button><button class="btn ghost" id="pl-adds" style="flex:1">＋ قسم</button>' : '') + '</div>' + (w ? '<div class="mrow" style="display:flex;gap:8px"><button class="btn ghost" id="pl-hd" style="flex:1">بيانات رأس القائمة</button><button class="btn ghost" id="pl-nt" style="flex:1">ملاحظات القائمة</button></div>' : '');
   const head = (cl(S.plDate) ? '<div class="pldate">' + esc(S.plDate) + '</div>' : '') + '<img class="plwm" src="logo.png" alt=""><div class="hrow" style="text-align:center"><div class="n">' + esc(L.head) + '</div><div class="note">' + esc(L.contact) + '</div>' + (custom && cl(S.plTitle) ? '<div class="n" style="margin-top:6px">' + esc(S.plTitle) + '</div>' : '') + '</div>';
   let no = 0;
@@ -3518,6 +3519,45 @@ function fgPriceHTML(D, w) {
   };
   const parts = custom ? mkC() : (() => { const r = mk(K); return r.body ? csTbl(r.wd, r.th, r.body) : ''; })();
   return ctl + head + (parts || '<div class="empty">' + (custom ? 'اختار منتجات من القائمة الرئيسية أو من شيت المنتجات.' : 'القائمة فاضية.') + '</div>') + (cl(L.notes) ? '<div class="hrow" style="margin-top:10px"><div class="n">ملاحظات</div><div style="white-space:pre-wrap">' + esc(L.notes) + '</div></div>' : '') + '<div class="note np" style="padding:8px 14px">السعر المكتوب هو السعر المعتمد (قطاعي). اضغط على أي صنف تعدل سعره أو وزنه أو ملاحظته. لو عايز قائمة لمنتجات معينة اختار «قائمة مخصصة» وبعدها PDF.</div>';
+}
+
+/* ---------- أرشيف قوائم الأسعار المخصصة (قايمة لكل عميل، بتتحفظ وترجعلها وتعدّل وتطبع) ---------- */
+const plSvList = () => docsOf('plsv').sort((a, b) => (b.data.ts || 0) - (a.data.ts || 0));
+const plSvGet = id => { const d = id && S.docs.get(id); return d && !d.deleted && d.data && d.data.sel ? d : null; };
+function plSnap() { return { sel:{ B:[...plSelGet('B')], J:[...plSelGet('J')] }, x:{ B:fgClone(plXGet('B')), J:fgClone(plXGet('J')), O:fgClone(plXGet('O')) }, t:S.plTitle || '', dt:S.plDate || '' }; }
+const plSnapN = s => s.sel.B.length + s.sel.J.length + s.x.B.length + s.x.J.length + s.x.O.length;
+const plSnapSig = () => JSON.stringify(plSnap());
+function plSvDirty() { const s = plSnap(); return (plSnapN(s) > 0 || !!s.t || !!s.dt) && plSnapSig() !== S.plBase; }
+function plCfgSet(sel, x) {
+  if (canWrite()) docSave('pl2', 'plcfg', { sel, x });
+  else { try { for (const K of ['B', 'J']) localStorage.setItem('pl_sel_' + K, JSON.stringify(sel[K])); for (const K of ['B', 'J', 'O']) localStorage.setItem('pl_x_' + K, JSON.stringify(x[K])); } catch (e) { /* ignore */ } S.plSel = {}; S.plSelV = {}; }
+}
+function plSvSave() {
+  if (!canWrite()) return; const s = plSnap(); if (!plSnapN(s)) { toast('اختار منتجات للقائمة الأول'); return; }
+  const cur = plSvGet(S.plCur); let id, name;
+  if (cur && confirm('تحدّث القائمة المحفوظة "' + cur.data.n + '"؟\nموافق = تحديث، إلغاء = حفظ كقائمة جديدة')) { id = cur.id; name = cur.data.n; }
+  else { name = (prompt('اسم القائمة (مثلاً اسم العميل)', cl(S.plTitle) || '') || '').trim(); if (!name) return; id = 'plsv:' + uid8(); }
+  docSave('plsv', id, { ...s, n:name, ts:Date.now() }); S.plCur = id; S.plBase = plSnapSig(); toast('اتحفظت القائمة'); renderCS();
+}
+function plSvOpen(id) {
+  const d = plSvGet(id); if (!d) return; if (plSvDirty() && !confirm('القائمة الحالية فيها اختيارات لسه ما اتحفظتش وهتتبدل. تكمّل؟')) return; const v = d.data;
+  plCfgSet({ B:[...(v.sel.B || [])], J:[...(v.sel.J || [])] }, { B:fgClone(v.x && v.x.B || []), J:fgClone(v.x && v.x.J || []), O:fgClone(v.x && v.x.O || []) });
+  S.plTitle = v.t || ''; S.plDate = v.dt || ''; S.plMode = 'c'; S.plCur = id; S.plBase = plSnapSig(); closeHS(); renderCS();
+}
+function plSvNew() {
+  if (plSvDirty() && !confirm('القائمة الحالية فيها اختيارات لسه ما اتحفظتش. تبدأ قائمة جديدة فاضية؟')) return;
+  plCfgSet({ B:[], J:[] }, { B:[], J:[], O:[] }); S.plTitle = ''; S.plDate = ''; S.plCur = null; S.plMode = 'c'; S.plBase = plSnapSig(); closeHS(); renderCS(); toast('قائمة جديدة فاضية');
+}
+function plSvDup(id) { const d = plSvGet(id); if (!d) return; docSave('plsv', 'plsv:' + uid8(), { ...fgClone(d.data), n:d.data.n + ' (نسخة)', ts:Date.now() }); openPLV(); toast('اتعملت نسخة'); }
+function plSvDel(id) { const d = plSvGet(id); if (!d || !confirm('تمسح القائمة المحفوظة "' + d.data.n + '"؟')) return; docSave('plsv', id, {}, true); if (S.plCur === id) S.plCur = null; openPLV(); renderCS(); }
+function openPLV() {
+  S.hs = { type:'plsv' }; const L = plSvList();
+  $('#hs-pn').innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">قوائم الأسعار المحفوظة (' + L.length + ')</h2><div class="note">كل قايمة بتحتفظ بالمنتجات المختارة واسم العميل والتاريخ. «فتح» بيرجّعها للقائمة المخصصة تعدّل فيها وتطبعها، وبعدها «حفظ» بيحدّثها.</div>' +
+    (L.length > 6 ? '<input id="plv-q" placeholder="بحث باسم العميل" style="margin-top:8px">' : '') +
+    (L.map(d => { const v = d.data, n = plSnapN(v); return '<div class="hrow" data-plvn="' + esc((v.n + ' ' + (v.t || '')).toLowerCase()) + '" style="margin-top:10px"><div class="n">' + esc(v.n) + (d.id === S.plCur ? ' <small style="color:var(--green-d)">(المفتوحة)</small>' : '') + '</div><div class="note">' + (v.dt ? esc(v.dt) + ' · ' : '') + n + ' صنف' + (v.ts ? ' · اتحفظت ' + esc(new Date(v.ts).toLocaleDateString('ar-EG')) : '') + '</div><div class="actions"><button class="btn" data-plvo="' + d.id + '">فتح</button><button class="btn ghost" data-plvd="' + d.id + '">نسخة</button><button class="btn danger" data-plvx="' + d.id + '">مسح</button></div></div>'; }).join('') || '<div class="empty">مفيش قوائم محفوظة لسه. اختار منتجات في القائمة المخصصة واضغط «حفظ القائمة».</div>') +
+    '<div class="actions"><button class="btn ghost" id="plv-new">＋ قائمة جديدة فاضية</button><button class="btn ghost" id="he-x">إغلاق</button></div>';
+  $('#hs-pn').oninput = e => { if (e.target.id === 'plv-q') { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('#hs-pn [data-plvn]').forEach(r => { r.style.display = !q || r.dataset.plvn.includes(q) ? '' : 'none'; }); } };
+  $('#hsheet').classList.remove('hide');
 }
 function openPLI(id, secIdx) {
   const P = plData(); if (!P) return; const K = S.plK === 'برطمان' ? 'J' : 'B', L = P[K]; let si = -1, ii = -1;
@@ -3606,6 +3646,10 @@ function openPLS() {
 }
 function plSheetClick(e) {
   const t = e.target, g = id => $(id).value;
+  if (S.hs && S.hs.type === 'plsv') {
+    const o = t.closest('[data-plvo]'), dp = t.closest('[data-plvd]'), xx = t.closest('[data-plvx]');
+    if (o) { plSvOpen(o.dataset.plvo); return true; } if (dp) { plSvDup(dp.dataset.plvd); return true; } if (xx) { plSvDel(xx.dataset.plvx); return true; } if (t.closest('#plv-new')) { plSvNew(); return true; }
+  }
   if (S.hs && S.hs.type === 'pls') {
     const K = S.hs.K, sel = plSelGet(K), P = plData();
     if (t.matches && t.matches('[data-sel]')) { if (t.checked) sel.add(t.dataset.sel); else sel.delete(t.dataset.sel); plSelSave(K); return false; }
@@ -3717,6 +3761,8 @@ function fgCostZ(W, z) {
 }
 function fgMar(W, z) { const c = fgCostZ(W, z); return c > 0 && z.price > 0 ? +((z.price - c) / c * 100).toFixed(2) : ''; }
 function fgInp(e) {
+  const mk = /^fg-skg(\d+)$/.exec((e && e.target && e.target.id) || '');
+  if (mk && S.fgW && $('#fg-n')) { fgSyncP(); const k = +mk[1], z = S.fgW.p.s[k]; if (z) { const c = fgCont(fgDx(S.fgW), z.c); if (c.kg > 0 && cl($('#fg-skg' + k).value) !== '') $('#fg-sp' + k).value = +(num($('#fg-skg' + k).value) * c.kg).toFixed(2); } }
   const m = /^fg-s([pm])(\d+)$/.exec((e && e.target && e.target.id) || '');
   if (m && S.fgW && $('#fg-n')) {
     fgSyncP(); const k = +m[2], z = S.fgW.p.s[k];
@@ -3737,7 +3783,7 @@ function fgDetHTML() {
       '<div class="kv"><b>التكلفة الإجمالية</b><b dir="ltr">' + c2(all) + '</b></div><div class="kv"><span>سعر البيع</span><span dir="ltr">' + c2(z.price) + '</span></div>' +
       '<div class="kv"><b>الربح</b><b dir="ltr" class="' + (pf < 0 ? 'neg' : '') + '">' + c2(pf) + (all ? ' (' + c2(pf / all * 100) + '%)' : '') + '</b></div></div>'; }).join('');
 }
-function fgLive() { if (!S.hs || S.hs.type !== 'fgp' || !S.fgW || !$('#fg-det')) return; fgSyncP(); const tot = S.fgW.p.r.reduce((a, r) => a + (+r[1] || 0), 0); $('#fg-tot').textContent = fmt(tot * 100) + '%'; $('#fg-det').innerHTML = fgDetHTML(); S.fgW.p.s.forEach((z, k) => { const el = $('#fg-sm' + k); if (el && document.activeElement !== el) el.value = fgMar(S.fgW, z); }); }
+function fgLive() { if (!S.hs || S.hs.type !== 'fgp' || !S.fgW || !$('#fg-det')) return; fgSyncP(); const tot = S.fgW.p.r.reduce((a, r) => a + (+r[1] || 0), 0); $('#fg-tot').textContent = fmt(tot * 100) + '%'; $('#fg-det').innerHTML = fgDetHTML(); S.fgW.p.s.forEach((z, k) => { const el = $('#fg-sm' + k); if (el && document.activeElement !== el) el.value = fgMar(S.fgW, z); const kg = $('#fg-skg' + k); if (kg && document.activeElement !== kg) { const c = fgCont(fgDx(S.fgW), z.c); kg.value = c.kg ? +(z.price / c.kg).toFixed(3) : ''; } }); }
 function fgRenderP() {
   const W = S.fgW, D = W.D, p = W.p, pr = { ...(D.ing[p.k] || {}), ...W.prices }, tot = p.r.reduce((a, r) => a + (+r[1] || 0), 0);
   $('#hs-pn').innerHTML = fgDL(D) + '<h2 style="margin:0 0 6px;font-size:18px">' + (W.idx == null ? 'منتج جديد' : 'تعديل منتج') + '</h2>' +
@@ -3749,9 +3795,9 @@ function fgRenderP() {
     '<div class="note" style="margin-top:12px"><b>العبوات والأسعار</b></div>' +
     p.s.map((z, k) => { const c = fgCont(D, z.c);
       return '<div class="hrow"><label for="fg-sc' + k + '">العبوة</label><select id="fg-sc' + k + '">' + D.cont.map(x => '<option value="' + x.id + '"' + (x.id === z.c ? ' selected' : '') + '>' + esc(x.n) + '</option>').join('') + '</select>' +
-        '<div class="grid"><div><label for="fg-sp' + k + '">سعر البيع (قطاعي)</label>' + fgIn('fg-sp' + k, z.price) + '</div><div><label for="fg-sm' + k + '">النسبة % فوق التكلفة</label>' + fgIn('fg-sm' + k, fgMar(W, z), '%') + '</div></div><div class="grid"><div><label for="fg-sw' + k + '">سعر الجملة (أرض المصنع)</label>' + fgIn('fg-sw' + k, z.wp, fmt(z.price * 0.8)) + '</div><div></div></div>' +
+        '<div class="grid"><div><label for="fg-sp' + k + '">سعر البيع (قطاعي)</label>' + fgIn('fg-sp' + k, z.price) + '</div><div><label for="fg-sm' + k + '">النسبة % فوق التكلفة</label>' + fgIn('fg-sm' + k, fgMar(W, z), '%') + '</div></div><div class="grid"><div><label for="fg-sw' + k + '">سعر الجملة (أرض المصنع)</label>' + fgIn('fg-sw' + k, z.wp, fmt(z.price * 0.8)) + '</div><div><label for="fg-skg' + k + '">سعر الكيلو</label>' + fgIn('fg-skg' + k, c.kg ? +(z.price / c.kg).toFixed(3) : '', 'جنيه / كجم') + '</div></div>' +
         '<div class="grid"><div><label for="fg-sk' + k + '">عبوة وكيس (للمنتج ده بس)</label>' + fgIn('fg-sk' + k, z.pk, fmt(fgSum(c.pk))) + '</div><div><label for="fg-so' + k + '">تشغيل (للمنتج ده بس)</label>' + fgIn('fg-so' + k, z.op, fmt(fgSum(c.op))) + '</div></div>' +
-        '<div class="actions"><button class="btn danger" data-fgrs="' + k + '">مسح الحجم</button></div></div>'; }).join('') +
+        '<div class="actions"><button class="btn ghost" data-fgnp="' + k + '">' + (z.pk === 0 ? 'رجّع تكلفة العبوة' : 'بدون عبوة (بيتباع سايب)') + '</button><button class="btn danger" data-fgrs="' + k + '">مسح الحجم</button></div></div>'; }).join('') +
     '<div class="actions"><button class="btn ghost" id="fg-adds">＋ عبوة / حجم</button></div>' +
     '<div class="note" style="margin-top:12px"><b>تفاصيل التكلفة لكل حجم</b> (بتتحدث وإنت بتعدل)</div><div id="fg-det">' + fgDetHTML() + '</div>' +
     '<div class="err" id="fg-err"></div><div class="actions"><button class="btn" id="fg-save">حفظ</button>' + (W.idx != null ? '<button class="btn ghost" id="fg-copy">نسخ المنتج</button><button class="btn danger" id="fg-del">حذف</button>' : '') + '<button class="btn ghost" id="he-x">إغلاق</button></div>';
@@ -3837,6 +3883,7 @@ function fgSheetClick(e) {
     if (t.closest('#fg-addr')) { fgSyncP(); W.p.r.push(['', 0]); fgRenderP(); return true; }
     const rm = t.closest('[data-fgrm]'); if (rm) { fgSyncP(); W.p.r.splice(+rm.dataset.fgrm, 1); fgRenderP(); return true; }
     if (t.closest('#fg-adds')) { fgSyncP(); W.p.s.push({ c:W.D.cont[0].id, price:0 }); fgRenderP(); return true; }
+    const np = t.closest('[data-fgnp]'); if (np) { fgSyncP(); const z0 = W.p.s[+np.dataset.fgnp]; if (z0) { if (z0.pk === 0) delete z0.pk; else z0.pk = 0; } fgRenderP(); return true; }
     const rs = t.closest('[data-fgrs]'); if (rs) { fgSyncP(); if (W.p.s.length > 1) W.p.s.splice(+rs.dataset.fgrs, 1); fgRenderP(); return true; }
     if (t.closest('#fg-copy')) { fgSyncP(); W.idx = null; W.p.n += ' (نسخة)'; fgRenderP(); return true; }
     if (t.closest('#fg-del')) { if (!confirm('تمسح المنتج ده؟')) return true; const D = fgClone(fgData()); D.prods.splice(W.idx, 1); docSave('fg2', 'fg2', D); closeHS(); renderCS(); return true; }
@@ -4356,6 +4403,8 @@ async function csBodyClick(e) {
   if (t0.closest('[data-plx]')) { S.plX = !S.plX; return renderCS(); }
   if (t0.closest('#pl-sel')) return openPLS();
   if (t0.closest('#pl-fx')) return openPLX();
+  if (t0.closest('#pl-svs')) return plSvSave();
+  if (t0.closest('#pl-svl')) return openPLV();
   if (t0.closest('#pl-hd') && canWrite()) return openPLH();
   if (t0.closest('#pl-nt') && canWrite()) return openPLN();
   const plx = t0.closest('[data-plxi]'); if (plx) return openPLXE(plx.dataset.plxi);
@@ -5254,7 +5303,7 @@ async function bioToggle() {
 }
 
 /* ---------- export to Excel (CSV) ---------- */
-const VER = '1.52';
+const VER = '1.53';
 const csvQ = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function csvOf(list) {
   const head = ['no', 'date', 'stmt', 'debit_acct', 'credit_acct', 'party_debit', 'party_credit', 'product', 'qty', 'disc', 'price', 'amount', 'opening', 'id'];
@@ -5694,7 +5743,7 @@ function ptrInit() {
       await sync();
       if (await codeUpdated()) { resSave(); ulStamp(); el.textContent = 'فيه نسخة جديدة، بنفتحها…'; setTimeout(() => location.reload(), 600); return; }
       toast(S.err ? (S.err === 'net' ? 'مفيش اتصال بالسيرفر' : 'فشلت المزامنة') : 'تم التحديث');
-    } finally { busy = false; el.classList.remove('on'); }
+    } finally { busy = false; el.classList.remove('on'); setTimeout(() => { if (!el.classList.contains('on')) el.textContent = ''; }, 500); }
   };
   document.addEventListener('touchend', end, { passive:true }); document.addEventListener('touchcancel', reset, { passive:true });
 }
